@@ -1,0 +1,5 @@
+python-reapy
+python-osc
+pytest
+mcp[cli]
+python-dotenv
