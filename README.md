@@ -73,7 +73,7 @@ Claude configuration:
 ```
 {
 	"mcpServers": {
-		"reaper-web": {
+		"reaper-reapy-mcp": {
 			"type": "stdio",
 			"command": "python",
 			"args": [
