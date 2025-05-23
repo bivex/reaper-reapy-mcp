@@ -31,9 +31,21 @@ ENV/
 *.swp
 *.swo
 
+# REAPER
+*.rpp-bak
+*.rpp
+peaks/
+samples/
+
 # Logs
 *.log
+logs/
 
-# Local development
+# Downloaded sample files
+samples/
+*.mp3
+*.wav
+
+# Environment variables
 .env
 .env.local 
