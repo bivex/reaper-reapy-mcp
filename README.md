@@ -2,6 +2,8 @@
 
 A Python application for controlling REAPER Digital Audio Workstation (DAW) using the MCP(Model context protocol).
 
+![REAPER MCP Demo](reaper-reapy-mcp-demo-for-gif-002.gif)
+
 ## Features
 
 - Track management (create, rename, color)
@@ -24,16 +26,14 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 ## Installation
 
 1. Install REAPER if you haven't already
-2. Install the required Python packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Enable python in REAPER
-4. Enable reapy server via REAPER scripting:
-   ```python
-   import reapy
-   reapy.config.enable_dist_api()
-   ```
+2. Enable reapy server via REAPER scripting
+    add reaper_side_enable_server.py to reaper actions and run it inside reaper studio
+3. Install current package:
+4. Enable python in REAPER
+
+
+
+The wheel package includes all necessary dependencies and can be used in other Python projects that need REAPER integration. The project uses `pyproject.toml` for modern Python packaging configuration, which provides better dependency management and build system configuration.
 
 ### Sample Audio File
 The application uses a sample MP3 file for testing audio operations. The file will be automatically downloaded when needed from:
@@ -43,16 +43,24 @@ https://www2.cs.uic.edu/~i101/SoundFiles/StarWars3.mp3
 
 This is a short Star Wars theme clip that's commonly used for testing audio applications.
 
-### MCP Integration
+### Running the Server
 
-The application includes MCP tools for remote control. To use them:
+You can run the server using uv directly:
+```bash
+uv --directory <project_path> run -m src.run_mcp_server
+```
 
-1. Start the MCP server:
-   ```bash
-   python src/run_mcp_server.py
-   ```
+For example, on Windows:
+```bash
+uv --directory C:\path\to\guitar_pro_mcp2 run -m src.run_mcp_server
+```
 
-2. Use the MCP inspector to test the tools:
+Or using the Python module directly after installation:
+```bash
+python -m src.run_mcp_server
+```
+
+### Use the MCP inspector to test the tools:
    ```bash
    test_mcp.bat
    ```
@@ -112,7 +120,26 @@ All item operations use a sequential index system (0..n) for item identification
 - Indices are stable until items are deleted or reordered
 - All item operations (MIDI, audio, properties) use the same indexing system
 
-Claude configuration:
+### Claude configuration (with uv run):
+```json
+{
+    "mcpServers": {
+        "reaper-reapy-mcp": {
+            "type": "stdio",
+            "command": "uv",
+            "args": [
+                "--directory",
+                "<path to folder>",
+                "run",
+                "-m",
+                "src.run_mcp_server"
+            ]
+        }
+    }
+}
+```
+
+### Claude configuration direct:
 ```json
 {
     "mcpServers": {
