@@ -50,4 +50,18 @@ samples/
 
 # Environment variables
 .env
-.env.local 
+.env.local
+
+# Reapy API files
+reapy-api/
+**/reapy_api.py
+**/_reapy_api.py
+**/__pycache__/reapy_api.py
+**/__pycache__/_reapy_api.py
+
+# generated files
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so

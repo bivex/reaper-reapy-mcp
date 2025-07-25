@@ -162,14 +162,15 @@ class AudioController(BaseController):
             self.logger.error(f"Failed to set item length: {e}")
             return False
             
-    def duplicate_item(self, track_index, item_id):
+    def duplicate_item(self, track_index, item_id, new_position=None):
         """
         Duplicate a media item.
         
         Args:
             track_index (int): Index of the track containing the item
             item_id (int or str): ID of the item to duplicate
-            
+            new_position (float, optional): If provided, the duplicated item will be placed at this position. Otherwise, it will be placed at the original position.
+        
         Returns:
             int or str: ID of the duplicated item
         """
@@ -187,34 +188,74 @@ class AudioController(BaseController):
             original_position = item.position
             original_length = item.length
             
+            # Determine the position for the duplicated item
+            if new_position is not None:
+                position = float(new_position)
+            else:
+                # If no new position specified, place it right after the original item
+                position = original_position + original_length
+            
             # Check if it's a MIDI item
             is_midi = False
             if item.active_take and item.active_take.is_midi:
                 is_midi = True
             
-            # Create a new item based on type
-            if is_midi:
-                new_item = track.add_midi_item(original_position, original_position + original_length)
-            else:
-                new_item = track.add_item(original_position, original_length)
-            
-            if new_item is None:
-                self.logger.error("Failed to create new item")
+            # Use REAPER's built-in duplication for both MIDI and audio items
+            try:
+                # Select only the original item
+                project.select_all_items(False)
+                RPR.SetMediaItemSelected(item.id, True)
+                
+                # Duplicate the item using REAPER's duplicate command
+                RPR.Main_OnCommand(41295, 0)  # Item: Duplicate items
+                
+                # Small delay to ensure duplication is complete
+                time.sleep(0.05)
+                
+                # Find the duplicated item - REAPER places it right after the original
+                duplicated_item = None
+                
+                # Get all items and look for one that wasn't there before
+                current_items = list(track.items)
+                
+                # Look for the newest item that has the same length as the original
+                for track_item in current_items:
+                    # Skip the original item
+                    if track_item.id == item.id:
+                        continue
+                    
+                    # Look for an item with matching length that's likely the duplicate
+                    if abs(track_item.length - original_length) < 0.001:
+                        # Check if it's positioned after the original (REAPER's default behavior)
+                        if track_item.position >= original_position:
+                            duplicated_item = track_item
+                            break
+                
+                # If we still haven't found it, try a different approach
+                if duplicated_item is None:
+                    # Look for any item that's not the original and has the same length
+                    for track_item in current_items:
+                        if (track_item.id != item.id and 
+                            abs(track_item.length - original_length) < 0.001):
+                            duplicated_item = track_item
+                            break
+                
+                if duplicated_item:
+                    # Move the duplicated item to the desired position
+                    duplicated_item.position = position
+                    new_item = duplicated_item
+                    
+                    if is_midi:
+                        self.logger.info(f"Successfully duplicated MIDI item using REAPER duplicate command, moved to position {position}")
+                    else:
+                        self.logger.info(f"Successfully duplicated audio item using REAPER duplicate command, moved to position {position}")
+                else:
+                    self.logger.warning("Could not find duplicated item after REAPER duplicate command")
+                    return -1
+                    
+            except Exception as e:
+                self.logger.error(f"Failed to duplicate item using REAPER command: {e}")
                 return -1
-            
-            # Ensure the new item has a take
-            if new_item.active_take is None:
-                new_item.add_take()
-            
-            # Copy take information if available
-            if item.active_take:
-                take = item.active_take
-                new_take = new_item.active_take
-                if new_take and not take.is_midi:
-                    try:
-                        new_take.source = take.source
-                    except Exception as e:
-                        self.logger.warning(f"Failed to copy take source: {e}")
             
             # Get the index of the new item
             for i, track_item in enumerate(track.items):

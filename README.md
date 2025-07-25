@@ -6,14 +6,15 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 
 ## Features
 
-- Track management (create, rename, color)
-- FX management (add, remove, parameter control)
-- Project tempo control
-- Region and marker management
-- Master track control
-- MIDI operations (create items, add notes, clear items)
-- Audio item operations (insert, duplicate, modify)
-- MCP (Message Control Protocol) integration for remote control
+- **Track Management**: Create, rename, and color tracks
+- **FX Management**: Add, remove, and control effect parameters
+- **Project Control**: Set tempo, manage regions and markers
+- **Master Track Control**: Volume, pan, mute, and solo operations
+- **MIDI Operations**: Create items, add/get notes, clear items with musical positioning
+- **Audio Item Operations**: Insert, duplicate, modify with enhanced positioning support
+- **Dual Position Format**: Support both time (seconds) and measure:beat notation
+- **Reliable Duplication**: Uses REAPER's built-in commands for accurate item copying
+- **MCP Integration**: Model Context Protocol server for AI assistant control
 
 ## Requirements
 
@@ -101,17 +102,24 @@ Available MCP tools:
 
 #### MIDI Operations
 - `create_midi_item`: Create an empty MIDI item on a track
+  - Supports both time (seconds) and measure:beat positioning
 - `add_midi_note`: Add a MIDI note to a MIDI item
+- `get_midi_notes`: Get all MIDI notes from a MIDI item
 - `clear_midi_item`: Clear all MIDI notes from a MIDI item
 
 #### Audio Item Operations
 - `insert_audio_item`: Insert an audio file as a media item
-- `duplicate_item`: Duplicate an existing item
+  - Supports both time (seconds) and measure:beat positioning
+- `duplicate_item`: Duplicate an existing item (MIDI or audio)
+  - Uses REAPER's built-in duplication for reliable copying
+  - Supports both time (seconds) and measure:beat positioning
 - `get_item_properties`: Get properties of a media item
 - `set_item_position`: Set the position of a media item
+  - Supports both time (seconds) and measure:beat positioning
 - `set_item_length`: Set the length of a media item
 - `delete_item`: Delete a media item
 - `get_items_in_time_range`: Get items within a time range
+  - Supports both time (seconds) and measure:beat positioning
 
 ### Item ID System
 All item operations use a sequential index system (0..n) for item identification. This makes it easier to work with items in scripts and automation:
@@ -119,6 +127,37 @@ All item operations use a sequential index system (0..n) for item identification
 - Each track maintains its own sequence of item indices
 - Indices are stable until items are deleted or reordered
 - All item operations (MIDI, audio, properties) use the same indexing system
+
+### Position Format Support
+Many MCP tools now support dual position formats for enhanced musical workflow:
+
+#### Time Format (seconds)
+```json
+{
+  "start_time": 15.5,
+  "new_time": 30.0
+}
+```
+
+#### Measure:Beat Format
+```json
+{
+  "start_measure": "3:2.5",
+  "new_measure": "5:1"
+}
+```
+
+**Format**: `"measure:beat"` where:
+- `measure`: 1-based measure number
+- `beat`: 1-based beat number (supports decimals)
+- Example: `"4:2.5"` = measure 4, beat 2.5
+
+#### Tools Supporting Both Formats:
+- `create_midi_item` - position via `start_time` OR `start_measure`
+- `insert_audio_item` - position via `start_time` OR `start_measure`  
+- `duplicate_item` - position via `new_time` OR `new_measure`
+- `set_item_position` - position via `new_time` OR `new_measure`
+- `get_items_in_time_range` - range via time OR measure parameters
 
 ### Claude configuration (with uv run):
 ```json

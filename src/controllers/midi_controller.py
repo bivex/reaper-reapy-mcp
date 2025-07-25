@@ -391,3 +391,21 @@ class MIDIController(BaseController):
         except Exception as e:
             self.logger.error(f"Failed to get all MIDI items: {e}")
             return []
+
+    def get_selected_midi_item(self) -> Optional[Dict[str, int]]:
+        """
+        Get the first selected MIDI item in the current project.
+        Returns:
+            dict: { 'track_index': int, 'item_id': int } or None if not found
+        """
+        try:
+            from reapy import reascript_api as RPR
+            project = reapy.Project()
+            for track_index, track in enumerate(project.tracks):
+                for item_index, item in enumerate(track.items):
+                    if RPR.IsMediaItemSelected(item.id) and item.active_take and item.active_take.is_midi:
+                        return {'track_index': track_index, 'item_id': item_index}
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to get selected MIDI item: {e}")
+            return None
