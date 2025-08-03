@@ -280,8 +280,8 @@ class AutomationController:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
                 return False
             
-            # Delete the point
-            success = RPR.DeleteEnvelopePoint(envelope, point_index)
+            # Delete the point using the correct API function
+            success = RPR.DeleteEnvelopePointEx(envelope, 0, point_index)  # Use DeleteEnvelopePointEx instead of DeleteEnvelopePoint
             
             if success:
                 self.logger.info(f"Deleted automation point {point_index} from track {track_index}")

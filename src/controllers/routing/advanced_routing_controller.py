@@ -27,7 +27,7 @@ class AdvancedRoutingController:
             
             # Create a new track using the correct API function
             track_index = len(project.tracks)
-            RPR.InsertMediaTrack(0, True)  # Use InsertMediaTrack instead of InsertTrack
+            RPR.InsertTrackAtIndex(track_index, True)  # Use InsertTrackAtIndex instead of InsertMediaTrack
             
             # Get the created track
             track = project.tracks[track_index]
@@ -60,7 +60,7 @@ class AdvancedRoutingController:
             
             # Create a new track using the correct API function
             track_index = len(project.tracks)
-            RPR.InsertMediaTrack(0, True)  # Use InsertMediaTrack instead of InsertTrack
+            RPR.InsertTrackAtIndex(track_index, True)  # Use InsertTrackAtIndex instead of InsertMediaTrack
             
             # Get the created track
             track = project.tracks[track_index]
