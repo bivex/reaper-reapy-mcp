@@ -321,3 +321,33 @@ class AudioController:
         except Exception as e:
             self.logger.error(f"Failed to get items in time range: {e}")
             return []
+    
+    def get_selected_items(self):
+        """
+        Get all currently selected items across all tracks.
+        
+        Returns:
+            list: List of dictionaries containing item information
+        """
+        try:
+            project = reapy.Project()
+            selected_items = []
+            
+            for track in project.tracks:
+                for item in track.items:
+                    if item.is_selected:
+                        item_info = {
+                            'track_index': track.index,
+                            'item_id': item.id,
+                            'position': item.position,
+                            'length': item.length,
+                            'name': item.name if hasattr(item, 'name') else f"Item {item.id}"
+                        }
+                        selected_items.append(item_info)
+            
+            self.logger.info(f"Found {len(selected_items)} selected items")
+            return selected_items
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get selected items: {e}")
+            return []

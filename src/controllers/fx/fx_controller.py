@@ -32,6 +32,21 @@ class FXController:
             project = reapy.Project()
             track = project.tracks[track_index]
             
+            # Try using reapy's built-in method first
+            try:
+                fx = track.add_fx(fx_name)
+                if fx:
+                    self.logger.info(
+                        f"Added FX '{fx_name}' to track {track_index} using reapy method"
+                    )
+                    return 0  # Return 0 as the first FX index
+            except Exception as reapy_error:
+                self.logger.warning(f"Reapy method failed: {reapy_error}")
+            
+            # Fallback to ReaScript API method
+            # First, try to select the track
+            RPR.SetOnlyTrackSelected(track.id)
+            
             # Add the FX using ReaScript API
             fx_index = RPR.TrackFX_AddByName(
                 track.id, fx_name, False, 0
@@ -41,12 +56,12 @@ class FXController:
                 self.logger.info(
                     f"Added FX '{fx_name}' to track {track_index} at index {fx_index}"
                 )
+                return fx_index
             else:
                 self.logger.error(
                     f"Failed to add FX '{fx_name}' to track {track_index}"
                 )
-            
-            return fx_index
+                return -1
             
         except Exception as e:
             self.logger.error(f"Failed to add FX: {e}")
@@ -221,6 +236,26 @@ class FXController:
             track = project.tracks[track_index]
             
             fx_list = []
+            
+            # Try using reapy's built-in method first
+            try:
+                reapy_fx_list = track.fxs
+                for i, fx in enumerate(reapy_fx_list):
+                    fx_info = {
+                        "index": i,
+                        "name": fx.name if hasattr(fx, 'name') else f"FX_{i}",
+                        "enabled": fx.is_enabled if hasattr(fx, 'is_enabled') else True
+                    }
+                    fx_list.append(fx_info)
+                
+                if fx_list:
+                    self.logger.info(f"Retrieved {len(fx_list)} FX for track {track_index} using reapy")
+                    return fx_list
+                    
+            except Exception as reapy_error:
+                self.logger.warning(f"Reapy method failed: {reapy_error}")
+            
+            # Fallback to ReaScript API method
             fx_count = RPR.TrackFX_GetCount(track.id)
             
             for i in range(fx_count):
@@ -236,7 +271,7 @@ class FXController:
                 }
                 fx_list.append(fx_info)
             
-            self.logger.info(f"Retrieved {len(fx_list)} FX for track {track_index}")
+            self.logger.info(f"Retrieved {len(fx_list)} FX for track {track_index} using ReaScript API")
             return fx_list
             
         except Exception as e:

@@ -326,14 +326,21 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
                      start_time: float, length: float, 
                      velocity: int = DEFAULT_MIDI_VELOCITY) -> Dict[str, Any]:
         """Add a MIDI note to a MIDI item."""
-        operation_name = f"Add MIDI note pitch {pitch} to item {item_id}"
-        return _handle_controller_operation(
-            operation_name,
-            controller.add_midi_note(
-                track_index, item_id, pitch,
-                start_time, length, velocity
+        try:
+            from src.controllers.midi.midi_controller import MIDIController
+            note_params = MIDIController.MIDINoteParams(
+                pitch=pitch,
+                start_time=start_time,
+                length=length,
+                velocity=velocity
             )
-        )
+            success = controller.add_midi_note(track_index, item_id, note_params)
+            if success:
+                return _create_success_response(f"Added MIDI note pitch {pitch} to item {item_id}")
+            return _create_error_response(f"Failed to add MIDI note pitch {pitch} to item {item_id}")
+        except Exception as e:
+            logger.error(f"Failed to add MIDI note: {str(e)}")
+            return _create_error_response(f"Failed to add MIDI note: {str(e)}")
 
     @mcp.tool("clear_midi_item")
     def clear_midi_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:

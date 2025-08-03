@@ -106,10 +106,7 @@ class ReaperController:
         """Create a MIDI item on a track."""
         return self.midi.create_midi_item(track_index, position, length)
     
-    def add_midi_note(self, item_id: int, note: int, start: float, length: float, 
-                     velocity: int = DEFAULT_MIDI_VELOCITY) -> bool:
-        """Add a MIDI note to a MIDI item."""
-        return self.midi.add_midi_note(item_id, note, start, length, velocity)
+
     
     # Audio operations
     def add_audio_item(self, track_index: int, file_path: str, position: float = 0.0) -> Optional[int]:
@@ -208,15 +205,8 @@ class ReaperController:
             start_time = 0.0
         return self.midi.create_midi_item(track_index, start_time, length=length)
     
-    def add_midi_note(self, track_index: int, item_id: int, pitch: int, start_time: float, length: float, velocity: int = 96) -> bool:
+    def add_midi_note(self, track_index: int, item_id: int, note_params) -> bool:
         """Add a MIDI note to a MIDI item."""
-        from src.controllers.midi.midi_controller import MIDIController
-        note_params = MIDIController.MIDINoteParams(
-            pitch=pitch,
-            start_time=start_time,
-            length=length,
-            velocity=velocity
-        )
         return self.midi.add_midi_note(track_index, item_id, note_params)
     
     def clear_midi_item(self, track_index: int, item_id: int) -> bool:
