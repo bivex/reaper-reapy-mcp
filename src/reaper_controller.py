@@ -298,6 +298,10 @@ class ReaperController:
         """Get comprehensive routing information for a track."""
         return self.routing.get_track_routing_info(track_index)
     
+    def debug_track_routing(self, track_index: int) -> Dict[str, Any]:
+        """Debug track routing information for troubleshooting."""
+        return self.routing.debug_track_routing(track_index)
+    
     def clear_all_sends(self, track_index: int) -> bool:
         """Remove all sends from a track."""
         return self.routing.clear_all_sends(track_index)

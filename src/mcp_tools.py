@@ -598,6 +598,16 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             logger.error(f"Failed to get track routing info: {str(e)}")
             return _create_error_response(f"Failed to get track routing info: {str(e)}")
 
+    @mcp.tool("debug_track_routing")
+    def debug_track_routing(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Debug track routing information for troubleshooting."""
+        try:
+            debug_info = controller.debug_track_routing(track_index)
+            return _create_success_response(f"Debug info for track {track_index}: {debug_info}")
+        except Exception as e:
+            logger.error(f"Failed to debug track routing: {str(e)}")
+            return _create_error_response(f"Failed to debug track routing: {str(e)}")
+
     @mcp.tool("clear_all_sends")
     def clear_all_sends(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Remove all sends from a track."""

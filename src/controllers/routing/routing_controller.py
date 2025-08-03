@@ -110,6 +110,18 @@ class RoutingController:
             RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "I_SRCCHAN", channels)
 
             self.logger.info(f"Added send from track {source_track} to track {destination_track} with ID {send_id}")
+            
+            # Verify the send was created by immediately checking
+            RPR.UpdateArrange()
+            verify_count = RPR.GetTrackNumSends(source.id, 0)
+            self.logger.info(f"After creation: Track {source_track} now has {verify_count} sends")
+            
+            # Try to read back the send we just created
+            if send_id >= 0 and send_id < verify_count:
+                verify_dest = RPR.GetTrackSendInfo_Value(source.id, 0, send_id, "P_DESTTRACK")
+                verify_vol = RPR.GetTrackSendInfo_Value(source.id, 0, send_id, "D_VOL")
+                self.logger.info(f"Verification - Send {send_id}: dest_ptr={verify_dest}, volume={verify_vol}")
+            
             return send_id
 
         except Exception as e:
@@ -167,10 +179,18 @@ class RoutingController:
             # Use ReaScript API to get sends
             import reapy.reascript_api as RPR
             
+            # Force REAPER to update
+            RPR.UpdateArrange()
+            RPR.TrackList_AdjustWindows(False)
+            
             sends = []
             send_count = RPR.GetTrackNumSends(track.id, 0)  # 0 for sends, 1 for receives
             
-            self.logger.info(f"Found {send_count} sends on track {track_index}")
+            self.logger.info(f"Track {track_index} (ID: {track.id}): Found {send_count} sends")
+            
+            # Debug: Also check the track name and other info
+            track_name = track.name if hasattr(track, 'name') else "Unknown"
+            self.logger.info(f"Track name: {track_name}")
             
             for i in range(send_count):
                 try:
@@ -251,10 +271,14 @@ class RoutingController:
             # Use ReaScript API
             import reapy.reascript_api as RPR
             
+            # Force REAPER to update
+            RPR.UpdateArrange()
+            RPR.TrackList_AdjustWindows(False)
+            
             receives = []
             project = reapy.Project()
             
-            self.logger.info(f"Scanning all tracks for sends to track {track_index}")
+            self.logger.info(f"Scanning all tracks for sends to track {track_index} (target track ID: {target_track.id})")
             
             # Scan all tracks for sends to our target track
             for source_idx, source_track in enumerate(project.tracks):
@@ -300,6 +324,63 @@ class RoutingController:
         except Exception as e:
             self.logger.error(f"Failed to get receives: {e}")
             return []
+
+    def debug_track_routing(self, track_index: int) -> Dict[str, Any]:
+        """
+        Debug function to analyze track routing in detail.
+        
+        Args:
+            track_index (int): Index of the track to debug
+        
+        Returns:
+            Dict containing detailed routing information
+        """
+        try:
+            track = self._get_track(track_index)
+            if track is None:
+                return {"error": f"Track {track_index} not found"}
+
+            import reapy.reascript_api as RPR
+            
+            # Force update
+            RPR.UpdateArrange()
+            
+            debug_info = {
+                "track_index": track_index,
+                "track_id": track.id,
+                "track_name": getattr(track, 'name', 'Unknown'),
+                "sends": [],
+                "receives": [],
+                "raw_send_count": RPR.GetTrackNumSends(track.id, 0),
+                "raw_receive_count": RPR.GetTrackNumSends(track.id, 1),
+            }
+            
+            # Debug sends
+            send_count = RPR.GetTrackNumSends(track.id, 0)
+            self.logger.info(f"DEBUG: Track {track_index} has {send_count} sends (raw)")
+            
+            for i in range(send_count):
+                try:
+                    dest_ptr = RPR.GetTrackSendInfo_Value(track.id, 0, i, "P_DESTTRACK")
+                    volume = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_VOL")
+                    pan = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_PAN")
+                    
+                    send_debug = {
+                        "send_id": i,
+                        "dest_pointer": dest_ptr,
+                        "dest_pointer_int": int(dest_ptr) if dest_ptr else 0,
+                        "volume": volume,
+                        "pan": pan
+                    }
+                    debug_info["sends"].append(send_debug)
+                    
+                except Exception as send_err:
+                    debug_info["sends"].append({"send_id": i, "error": str(send_err)})
+            
+            return debug_info
+            
+        except Exception as e:
+            return {"error": str(e)}
 
     def set_send_volume(self, source_track: int, send_id: int, volume: float) -> bool:
         """
