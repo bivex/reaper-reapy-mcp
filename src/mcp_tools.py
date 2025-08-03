@@ -26,6 +26,7 @@ def _handle_controller_operation(operation_name: str, operation_func, *args, **k
             return _create_success_response(f"{operation_name} completed successfully")
         return _create_error_response(f"Failed to {operation_name.lower()}")
     except Exception as e:
+        logger.error(f"Controller operation failed: {operation_name} - {str(e)}")
         return _create_error_response(f"Failed to {operation_name.lower()}: {str(e)}")
 
 def _setup_connection_tools(mcp: FastMCP, controller) -> None:
@@ -46,6 +47,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
             track_index = controller.create_track(name)
             return _create_success_response(f"Created track {track_index}")
         except Exception as e:
+            logger.error(f"Failed to create track: {str(e)}")
             return _create_error_response(f"Failed to create track: {str(e)}")
 
     @mcp.tool("rename_track")
@@ -71,6 +73,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
             color = controller.get_track_color(track_index)
             return _create_success_response(f"Color of track {track_index}: {color}")
         except Exception as e:
+            logger.error(f"Failed to get track color: {str(e)}")
             return _create_error_response(f"Failed to get track color: {str(e)}")
 
     @mcp.tool("get_track_count")
@@ -80,6 +83,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
             count = controller.get_track_count()
             return _create_success_response(f"Track count: {count}")
         except Exception as e:
+            logger.error(f"Failed to get track count: {str(e)}")
             return _create_error_response(f"Failed to get track count: {str(e)}")
 
 def _setup_project_tools(mcp: FastMCP, controller) -> None:
@@ -100,6 +104,7 @@ def _setup_project_tools(mcp: FastMCP, controller) -> None:
             tempo = controller.get_tempo()
             return _create_success_response(f"Current tempo: {tempo} BPM")
         except Exception as e:
+            logger.error(f"Failed to get tempo: {str(e)}")
             return _create_error_response(f"Failed to get tempo: {str(e)}")
 
 def _setup_fx_tools(mcp: FastMCP, controller) -> None:
@@ -112,10 +117,12 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             fx_index = controller.add_fx(track_index, fx_name)
             if fx_index >= 0:
                 return _create_success_response(
-                    f"Added FX {fx_name} to track {track_index} at index {fx_index}"
+                    f"Added FX {fx_name} to track {track_index} "
+                    f"at index {fx_index}"
                 )
             return _create_error_response(f"Failed to add FX to track {track_index}")
         except Exception as e:
+            logger.error(f"Failed to add FX: {str(e)}")
             return _create_error_response(f"Failed to add FX: {str(e)}")
 
     @mcp.tool("remove_fx")
@@ -143,6 +150,7 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             value = controller.get_fx_param(track_index, fx_index, param_name)
             return _create_success_response(f"FX parameter {param_name}: {value}")
         except Exception as e:
+            logger.error(f"Failed to get FX parameter: {str(e)}")
             return _create_error_response(f"Failed to get FX parameter: {str(e)}")
 
     @mcp.tool("get_fx_param_list")
@@ -152,6 +160,7 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             params = controller.get_fx_param_list(track_index, fx_index)
             return _create_success_response(f"FX parameters: {params}")
         except Exception as e:
+            logger.error(f"Failed to get FX parameters: {str(e)}")
             return _create_error_response(f"Failed to get FX parameters: {str(e)}")
 
     @mcp.tool("get_fx_list")
@@ -161,6 +170,7 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             fx_list = controller.get_fx_list(track_index)
             return _create_success_response(f"FX list for track {track_index}: {fx_list}")
         except Exception as e:
+            logger.error(f"Failed to get FX list: {str(e)}")
             return _create_error_response(f"Failed to get FX list: {str(e)}")
 
     @mcp.tool("get_available_fx_list")
@@ -170,6 +180,7 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             fx_list = controller.get_available_fx_list()
             return _create_success_response(f"Available FX: {fx_list}")
         except Exception as e:
+            logger.error(f"Failed to get available FX: {str(e)}")
             return _create_error_response(f"Failed to get available FX: {str(e)}")
 
     @mcp.tool("toggle_fx")
@@ -177,8 +188,9 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
                  enable: Optional[bool] = None) -> Dict[str, Any]:
         """Toggle FX on/off."""
         action = "enable" if enable else "toggle"
+        operation_name = f"{action.capitalize()} FX {fx_index} on track {track_index}"
         return _handle_controller_operation(
-            f"{action.capitalize()} FX {fx_index} on track {track_index}",
+            operation_name,
             controller.toggle_fx, track_index, fx_index, enable
         )
 
@@ -189,8 +201,9 @@ def _setup_marker_tools(mcp: FastMCP, controller) -> None:
     def create_region(ctx: Context, start_time: float, end_time: float, 
                      name: str) -> Dict[str, Any]:
         """Create a region in the project."""
+        operation_name = f"Create region '{name}' from {start_time} to {end_time}"
         return _handle_controller_operation(
-            f"Create region '{name}' from {start_time} to {end_time}",
+            operation_name,
             controller.create_region, start_time, end_time, name
         )
 
@@ -228,6 +241,7 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
             master_info = controller.get_master_track()
             return _create_success_response(f"Master track info: {master_info}")
         except Exception as e:
+            logger.error(f"Failed to get master track: {str(e)}")
             return _create_error_response(f"Failed to get master track: {str(e)}")
 
     @mcp.tool("set_master_volume")
@@ -281,6 +295,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             item_id = controller.create_midi_item(track_index, start_time, length)
             return _create_success_response(f"Created MIDI item {item_id} on track {track_index}")
         except Exception as e:
+            logger.error(f"Failed to create MIDI item: {str(e)}")
             return _create_error_response(f"Failed to create MIDI item: {str(e)}")
 
     @mcp.tool("add_midi_note")
@@ -288,8 +303,9 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
                      start_time: float, length: float, 
                      velocity: int = DEFAULT_MIDI_VELOCITY) -> Dict[str, Any]:
         """Add a MIDI note to a MIDI item."""
+        operation_name = f"Add MIDI note pitch {pitch} to item {item_id}"
         return _handle_controller_operation(
-            f"Add MIDI note pitch {pitch} to item {item_id}",
+            operation_name,
             controller.add_midi_note, track_index, item_id, pitch, 
             start_time, length, velocity
         )
@@ -309,6 +325,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             notes = controller.get_midi_notes(track_index, item_id)
             return _create_success_response(f"MIDI notes in item {item_id}: {notes}")
         except Exception as e:
+            logger.error(f"Failed to get MIDI notes: {str(e)}")
             return _create_error_response(f"Failed to get MIDI notes: {str(e)}")
 
     @mcp.tool("find_midi_notes_by_pitch")
@@ -319,6 +336,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             notes = controller.find_midi_notes_by_pitch(pitch_min, pitch_max)
             return _create_success_response(f"MIDI notes in pitch range {pitch_min}-{pitch_max}: {notes}")
         except Exception as e:
+            logger.error(f"Failed to find MIDI notes: {str(e)}")
             return _create_error_response(f"Failed to find MIDI notes: {str(e)}")
 
     @mcp.tool("get_selected_midi_item")
@@ -328,10 +346,18 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             item_info = controller.get_selected_midi_item()
             return _create_success_response(f"Selected MIDI item: {item_info}")
         except Exception as e:
+            logger.error(f"Failed to get selected MIDI item: {str(e)}")
             return _create_error_response(f"Failed to get selected MIDI item: {str(e)}")
 
 def _setup_audio_tools(mcp: FastMCP, controller) -> None:
     """Setup audio-related MCP tools."""
+    _setup_audio_item_tools(mcp, controller)
+    _setup_item_property_tools(mcp, controller)
+    _setup_item_selection_tools(mcp, controller)
+
+
+def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
+    """Setup audio item creation and manipulation tools."""
     
     @mcp.tool("insert_audio_item")
     def insert_audio_item(ctx: Context, track_index: int, file_path: str,
@@ -344,8 +370,11 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
                 start_time = time_to_measure(start_measure)
             
             item_id = controller.insert_audio_item(track_index, file_path, start_time)
-            return _create_success_response(f"Inserted audio item {item_id} on track {track_index}")
+            return _create_success_response(
+                f"Inserted audio item {item_id} on track {track_index}"
+            )
         except Exception as e:
+            logger.error(f"Failed to insert audio item: {str(e)}")
             return _create_error_response(f"Failed to insert audio item: {str(e)}")
 
     @mcp.tool("duplicate_item")
@@ -359,10 +388,25 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
                 new_time = time_to_measure(new_measure)
             
             new_item_id = controller.duplicate_item(track_index, item_id, new_time)
-            return _create_success_response(f"Duplicated item {item_id} to {new_item_id}")
+            return _create_success_response(
+                f"Duplicated item {item_id} to {new_item_id}"
+            )
         except Exception as e:
+            logger.error(f"Failed to duplicate item: {str(e)}")
             return _create_error_response(f"Failed to duplicate item: {str(e)}")
 
+    @mcp.tool("delete_item")
+    def delete_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
+        """Delete an item from a track."""
+        return _handle_controller_operation(
+            f"Delete item {item_id} from track {track_index}",
+            controller.delete_item, track_index, item_id
+        )
+
+
+def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
+    """Setup item property manipulation tools."""
+    
     @mcp.tool("get_item_properties")
     def get_item_properties(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
         """Get properties of an item."""
@@ -370,6 +414,7 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
             properties = controller.get_item_properties(track_index, item_id)
             return _create_success_response(f"Item {item_id} properties: {properties}")
         except Exception as e:
+            logger.error(f"Failed to get item properties: {str(e)}")
             return _create_error_response(f"Failed to get item properties: {str(e)}")
 
     @mcp.tool("set_item_position")
@@ -387,6 +432,7 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
                 return _create_success_response(f"Set position of item {item_id}")
             return _create_error_response(f"Failed to set item position")
         except Exception as e:
+            logger.error(f"Failed to set item position: {str(e)}")
             return _create_error_response(f"Failed to set item position: {str(e)}")
 
     @mcp.tool("set_item_length")
@@ -398,14 +444,10 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
             controller.set_item_length, track_index, item_id, length
         )
 
-    @mcp.tool("delete_item")
-    def delete_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
-        """Delete an item from a track."""
-        return _handle_controller_operation(
-            f"Delete item {item_id} from track {track_index}",
-            controller.delete_item, track_index, item_id
-        )
 
+def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
+    """Setup item selection and query tools."""
+    
     @mcp.tool("get_items_in_time_range")
     def get_items_in_time_range(ctx: Context, track_index: int,
                                start_time: Optional[float] = None, 
@@ -423,6 +465,7 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
             items = controller.get_items_in_time_range(track_index, start_time, end_time)
             return _create_success_response(f"Items in time range: {items}")
         except Exception as e:
+            logger.error(f"Failed to get items in time range: {str(e)}")
             return _create_error_response(f"Failed to get items in time range: {str(e)}")
 
     @mcp.tool("get_selected_items")
@@ -432,6 +475,7 @@ def _setup_audio_tools(mcp: FastMCP, controller) -> None:
             items = controller.get_selected_items()
             return _create_success_response(f"Selected items: {items}")
         except Exception as e:
+            logger.error(f"Failed to get selected items: {str(e)}")
             return _create_error_response(f"Failed to get selected items: {str(e)}")
 
 def setup_mcp_tools(mcp: FastMCP, controller) -> None:

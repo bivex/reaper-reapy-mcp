@@ -5,7 +5,8 @@ from typing import Union
 # Constants to replace magic numbers
 DEFAULT_BEATS_PER_MEASURE = 4
 DEFAULT_BPM = 120.0
-DEFAULT_SECONDS_PER_BEAT = 60.0 / DEFAULT_BPM
+SECONDS_PER_MINUTE = 60.0
+DEFAULT_SECONDS_PER_BEAT = SECONDS_PER_MINUTE / DEFAULT_BPM
 DEFAULT_SECONDS_PER_MEASURE = DEFAULT_SECONDS_PER_BEAT * DEFAULT_BEATS_PER_MEASURE
 
 def position_to_time(position: Union[float, str], project=None) -> float:
@@ -27,7 +28,9 @@ def position_to_time(position: Union[float, str], project=None) -> float:
             measure, beat = map(float, position.split(':'))
             return _convert_measure_beat_to_time(measure, beat, project)
         except ValueError as e:
-            raise ValueError(f"Invalid measure:beat format: {position}") from e
+            raise ValueError(
+                f"Invalid measure:beat format: {position}"
+            ) from e
         
     return float(position)  # Try direct conversion
 
@@ -42,7 +45,7 @@ def _convert_measure_beat_to_time(measure: float, beat: float, project=None) -> 
         beats_per_measure = _get_beats_per_measure(project)
         
         # Calculate time conversion factors
-        seconds_per_beat = 60.0 / bpm
+        seconds_per_beat = SECONDS_PER_MINUTE / bpm
         seconds_per_measure = seconds_per_beat * beats_per_measure
         
         # Convert measure:beat to time (measures are 1-based in our interface)
@@ -86,7 +89,7 @@ def time_to_measure(time: float, project=None) -> str:
         beats_per_measure = _get_beats_per_measure(project)
         
         # Calculate time conversion factors
-        seconds_per_beat = 60.0 / bpm
+        seconds_per_beat = SECONDS_PER_MINUTE / bpm
         seconds_per_measure = seconds_per_beat * beats_per_measure
         
         # Convert time to measure:beat
@@ -98,9 +101,9 @@ def time_to_measure(time: float, project=None) -> str:
         
     except Exception as e:
         # Fallback: estimate based on default values
-        return _convert_time_to_measure_fallback(time)
+        return _time_to_measure_fallback(time)
 
-def _convert_time_to_measure_fallback(time: float) -> str:
+def _time_to_measure_fallback(time: float) -> str:
     """Convert time to measure:beat using default values as fallback."""
     measure = int(time // DEFAULT_SECONDS_PER_MEASURE) + 1
     beat_time = time % DEFAULT_SECONDS_PER_MEASURE

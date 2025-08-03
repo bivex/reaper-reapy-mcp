@@ -5,6 +5,9 @@ import re
 from typing import List, Dict, Any, Optional
 from reapy import reascript_api as RPR
 
+# Constants to replace magic numbers
+PLUGIN_NAME_INDEX = 2  # Index of plugin name in comma-separated format
+
 class FXController:
     """Controller for FX-related operations in Reaper."""
     
@@ -29,7 +32,9 @@ class FXController:
             track = project.tracks[track_index]
             
             # Add the FX using ReaScript API
-            fx_index = RPR.TrackFX_AddByName(track.id, fx_name, False, 0)
+            fx_index = RPR.TrackFX_AddByName(
+                track.id, fx_name, False, 0
+            )
             
             if fx_index >= 0:
                 self.logger.info(f"Added FX '{fx_name}' to track {track_index} at index {fx_index}")
@@ -58,7 +63,9 @@ class FXController:
             track = project.tracks[track_index]
             
             # Remove the FX using ReaScript API
-            success = RPR.TrackFX_Delete(track.id, fx_index)
+            success = RPR.TrackFX_Delete(
+                track.id, fx_index
+            )
             
             if success:
                 self.logger.info(f"Removed FX {fx_index} from track {track_index}")
@@ -93,7 +100,9 @@ class FXController:
             param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             for i in range(param_count):
-                param_name_retrieved = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_name_retrieved = RPR.TrackFX_GetParamName(
+                    track.id, fx_index, i, ""
+                )
                 if param_name_retrieved == param_name:
                     # Set the parameter value
                     success = RPR.TrackFX_SetParam(track.id, fx_index, i, value)
@@ -128,7 +137,9 @@ class FXController:
             param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             for i in range(param_count):
-                param_name_retrieved = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_name_retrieved = RPR.TrackFX_GetParamName(
+                    track.id, fx_index, i, ""
+                )
                 if param_name_retrieved == param_name:
                     # Get the parameter value
                     value = RPR.TrackFX_GetParam(track.id, fx_index, i)
@@ -161,7 +172,9 @@ class FXController:
             param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             for i in range(param_count):
-                param_name = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_name = RPR.TrackFX_GetParamName(
+                    track.id, fx_index, i, ""
+                )
                 param_value = RPR.TrackFX_GetParam(track.id, fx_index, i)
                 
                 param_info = {
@@ -196,7 +209,9 @@ class FXController:
             fx_count = RPR.TrackFX_GetCount(track.id)
             
             for i in range(fx_count):
-                fx_name = RPR.TrackFX_GetFXName(track.id, i, "")
+                fx_name = RPR.TrackFX_GetFXName(
+                    track.id, i, ""
+                )
                 enabled = RPR.TrackFX_GetEnabled(track.id, i)
                 
                 fx_info = {
@@ -229,7 +244,9 @@ class FXController:
             # Deduplicate and sort the list
             if fx_list:
                 unique_fx_list = sorted(list(set(fx_list)))
-                self.logger.info(f"Retrieved {len(unique_fx_list)} unique FX plugins")
+                self.logger.info(
+                    f"Retrieved {len(unique_fx_list)} unique FX plugins"
+                )
                 return unique_fx_list
             else:
                 self.logger.warning("No FX plugins found through any method")
@@ -323,7 +340,7 @@ class FXController:
         if ',' in right_part:
             comma_parts = right_part.split(',')
             if len(comma_parts) >= 3:
-                plugin_name = comma_parts[2].strip()
+                plugin_name = comma_parts[PLUGIN_NAME_INDEX].strip()
                 if plugin_name:
                     return plugin_name
         
@@ -362,7 +379,9 @@ class FXController:
             
             if success:
                 state_str = "enabled" if enable else "disabled"
-                self.logger.info(f"{state_str.capitalize()} FX {fx_index} on track {track_index}")
+                self.logger.info(
+                    f"{state_str.capitalize()} FX {fx_index} on track {track_index}"
+                )
             else:
                 self.logger.error(f"Failed to toggle FX {fx_index} on track {track_index}")
             

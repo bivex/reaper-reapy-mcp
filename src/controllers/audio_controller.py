@@ -5,7 +5,7 @@ from typing import Union
 import time
 from reapy import reascript_api as RPR
 
-from utils.item_utils import get_item_by_id_or_index, get_item_properties
+from utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
 from utils.item_operations import select_item, delete_item
 
 # Constants to replace magic numbers
@@ -48,8 +48,8 @@ class AudioController:
             # Store the number of items before insertion
             num_items_before = len(track.items)
             
-            # Insert the media file
-            RPR.InsertMedia(file_path, 0)  # 0 means "add media to selected tracks"
+            # Insert the media file (0 means "add media to selected tracks")
+            RPR.InsertMedia(file_path, 0)
             
             # Wait for insertion to complete
             time.sleep(INSERTION_WAIT_TIME)
@@ -115,7 +115,7 @@ class AudioController:
                 return {}
             
             # Get properties using shared utility
-            return get_item_properties(item)
+            return get_item_props(item)
             
         except Exception as e:
             self.logger.error(f"Failed to get item properties: {e}")
@@ -204,7 +204,9 @@ class AudioController:
                 new_position = self._calculate_duplicate_position(original_item)
             
             # Create the duplicate
-            return self._create_item_duplicate(original_item, track, new_position)
+            return self._create_item_duplicate(
+                original_item, track, new_position
+            )
             
         except Exception as e:
             self.logger.error(f"Failed to duplicate item: {e}")
@@ -308,7 +310,9 @@ class AudioController:
                 if item_start < end_time and item_end > start_time:
                     items_in_range.append(item.id)
             
-            self.logger.info(f"Found {len(items_in_range)} items in time range {start_time}-{end_time}")
+            self.logger.info(
+                f"Found {len(items_in_range)} items in time range {start_time}-{end_time}"
+            )
             return items_in_range
             
         except Exception as e:

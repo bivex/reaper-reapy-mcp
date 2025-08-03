@@ -12,6 +12,7 @@ DEFAULT_MIDI_VELOCITY = 96
 DEFAULT_MIDI_CHANNEL = 0
 MAX_MIDI_PITCH = 127
 MIN_MIDI_PITCH = 0
+MAX_MIDI_CHANNEL = 15
 
 class MIDIController:
     """Controller for MIDI-related operations in Reaper."""
@@ -40,7 +41,9 @@ class MIDIController:
             num_tracks = len(project.tracks)
             return track_index < num_tracks
         except Exception as e:
-            self.logger.error(f"Failed to validate track index: {e}")
+            self.logger.error(
+                f"Failed to validate track index: {e}"
+            )
             return False
             
     def _get_track(self, track_index: int) -> Optional[reapy.Track]:
@@ -59,7 +62,9 @@ class MIDIController:
         try:
             return reapy.Project().tracks[track_index]
         except Exception as e:
-            self.logger.error(f"Failed to get track {track_index}: {e}")
+            self.logger.error(
+                f"Failed to get track {track_index}: {e}"
+            )
             return None
 
     def _select_item(self, item: reapy.Item) -> bool:
@@ -99,7 +104,10 @@ class MIDIController:
             if track is None:
                 return -1
                 
-            self.logger.debug(f"Creating MIDI item on track {track_index} at position {start_time} with length {length}")
+            self.logger.debug(
+                f"Creating MIDI item on track {track_index} at position {start_time} "
+                f"with length {length}"
+            )
             
             # Create the item
             item = track.add_midi_item(start_time, start_time + length)
@@ -168,7 +176,9 @@ class MIDIController:
                 return False
             
             # Add the note using the MIDI take
-            take.add_midi_note(pitch, start_time, start_time + length, velocity, channel)
+            take.add_midi_note(
+                pitch, start_time, start_time + length, velocity, channel
+            )
             
             self.logger.info(f"Added MIDI note: pitch={pitch}, velocity={velocity}, channel={channel}")
             return True
@@ -187,8 +197,8 @@ class MIDIController:
             self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {MAX_MIDI_PITCH}")
             return False
         
-        if not (0 <= channel <= 15):
-            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and 15")
+        if not (0 <= channel <= MAX_MIDI_CHANNEL):
+            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and {MAX_MIDI_CHANNEL}")
             return False
         
         return True
