@@ -296,14 +296,16 @@ class AudioController:
             self.logger.error(error_message)
             return False
 
-    def get_items_in_time_range(self, track_index, start_time, end_time):
+    def get_items_in_time_range(self, track_index, start_time=None, end_time=None, start_measure=None, end_measure=None):
         """
         Get all items on a track within a time range.
         
         Args:
             track_index (int): Index of the track
-            start_time (float): Start time in seconds
-            end_time (float): End time in seconds
+            start_time (float): Start time in seconds (optional)
+            end_time (float): End time in seconds (optional)
+            start_measure (str): Start measure (optional, not used)
+            end_measure (str): End measure (optional, not used)
             
         Returns:
             list: List of item IDs within the time range
@@ -311,6 +313,12 @@ class AudioController:
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
+            
+            # Set default time range if not provided
+            if start_time is None:
+                start_time = 0.0
+            if end_time is None:
+                end_time = float('inf')  # Get all items
             
             items_in_range = []
             for item in track.items:
