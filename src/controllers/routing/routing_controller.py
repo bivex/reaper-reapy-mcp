@@ -174,20 +174,35 @@ class RoutingController:
             
             for i in range(send_count):
                 try:
-                    dest_track_id = RPR.GetTrackSendInfo_Value(track.id, 0, i, "P_DESTTRACK")
+                    # Get destination track pointer (this is a MediaTrack pointer, not a float)
+                    dest_track_pointer = RPR.GetTrackSendInfo_Value(track.id, 0, i, "P_DESTTRACK")
                     
-                    # Get destination track index using a different approach
+                    # Get destination track index
                     dest_track_index = -1
                     try:
-                        # Try to get track index directly
-                        dest_track_index = RPR.GetMediaTrackInfo_Value(dest_track_id, "IP_TRACKNUMBER") - 1
-                    except:
-                        # Fallback: iterate through all tracks to find the matching track
-                        project = reapy.Project()
-                        for idx, project_track in enumerate(project.tracks):
-                            if project_track.id == dest_track_id:
-                                dest_track_index = idx
-                                break
+                        # Convert the pointer to int for comparison
+                        dest_track_ptr_int = int(dest_track_pointer)
+                        if dest_track_ptr_int != 0:  # Valid pointer
+                            # Try to get track index directly from the MediaTrack pointer
+                            dest_track_index = int(RPR.GetMediaTrackInfo_Value(dest_track_ptr_int, "IP_TRACKNUMBER")) - 1
+                        else:
+                            self.logger.warning(f"Invalid destination track pointer for send {i}")
+                    except Exception as ptr_error:
+                        self.logger.debug(f"Failed to get track index from pointer: {ptr_error}")
+                        # Fallback: scan all tracks to find the matching one
+                        try:
+                            project = reapy.Project()
+                            for idx, project_track in enumerate(project.tracks):
+                                if int(project_track.id) == dest_track_ptr_int:
+                                    dest_track_index = idx
+                                    break
+                        except Exception as fallback_error:
+                            self.logger.debug(f"Fallback method also failed: {fallback_error}")
+                    
+                    # If we still don't have a valid index, log and skip
+                    if dest_track_index == -1:
+                        self.logger.warning(f"Could not determine destination track for send {i}, skipping")
+                        continue
                     
                     volume = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_VOL")
                     pan = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_PAN")
@@ -220,7 +235,7 @@ class RoutingController:
 
     def get_receives(self, track_index: int) -> List[ReceiveInfo]:
         """
-        Get all receives on a track.
+        Get all receives on a track by scanning all tracks for sends to this track.
         
         Args:
             track_index (int): Index of the track
@@ -229,63 +244,57 @@ class RoutingController:
             List[ReceiveInfo]: List of receive information
         """
         try:
-            track = self._get_track(track_index)
-            if track is None:
+            target_track = self._get_track(track_index)
+            if target_track is None:
                 return []
 
-            # Use ReaScript API to get receives
+            # Use ReaScript API
             import reapy.reascript_api as RPR
             
             receives = []
-            receive_count = RPR.GetTrackNumSends(track.id, 1)  # 1 for receives
+            project = reapy.Project()
             
-            self.logger.info(f"Found {receive_count} receives on track {track_index}")
-            self.logger.info(f"Track ID: {track.id}, Track name: {track.name}")
+            self.logger.info(f"Scanning all tracks for sends to track {track_index}")
             
-            # Also check sends count for comparison
-            send_count = RPR.GetTrackNumSends(track.id, 0)
-            self.logger.info(f"Track {track_index} has {send_count} sends and {receive_count} receives")
-            
-            for i in range(receive_count):
+            # Scan all tracks for sends to our target track
+            for source_idx, source_track in enumerate(project.tracks):
                 try:
-                    source_track_id = RPR.GetTrackSendInfo_Value(track.id, 1, i, "P_SRCTRACK")
+                    send_count = RPR.GetTrackNumSends(source_track.id, 0)  # 0 for sends
                     
-                    # Get source track index using a different approach
-                    source_track_index = -1
-                    try:
-                        # Try to get track index directly
-                        source_track_index = RPR.GetMediaTrackInfo_Value(source_track_id, "IP_TRACKNUMBER") - 1
-                    except:
-                        # Fallback: iterate through all tracks to find the matching track
-                        project = reapy.Project()
-                        for idx, project_track in enumerate(project.tracks):
-                            if project_track.id == source_track_id:
-                                source_track_index = idx
-                                break
-                    
-                    volume = RPR.GetTrackSendInfo_Value(track.id, 1, i, "D_VOL")
-                    pan = RPR.GetTrackSendInfo_Value(track.id, 1, i, "D_PAN")
-                    mute = bool(RPR.GetTrackSendInfo_Value(track.id, 1, i, "B_MUTE"))
-                    phase = bool(RPR.GetTrackSendInfo_Value(track.id, 1, i, "B_PHASE"))
-                    channels = int(RPR.GetTrackSendInfo_Value(track.id, 1, i, "I_SRCCHAN"))
-                    
-                    receive_info = ReceiveInfo(
-                        receive_id=i,
-                        source_track=source_track_index,
-                        destination_track=track_index,
-                        volume=volume,
-                        pan=pan,
-                        mute=mute,
-                        phase=phase,
-                        channels=channels
-                    )
-                    receives.append(receive_info)
-                    self.logger.info(f"Receive {i}: {source_track_index} -> {track_index}, vol={volume}, pan={pan}, mute={mute}")
-                    
-                except Exception as receive_error:
-                    self.logger.error(f"Failed to get receive {i}: {receive_error}")
+                    for send_idx in range(send_count):
+                        try:
+                            # Get destination track of this send
+                            dest_track_id = RPR.GetTrackSendInfo_Value(source_track.id, 0, send_idx, "P_DESTTRACK")
+                            
+                            # Check if this send goes to our target track
+                            if dest_track_id == target_track.id:
+                                # This is a receive for our target track
+                                volume = RPR.GetTrackSendInfo_Value(source_track.id, 0, send_idx, "D_VOL")
+                                pan = RPR.GetTrackSendInfo_Value(source_track.id, 0, send_idx, "D_PAN")
+                                mute = bool(RPR.GetTrackSendInfo_Value(source_track.id, 0, send_idx, "B_MUTE"))
+                                phase = bool(RPR.GetTrackSendInfo_Value(source_track.id, 0, send_idx, "B_PHASE"))
+                                channels = int(RPR.GetTrackSendInfo_Value(source_track.id, 0, send_idx, "I_SRCCHAN"))
+                                
+                                receive_info = ReceiveInfo(
+                                    receive_id=len(receives),  # Sequential receive ID
+                                    source_track=source_idx,
+                                    destination_track=track_index,
+                                    volume=volume,
+                                    pan=pan,
+                                    mute=mute,
+                                    phase=phase,
+                                    channels=channels
+                                )
+                                receives.append(receive_info)
+                                self.logger.info(f"Found receive: Track {source_idx} -> Track {track_index}, vol={volume}, pan={pan}, mute={mute}")
+                                
+                        except Exception as send_error:
+                            self.logger.debug(f"Error checking send {send_idx} on track {source_idx}: {send_error}")
+                            
+                except Exception as track_error:
+                    self.logger.debug(f"Error scanning track {source_idx}: {track_error}")
 
-            self.logger.info(f"Successfully processed {len(receives)} receives on track {track_index}")
+            self.logger.info(f"Found {len(receives)} receives for track {track_index}")
             return receives
 
         except Exception as e:
