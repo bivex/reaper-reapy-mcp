@@ -91,6 +91,10 @@ class ReaperController:
         """Save the current project."""
         return self.project.save_project(filepath)
     
+    def clear_project(self) -> bool:
+        """Clear all items from all tracks in the project."""
+        return self.project.clear_project()
+    
     # Marker operations
     def add_marker(self, position: float, name: str = "") -> bool:
         """Add a marker at the specified position."""

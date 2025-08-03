@@ -117,6 +117,14 @@ def _setup_project_tools(mcp: FastMCP, controller) -> None:
             logger.error(f"Failed to get tempo: {str(e)}")
             return _create_error_response(f"Failed to get tempo: {str(e)}")
 
+    @mcp.tool("clear_project")
+    def clear_project(ctx: Context) -> Dict[str, Any]:
+        """Clear all items from all tracks in the project."""
+        return _handle_controller_operation(
+            "Clear all items from project",
+            controller.clear_project
+        )
+
 def _setup_fx_tools(mcp: FastMCP, controller) -> None:
     """Setup FX-related MCP tools."""
     _setup_fx_add_remove_tools(mcp, controller)

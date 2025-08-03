@@ -46,3 +46,29 @@ class ProjectController:
             error_message = f"Failed to get tempo: {e}"
             self.logger.error(error_message)
             return None
+
+    def clear_project(self) -> bool:
+        """
+        Clear all items from all tracks in the project.
+        
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            project = reapy.Project()
+            
+            # Clear all items from all tracks
+            for track in project.tracks:
+                # Get all items on this track
+                items_to_delete = list(track.items)  # Create a copy of the list
+                
+                # Delete each item
+                for item in items_to_delete:
+                    item.delete()
+            
+            self.logger.info("Cleared all items from project")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Failed to clear project: {e}")
+            return False
