@@ -12,6 +12,7 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 - **Master Track Control**: Volume, pan, mute, and solo operations
 - **MIDI Operations**: Create items, add/get notes, clear items with musical positioning
 - **Audio Item Operations**: Insert, duplicate, modify with enhanced positioning support
+- **Routing Management**: Create, manage, and control track sends and receives
 - **Dual Position Format**: Support both time (seconds) and measure:beat notation
 - **Reliable Duplication**: Uses REAPER's built-in commands for accurate item copying
 - **MCP Integration**: Model Context Protocol server for AI assistant control
@@ -66,60 +67,89 @@ python -m src.run_mcp_server
    test_mcp.bat
    ```
 
-Available MCP tools:
+## Available MCP Tools
 
-#### Track Management
-- `test_connection`: Verify connection to REAPER
-- `create_track`: Create a new track
-- `rename_track`: Rename an existing track
-- `set_track_color`: Set track color
-- `get_track_color`: Get track color
+### Connection & Testing
+| Tool | Description |
+|------|-------------|
+| `test_connection` | Verify connection to REAPER |
 
-#### FX Management
-- `add_fx`: Add an FX to a track
-- `remove_fx`: Remove an FX from a track
-- `set_fx_param`: Set FX parameter value
-- `get_fx_param`: Get FX parameter value
-- `get_fx_param_list`: Get list of FX parameters
-- `get_fx_list`: Get list of FX on a track
-- `get_available_fx_list`: Get list of available FX plugins
-- `toggle_fx`: Toggle FX enable/disable state
+### Track Management
+| Tool | Description |
+|------|-------------|
+| `create_track` | Create a new track |
+| `rename_track` | Rename an existing track |
+| `set_track_color` | Set track color |
+| `get_track_color` | Get track color |
+| `get_track_count` | Get number of tracks in project |
 
-#### Project Control
-- `set_tempo`: Set project tempo
-- `get_tempo`: Get current tempo
-- `create_region`: Create a region
-- `delete_region`: Delete a region
-- `create_marker`: Create a marker
-- `delete_marker`: Delete a marker
+### Routing Management
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `add_send` | Add a send from source track to destination track | `source_track`, `destination_track`, `volume`, `pan`, `mute`, `phase`, `channels` |
+| `remove_send` | Remove a specific send from a track | `source_track`, `send_id` |
+| `get_sends` | Get all sends from a track | `track_index` |
+| `get_receives` | Get all receives on a track | `track_index` |
+| `set_send_volume` | Set the volume of a send | `source_track`, `send_id`, `volume` |
+| `set_send_pan` | Set the pan of a send | `source_track`, `send_id`, `pan` |
+| `toggle_send_mute` | Toggle or set the mute state of a send | `source_track`, `send_id`, `mute` |
+| `get_track_routing_info` | Get comprehensive routing information for a track | `track_index` |
+| `debug_track_routing` | Debug track routing information for troubleshooting | `track_index` |
+| `clear_all_sends` | Remove all sends from a track | `track_index` |
+| `clear_all_receives` | Remove all receives from a track | `track_index` |
 
-#### Master Track
-- `get_master_track`: Get master track information
-- `set_master_volume`: Set master track volume
-- `set_master_pan`: Set master track pan
-- `toggle_master_mute`: Toggle master track mute
-- `toggle_master_solo`: Toggle master track solo
+### FX Management
+| Tool | Description |
+|------|-------------|
+| `add_fx` | Add an FX to a track |
+| `remove_fx` | Remove an FX from a track |
+| `set_fx_param` | Set FX parameter value |
+| `get_fx_param` | Get FX parameter value |
+| `get_fx_param_list` | Get list of FX parameters |
+| `get_fx_list` | Get list of FX on a track |
+| `get_available_fx_list` | Get list of available FX plugins |
+| `toggle_fx` | Toggle FX enable/disable state |
 
-#### MIDI Operations
-- `create_midi_item`: Create an empty MIDI item on a track
-  - Supports both time (seconds) and measure:beat positioning
-- `add_midi_note`: Add a MIDI note to a MIDI item
-- `get_midi_notes`: Get all MIDI notes from a MIDI item
-- `clear_midi_item`: Clear all MIDI notes from a MIDI item
+### Project Control
+| Tool | Description |
+|------|-------------|
+| `set_tempo` | Set project tempo |
+| `get_tempo` | Get current tempo |
+| `create_region` | Create a region |
+| `delete_region` | Delete a region |
+| `create_marker` | Create a marker |
+| `delete_marker` | Delete a marker |
 
-#### Audio Item Operations
-- `insert_audio_item`: Insert an audio file as a media item
-  - Supports both time (seconds) and measure:beat positioning
-- `duplicate_item`: Duplicate an existing item (MIDI or audio)
-  - Uses REAPER's built-in duplication for reliable copying
-  - Supports both time (seconds) and measure:beat positioning
-- `get_item_properties`: Get properties of a media item
-- `set_item_position`: Set the position of a media item
-  - Supports both time (seconds) and measure:beat positioning
-- `set_item_length`: Set the length of a media item
-- `delete_item`: Delete a media item
-- `get_items_in_time_range`: Get items within a time range
-  - Supports both time (seconds) and measure:beat positioning
+### Master Track
+| Tool | Description |
+|------|-------------|
+| `get_master_track` | Get master track information |
+| `set_master_volume` | Set master track volume |
+| `set_master_pan` | Set master track pan |
+| `toggle_master_mute` | Toggle master track mute |
+| `toggle_master_solo` | Toggle master track solo |
+
+### MIDI Operations
+| Tool | Description | Position Support |
+|------|-------------|-----------------|
+| `create_midi_item` | Create an empty MIDI item on a track | Time & Measure:Beat |
+| `add_midi_note` | Add a MIDI note to a MIDI item | Time only |
+| `get_midi_notes` | Get all MIDI notes from a MIDI item | - |
+| `clear_midi_item` | Clear all MIDI notes from a MIDI item | - |
+| `find_midi_notes_by_pitch` | Find MIDI notes within a pitch range | - |
+| `get_selected_midi_item` | Get the currently selected MIDI item | - |
+
+### Audio Item Operations
+| Tool | Description | Position Support |
+|------|-------------|-----------------|
+| `insert_audio_item` | Insert an audio file as a media item | Time & Measure:Beat |
+| `duplicate_item` | Duplicate an existing item (MIDI or audio) | Time & Measure:Beat |
+| `get_item_properties` | Get properties of a media item | - |
+| `set_item_position` | Set the position of a media item | Time & Measure:Beat |
+| `set_item_length` | Set the length of a media item | - |
+| `delete_item` | Delete a media item | - |
+| `get_items_in_time_range` | Get items within a time range | Time & Measure:Beat |
+| `get_selected_items` | Get all selected items | - |
 
 ### Item ID System
 All item operations use a sequential index system (0..n) for item identification. This makes it easier to work with items in scripts and automation:
@@ -159,6 +189,64 @@ Many MCP tools now support dual position formats for enhanced musical workflow:
 - `set_item_position` - position via `new_time` OR `new_measure`
 - `get_items_in_time_range` - range via time OR measure parameters
 
+### Routing Examples
+
+Here are some common routing scenarios using the new routing tools:
+
+#### Basic Send Creation
+```python
+# Create a send from track 0 to track 1 with -6dB volume
+add_send(source_track=0, destination_track=1, volume=-6.0, pan=0.0)
+
+# Create a send with pan and mute
+add_send(source_track=1, destination_track=2, volume=-3.0, pan=0.5, mute=False)
+```
+
+#### Managing Send Parameters
+```python
+# Set send volume
+set_send_volume(source_track=0, send_id=0, volume=-12.0)
+
+# Set send pan
+set_send_pan(source_track=0, send_id=0, pan=0.25)
+
+# Toggle send mute
+toggle_send_mute(source_track=0, send_id=0)
+```
+
+#### Getting Routing Information
+```python
+# Get all sends from a track
+get_sends(track_index=0)
+
+# Get all receives on a track
+get_receives(track_index=1)
+
+# Get comprehensive routing info
+get_track_routing_info(track_index=0)
+```
+
+#### Debugging Routing Issues
+```python
+# Debug routing information for troubleshooting
+debug_track_routing(track_index=0)
+```
+
+#### Cleaning Up Routing
+```python
+# Remove all sends from a track
+clear_all_sends(track_index=0)
+
+# Remove all receives from a track
+clear_all_receives(track_index=1)
+```
+
+**Note**: All routing tools are fully functional and tested. The `destination_track` field now correctly shows track indices instead of -1.0, and all send/receive operations work reliably with proper MediaTrack pointer handling.
+
+### MCP Client Configuration
+
+The following configurations are for different MCP clients to connect to this REAPER MCP server:
+
 ### Claude configuration (with uv run):
 ```json
 {
@@ -192,6 +280,49 @@ Many MCP tools now support dual position formats for enhanced musical workflow:
     }
 }
 ```
+
+### Cursor MCP Configuration
+
+To connect this MCP server to Cursor, add the following configuration to your `~/.cursor/mcp.json` file:
+
+#### Using uv (Recommended)
+```json
+{
+  "mcpServers": {
+    "reaper-reapy-mcp": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "C:\\Users\\Admin\\Desktop\\Dev\\reaper-reapy-mcp",
+        "run",
+        "-m",
+        "src.run_mcp_server"
+      ]
+    }
+  }
+}
+```
+
+#### Using Python directly
+```json
+{
+  "mcpServers": {
+    "reaper-reapy-mcp": {
+      "command": "python",
+      "args": [
+        "C:\\Users\\Admin\\Desktop\\Dev\\reaper-reapy-mcp\\src\\run_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+**Note**: Replace `C:\\Users\\Admin\\Desktop\\Dev\\reaper-reapy-mcp` with the actual path to your project folder.
+
+After adding the configuration:
+1. Restart Cursor
+2. The MCP server will be available in your Cursor environment
+3. You can use all the routing, track management, and other tools directly in Cursor
 
 ## Contributing
 
