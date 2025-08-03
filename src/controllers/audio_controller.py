@@ -5,12 +5,17 @@ from typing import Union
 import time
 from reapy import reascript_api as RPR
 
-from .base_controller import BaseController
+
 from utils.item_utils import get_item_by_id_or_index, get_item_properties, select_item, delete_item
 
-class AudioController(BaseController):
+class AudioController:
     """Controller for audio-related operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def insert_audio_item(self, track_index: int, file_path: str, start_time: float) -> Union[int, str]:
         """
         Insert an audio file as a media item on a track.

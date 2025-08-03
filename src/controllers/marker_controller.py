@@ -2,11 +2,15 @@ import reapy
 import logging
 from typing import Dict, Any
 
-from .base_controller import BaseController
 
-class MarkerController(BaseController):
+class MarkerController:
     """Controller for marker and region-related operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def create_region(self, start_time: float, end_time: float, name: str) -> int:
         """
         Create a region in the project.

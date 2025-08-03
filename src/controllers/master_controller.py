@@ -2,11 +2,15 @@ import reapy
 import logging
 from typing import Dict, Any, Optional
 
-from .base_controller import BaseController
 
-class MasterController(BaseController):
+class MasterController:
     """Controller for master track operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def get_master_track(self) -> Dict[str, Any]:
         """Get information about the master track."""
         try:

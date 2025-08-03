@@ -2,10 +2,14 @@ import reapy
 import logging
 from typing import Optional, Union
 
-from .base_controller import BaseController
 
-class ProjectController(BaseController):
+class ProjectController:
     """Controller for project-level operations in Reaper."""
+    
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
     
     def set_tempo(self, bpm: float) -> bool:
         """

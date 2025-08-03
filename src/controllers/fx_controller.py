@@ -5,11 +5,15 @@ import re
 import time
 from typing import List, Dict, Any
 
-from .base_controller import BaseController
 
-class FXController(BaseController):
+class FXController:
     """Controller for FX-related operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def add_fx(self, track_index: int, fx_name: str) -> int:
         """
         Add an FX to a track.

@@ -2,11 +2,15 @@ import reapy
 import logging
 from typing import Optional
 
-from .base_controller import BaseController
 
-class TrackController(BaseController):
+class TrackController:
     """Controller for track-related operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def create_track(self, name: Optional[str] = None) -> int:
         """
         Create a new track in Reaper.

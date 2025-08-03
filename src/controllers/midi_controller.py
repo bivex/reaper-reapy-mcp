@@ -5,9 +5,53 @@ from typing import List, Dict, Any, Optional, Union, Tuple
 from .base_controller import BaseController
 from src.utils.item_utils import get_item_by_id_or_index, get_item_properties, select_item, delete_item
 
-class MIDIController(BaseController):
+class MIDIController:
     """Controller for MIDI-related operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
+    def _validate_track_index(self, track_index: int) -> bool:
+        """
+        Validate that a track index is within valid range.
+        
+        Args:
+            track_index (int): The track index to validate
+            
+        Returns:
+            bool: True if valid, False if invalid
+        """
+        try:
+            track_index = int(track_index)
+            if track_index < 0:
+                return False
+                
+            project = reapy.Project()
+            num_tracks = len(project.tracks)
+            return track_index < num_tracks
+        except Exception:
+            return False
+            
+    def _get_track(self, track_index: int) -> Optional[reapy.Track]:
+        """
+        Get a track by index with validation.
+        
+        Args:
+            track_index (int): The track index to get
+            
+        Returns:
+            Optional[reapy.Track]: The track if valid, None if invalid
+        """
+        if not self._validate_track_index(track_index):
+            return None
+            
+        try:
+            return reapy.Project().tracks[track_index]
+        except Exception:
+            return None
+
     def _select_item(self, item: reapy.Item) -> bool:
         """
         Helper function to select an item.
@@ -98,8 +142,8 @@ class MIDIController(BaseController):
             track_index (int): Index of the track containing the MIDI item
             item_id (int or str): ID of the MIDI item
             pitch (int): MIDI note pitch (0-127)
-            start_time (float): Start time in seconds (relative to item start)
-            length (float): Note length in seconds
+            start_time (float): Start time of the note within the MIDI item in seconds
+            length (float): Length of the note in seconds
             velocity (int): Note velocity (0-127)
             channel (int): MIDI channel (0-15)
             
@@ -107,116 +151,63 @@ class MIDIController(BaseController):
             bool: True if successful, False otherwise
         """
         try:
-            track_index = int(track_index)
-            pitch = int(pitch)
-            start_time = float(start_time)
-            length = float(length)
-            velocity = int(velocity)
-            channel = int(channel)
-
-            # Try to add the note to Reaper project
-            try:
-                project = reapy.Project()
-                track = project.tracks[track_index]
-                
-                # Use shared utility to find the item
-                item = get_item_by_id_or_index(track, item_id)
-                if item is None:
-                    return False
-                
-                take = item.active_take
-                if take is None:
-                    self.logger.error("Item has no active take")
-                    return False
-                
-                item_start = item.position
-                note_start = item_start + start_time
-                note_end = note_start + length
-                
-                # Make sure item is selected
-                project.select_all_items(False)
-                try:
-                    self._select_item(item)
-                except Exception as e:
-                    self.logger.warning(f"Failed to select item, but continuing: {e}")
-                
-                take.add_note(note_start, note_end, channel=channel, pitch=pitch, velocity=velocity)
-                self.logger.info(f"Added MIDI note: pos={note_start}, pitch={pitch}")
-                
-                return True
-                
-            except Exception as e:
-                self.logger.error(f"Failed to add MIDI note to Reaper: {e}")
+            item = get_item_by_id_or_index(reapy.Project().tracks[track_index], item_id)
+            if item is None:
+                self.logger.error(f"MIDI item with ID {item_id} not found on track {track_index}")
                 return False
-                
+
+            # Ensure the item is a MIDI item and has an active take
+            if not item.is_midi or not item.active_take:
+                self.logger.error(f"Item {item_id} on track {track_index} is not a valid MIDI item or has no active take.")
+                return False
+
+            midi_take = item.active_take
+            
+            # Add note
+            midi_take.add_note(
+                pitch=pitch,
+                start_time=start_time,
+                length=length,
+                velocity=velocity,
+                channel=channel
+            )
+            
+            self.logger.info(f"Added MIDI note: pitch={pitch}, start={start_time}, length={length}")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to add MIDI note: {e}")
             return False
-    
-    def clear_midi_item(self, track_index, item_id):
+
+    def clear_midi_item(self, track_index: int, item_id: Union[int, str]) -> bool:
         """
         Clear all MIDI notes from a MIDI item.
         
         Args:
             track_index (int): Index of the track containing the MIDI item
-            item_id (int or str): ID of the MIDI item to clear
+            item_id (int or str): ID of the MIDI item
             
         Returns:
             bool: True if successful, False otherwise
         """
-        self.logger.debug(f"Clearing MIDI notes from track {track_index}, item {item_id}")
-        
         try:
-            # Validate track index first
-            track_index = int(track_index)
-            project = reapy.Project()
-            num_tracks = len(project.tracks)
-            if track_index < 0 or track_index >= num_tracks:
-                self.logger.error(f"Track index {track_index} out of range (project has {num_tracks} tracks)")
-                return False
-                
-            track = project.tracks[track_index]
-            
-            # Use shared utility to find the item
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(reapy.Project().tracks[track_index], item_id)
             if item is None:
+                self.logger.error(f"MIDI item with ID {item_id} not found on track {track_index}")
                 return False
-            
-            # Get the current take
-            take = item.active_take
-            if take is None:
-                self.logger.error("Item has no active take")
+
+            if not item.is_midi or not item.active_take:
+                self.logger.error(f"Item {item_id} on track {track_index} is not a valid MIDI item or has no active take.")
                 return False
-            
-            # Store the item's position and length
-            position = item.position
-            length = item.length
-            
-            # Create a new empty MIDI item at the same position
-            new_item = track.add_midi_item(position, position + length)
-            if new_item is None:
-                self.logger.error("Failed to create new MIDI item")
-                return False
-            
-            # Delete the old item
-            if not delete_item(item):
-                self.logger.error("Failed to delete old MIDI item")
-                return False
-            
-            # Return the index of the new item
-            for i, track_item in enumerate(track.items):
-                if track_item.id == new_item.id:
-                    self.logger.info(f"Created new empty MIDI item at index {i}")
-                    return True
-            
-            self.logger.error("Failed to find the new MIDI item")
-            return False
-            
+
+            midi_take = item.active_take
+            midi_take.clear_notes()
+            self.logger.info(f"Cleared all MIDI notes from item {item_id}")
+            return True
         except Exception as e:
             self.logger.error(f"Failed to clear MIDI item: {e}")
             return False
-    
-    def get_midi_notes(self, track_index, item_id):
+
+    def get_midi_notes(self, track_index: int, item_id: Union[int, str]) -> List[Dict[str, Any]]:
         """
         Get all MIDI notes from a MIDI item.
         
@@ -225,187 +216,97 @@ class MIDIController(BaseController):
             item_id (int or str): ID of the MIDI item
             
         Returns:
-            list: A list of dictionaries containing MIDI note data with keys:
-                - pitch (int): MIDI note number
-                - start_time (float): Start time in seconds
-                - end_time (float): End time in seconds
-                - velocity (int): Note velocity (0-127)
-                - channel (int): MIDI channel
+            List[Dict[str, Any]]: List of dictionaries, each representing a MIDI note
         """
-        self.logger.debug(f"Getting MIDI notes from track {track_index}, item {item_id}")
-        
-        try:                
-            # Get actual notes from REAPER
-            project = reapy.Project()
-            track = project.tracks[track_index]
-            
-            # Use shared utility to find the item
-            item = get_item_by_id_or_index(track, item_id)
+        try:
+            item = get_item_by_id_or_index(reapy.Project().tracks[track_index], item_id)
             if item is None:
+                self.logger.error(f"MIDI item with ID {item_id} not found on track {track_index}")
                 return []
-            
-            take = item.active_take
-            if take is None:
-                self.logger.error("Item has no active take")
+
+            if not item.is_midi or not item.active_take:
+                self.logger.error(f"Item {item_id} on track {track_index} is not a valid MIDI item or has no active take.")
                 return []
-                
-            item_start = item.position
-            
-            # Get MIDI notes using REAPER API
-            from reapy import reascript_api as RPR
-            
-            # Make sure item is selected for MIDI operations
-            project.select_all_items(False)
-            try:
-                self._select_item(item)
-            except Exception as e:
-                self.logger.warning(f"Failed to select item, but continuing: {e}")
-            
-            # Get all MIDI notes
-            notes = []
-            for note in take.notes:
-                notes.append({
-                    'pitch': note.pitch,
-                    'start_time': note.start - item_start,  # Subtract item start to get time relative to item
-                    'end_time': note.end - item_start,      # Subtract item start to get time relative to item
-                    'velocity': note.velocity,
-                    'channel': note.channel
+
+            midi_take = item.active_take
+            notes_data = []
+            for note in midi_take.notes:
+                notes_data.append({
+                    "pitch": note.pitch,
+                    "start_time": note.start_time,
+                    "length": note.length,
+                    "velocity": note.velocity,
+                    "channel": note.channel,
                 })
-            
-            self.logger.info(f"Found {len(notes)} MIDI notes in item")
-            return notes
-            
+            return notes_data
         except Exception as e:
             self.logger.error(f"Failed to get MIDI notes: {e}")
             return []
-    
-    def find_midi_notes_by_pitch(self, pitch_min=0, pitch_max=127):
+
+    def find_midi_notes_by_pitch(self, pitch_min: int = 0, pitch_max: int = 127) -> List[Dict[str, Any]]:
         """
-        Find all MIDI notes within a specific pitch range across the project.
+        Find all MIDI notes within a pitch range across all MIDI items in the current project.
         
         Args:
-            pitch_min (int): Minimum MIDI pitch to search for (0-127)
-            pitch_max (int): Maximum MIDI pitch to search for (0-127)
+            pitch_min (int): Minimum pitch to search for (inclusive, 0-127)
+            pitch_max (int): Maximum pitch to search for (inclusive, 0-127)
             
         Returns:
-            list: A list of dictionaries containing found MIDI notes with keys:
-                - track_index (int): Index of the track containing the note
-                - item_id (int or str): ID of the MIDI item containing the note
-                - pitch (int): MIDI note number
-                - start_time (float): Start time in seconds
-                - end_time (float): End time in seconds
-                - velocity (int): Note velocity (0-127)
-                - channel (int): MIDI channel
+            List[Dict[str, Any]]: A list of dictionaries, each representing a MIDI note found,
+                                  including its track index and item ID.
         """
-        self.logger.debug(f"Finding MIDI notes with pitch between {pitch_min} and {pitch_max}")
-        
-        try:
-            # Find notes in actual REAPER project
-            project = reapy.Project()
-            matching_notes = []
-            
-            # Iterate through all tracks
-            for track_index, track in enumerate(project.tracks):
-                # Iterate through all items on this track
-                for item_index, item in enumerate(track.items):
-                    take = item.active_take
-                    if take is None:
-                        continue
-                    
-                    # Skip non-MIDI takes
-                    if not take.is_midi:
-                        continue
-                    
-                    # Remember item start position for relative time calculation
-                    item_start = item.position
-                    
-                    # Make sure item is selected for MIDI operations
-                    project.select_all_items(False)
-                    try:
-                        self._select_item(item)
-                    except Exception as e:
-                        self.logger.warning(f"Failed to select item, but continuing: {e}")
-                    
-                    # Get all MIDI notes from this take
-                    for note in take.notes:
+        found_notes = []
+        project = reapy.Project()
+        for track_index, track in enumerate(project.tracks):
+            for item in track.items:
+                if item.is_midi and item.active_take:
+                    midi_take = item.active_take
+                    for note in midi_take.notes:
                         if pitch_min <= note.pitch <= pitch_max:
-                            matching_notes.append({
-                                'track_index': track_index,
-                                'item_id': item_index,  # Use item index for consistency
-                                'pitch': note.pitch,
-                                'start_time': note.start - item_start,
-                                'end_time': note.end - item_start,
-                                'velocity': note.velocity,
-                                'channel': note.channel
+                            found_notes.append({
+                                "track_index": track_index,
+                                "item_id": item.id,
+                                "pitch": note.pitch,
+                                "start_time": note.start_time,
+                                "length": note.length,
+                                "velocity": note.velocity,
+                                "channel": note.channel,
                             })
-            
-            self.logger.info(f"Found {len(matching_notes)} matching notes in project")
-            return matching_notes
-            
-        except Exception as e:
-            self.logger.error(f"Failed to find MIDI notes by pitch: {e}")
-            return []
-    
-    def get_all_midi_items(self):
+        return found_notes
+
+    def get_all_midi_items(self) -> List[Dict[str, Union[int, str, float]]]:
         """
-        Get all MIDI items in the project.
+        Get information about all MIDI items in the current project.
         
         Returns:
-            list: A list of dictionaries containing MIDI item data with keys:
-                - track_index (int): Index of the track containing the item
-                - item_id (int or str): ID of the MIDI item
-                - position (float): Start position in seconds
-                - length (float): Length in seconds
-                - name (str): Name of the MIDI item
+            List[Dict[str, Union[int, str, float]]]: A list of dictionaries, each representing a MIDI item,
+                                                      including its track index, item ID, position, and length.
         """
-        self.logger.debug("Getting all MIDI items in the project")
-        
-        try:
-            # Find MIDI items in actual REAPER project
-            project = reapy.Project()
-            midi_items = []
-            
-            # Iterate through all tracks
-            for track_index, track in enumerate(project.tracks):
-                # Iterate through all items on this track
-                for item_index, item in enumerate(track.items):
-                    take = item.active_take
-                    if take is None:
-                        continue
-                    
-                    # Skip non-MIDI takes
-                    if not take.is_midi:
-                        continue
-                    
-                    # Use shared utility to get properties
-                    properties = get_item_properties(item)
-                    properties.update({
-                        'track_index': track_index,
-                        'item_id': item_index  # Use item index for consistency
+        all_midi_items = []
+        project = reapy.Project()
+        for track_index, track in enumerate(project.tracks):
+            for item in track.items:
+                if item.is_midi:
+                    all_midi_items.append({
+                        "track_index": track_index,
+                        "item_id": item.id,
+                        "position": item.position,
+                        "length": item.length,
+                        "name": item.active_take.name if item.active_take else ""
                     })
-                    midi_items.append(properties)
-            
-            self.logger.info(f"Found {len(midi_items)} MIDI items in project")
-            return midi_items
-            
-        except Exception as e:
-            self.logger.error(f"Failed to get all MIDI items: {e}")
-            return []
-
+        return all_midi_items
+    
     def get_selected_midi_item(self) -> Optional[Dict[str, int]]:
         """
-        Get the first selected MIDI item in the current project.
+        Get the currently selected MIDI item, if any.
+
         Returns:
-            dict: { 'track_index': int, 'item_id': int } or None if not found
+            Optional[Dict[str, int]]: A dictionary containing the track index and item ID of the selected MIDI item,
+                                      or None if no MIDI item is selected.
         """
-        try:
-            from reapy import reascript_api as RPR
-            project = reapy.Project()
-            for track_index, track in enumerate(project.tracks):
-                for item_index, item in enumerate(track.items):
-                    if RPR.IsMediaItemSelected(item.id) and item.active_take and item.active_take.is_midi:
-                        return {'track_index': track_index, 'item_id': item_index}
-            return None
-        except Exception as e:
-            self.logger.error(f"Failed to get selected MIDI item: {e}")
-            return None
+        project = reapy.Project()
+        for track_index, track in enumerate(project.tracks):
+            for item in track.items:
+                if item.selected and item.is_midi:
+                    return {"track_index": track_index, "item_id": item.id}
+        return None
