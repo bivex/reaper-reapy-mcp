@@ -44,8 +44,9 @@ class AutomationController:
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
             
-            # Create the envelope
-            envelope_index = RPR.GetEnvelopeByName(track.id, envelope_type)
+            # Create the envelope using the correct API function
+            # First try to get existing envelope
+            envelope_index = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope_index == -1:
                 # Create new envelope if it doesn't exist
@@ -92,13 +93,13 @@ class AutomationController:
             }
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = RPR.GetEnvelopeByName(track.id, envelope_type)
+            envelope = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope == -1:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
                 return False
             
-            # Add automation point
+            # Add automation point using the correct API function
             point_index = RPR.InsertEnvelopePoint(envelope, time, value, shape, 0, False, True)
             
             self.logger.info(f"Added automation point at {time}s with value {value} on track {track_index}")
@@ -139,7 +140,7 @@ class AutomationController:
             }
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = RPR.GetEnvelopeByName(track.id, envelope_type)
+            envelope = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope == -1:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
@@ -273,7 +274,7 @@ class AutomationController:
             }
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = RPR.GetEnvelopeByName(track.id, envelope_type)
+            envelope = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope == -1:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
