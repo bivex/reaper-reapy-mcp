@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.reaper_controller import ReaperController
 from src.utils.sample_audio import ensure_sample_file
+from src.controllers.midi.midi_controller import MIDIController
 
 # Constants to replace magic numbers
 DEFAULT_TEMPO = 120.0
@@ -17,12 +18,12 @@ DEFAULT_MASTER_PAN = 0.5
 DEFAULT_REGION_START_TIME = 0.0
 DEFAULT_REGION_END_TIME = 10.0
 DEFAULT_MARKER_TIME = 5.0
-DEFAULT_MIDI_START_TIME = 0.0
-DEFAULT_MIDI_LENGTH = 4.0
-DEFAULT_MIDI_NOTE_PITCHES = [60, 64, 67]  # C4, E4, G4
-DEFAULT_MIDI_NOTE_LENGTH = 1.0
-DEFAULT_MIDI_NOTE_VELOCITY = 100
-DEFAULT_MIDI_NOTE_COUNT = 3
+# DEFAULT_MIDI_START_TIME = 0.0 # Removed
+# DEFAULT_MIDI_LENGTH = 4.0 # Removed
+# DEFAULT_MIDI_NOTE_PITCHES = [60, 64, 67] # Removed
+# DEFAULT_MIDI_NOTE_LENGTH = 1.0 # Removed
+# DEFAULT_MIDI_NOTE_VELOCITY = 100 # Removed
+# DEFAULT_MIDI_NOTE_COUNT = 3 # Removed
 DEFAULT_MP3_POSITION = 0.0
 DEFAULT_MP3_NEW_POSITION = 1.0
 DEFAULT_MP3_NEW_LENGTH = 5.0
@@ -284,8 +285,8 @@ class TestReaperController(unittest.TestCase):
         track_index = self.controller.create_track("MIDI Test Track")
         
         # Create MIDI item
-        start_time = DEFAULT_MIDI_START_TIME
-        length = DEFAULT_MIDI_LENGTH
+        start_time = MIDIController.DEFAULT_MIDI_START_TIME
+        length = MIDIController.DEFAULT_MIDI_LENGTH
         midi_item_id = self.controller.create_midi_item(track_index, start_time, length=length)
         
         # Check if the MIDI item ID is valid - handle both string and integer IDs
@@ -295,19 +296,18 @@ class TestReaperController(unittest.TestCase):
             self.assertGreaterEqual(midi_item_id, 0, "MIDI item ID should be >= 0")
         
         # Add MIDI notes
-        for pitch in DEFAULT_MIDI_NOTE_PITCHES:
+        for pitch in MIDIController.DEFAULT_MIDI_NOTE_PITCHES:
             self.assertTrue(self.controller.add_midi_note(
-                track_index, midi_item_id, pitch, DEFAULT_MIDI_START_TIME, 
-                DEFAULT_MIDI_NOTE_LENGTH, DEFAULT_MIDI_NOTE_VELOCITY
+                track_index, midi_item_id, MIDIController.MIDINoteParams(pitch=pitch, start_time=MIDIController.DEFAULT_MIDI_START_TIME, length=MIDIController.DEFAULT_MIDI_NOTE_LENGTH, velocity=MIDIController.DEFAULT_MIDI_NOTE_VELOCITY)
             ))
         
         # Get all MIDI notes from the item
         midi_notes = self.controller.get_midi_notes(track_index, midi_item_id)
-        self.assertEqual(len(midi_notes), DEFAULT_MIDI_NOTE_COUNT, "Should have retrieved 3 MIDI notes")
+        self.assertEqual(len(midi_notes), MIDIController.DEFAULT_MIDI_NOTE_COUNT, "Should have retrieved 3 MIDI notes")
         
         # Verify notes have correct pitches
         pitches = sorted([note['pitch'] for note in midi_notes])
-        self.assertEqual(pitches, DEFAULT_MIDI_NOTE_PITCHES, "Retrieved notes should have correct pitches")
+        self.assertEqual(pitches, MIDIController.DEFAULT_MIDI_NOTE_PITCHES, "Retrieved notes should have correct pitches")
         
         # Test finding notes by pitch
         c_notes = self.controller.find_midi_notes_by_pitch(60, 60)

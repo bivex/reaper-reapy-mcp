@@ -7,18 +7,7 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.reaper_controller import ReaperController
-
-# Constants to replace magic numbers
-DEFAULT_MIDI_START_TIME = 0.0
-DEFAULT_MIDI_LENGTH = 4.0
-DEFAULT_MIDI_NOTE_PITCHES = [60, 64, 67]  # C, E, G (C major chord)
-DEFAULT_MIDI_NOTE_LENGTH = 1.0
-DEFAULT_MIDI_NOTE_VELOCITY = 100
-DEFAULT_SECOND_MIDI_START_TIME = 4.0
-DEFAULT_SECOND_MIDI_LENGTH = 2.0
-DEFAULT_SECOND_MIDI_NOTE_PITCH = 72  # C an octave up
-DEFAULT_SECOND_MIDI_NOTE_LEN = 0.5
-DEFAULT_SECOND_MIDI_NOTE_VEL = 90
+from src.controllers.midi.midi_controller import MIDIController
 
 
 class TestMidiItemClientOperations(unittest.TestCase):
@@ -40,19 +29,19 @@ class TestMidiItemClientOperations(unittest.TestCase):
         self.assertGreaterEqual(midi_track_index, 0, "Failed to create MIDI track.")
         self.logger.info(f"Created MIDI track {midi_track_index}")
 
-        midi_item_id = self.controller.create_midi_item(midi_track_index, DEFAULT_MIDI_START_TIME, length=DEFAULT_MIDI_LENGTH)
+        midi_item_id = self.controller.create_midi_item(midi_track_index, MIDIController.DEFAULT_MIDI_START_TIME, length=MIDIController.DEFAULT_MIDI_LENGTH)
         self.assertGreaterEqual(midi_item_id, 0, "Failed to create MIDI item.")
         self.logger.info(f"Created MIDI item {midi_item_id}")
 
-        for pitch in DEFAULT_MIDI_NOTE_PITCHES:
-            self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item_id, pitch, 0.0, DEFAULT_MIDI_NOTE_LENGTH, DEFAULT_MIDI_NOTE_VELOCITY), f"Failed to add note with pitch {pitch}.")
+        for pitch in MIDIController.DEFAULT_MIDI_NOTE_PITCHES:
+            self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item_id, MIDIController.MIDINoteParams(pitch=pitch, start_time=0.0, length=MIDIController.DEFAULT_MIDI_NOTE_LENGTH, velocity=MIDIController.DEFAULT_MIDI_NOTE_VELOCITY)), f"Failed to add note with pitch {pitch}.")
         self.logger.info("Added MIDI notes (C major chord)")
 
-        midi_item2_id = self.controller.create_midi_item(midi_track_index, DEFAULT_SECOND_MIDI_START_TIME, length=DEFAULT_SECOND_MIDI_LENGTH)
+        midi_item2_id = self.controller.create_midi_item(midi_track_index, MIDIController.DEFAULT_SECOND_MIDI_START_TIME, length=MIDIController.DEFAULT_SECOND_MIDI_LENGTH)
         self.assertGreaterEqual(midi_item2_id, 0, "Failed to create second MIDI item.")
         self.logger.info(f"Created second MIDI item {midi_item2_id}")
 
-        self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item2_id, DEFAULT_SECOND_MIDI_NOTE_PITCH, 0.0, DEFAULT_SECOND_MIDI_NOTE_LEN, DEFAULT_SECOND_MIDI_NOTE_VEL), "Failed to add note to second item.")
+        self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item2_id, MIDIController.MIDINoteParams(pitch=MIDIController.DEFAULT_SECOND_MIDI_NOTE_PITCH, start_time=0.0, length=MIDIController.DEFAULT_SECOND_MIDI_NOTE_LEN, velocity=MIDIController.DEFAULT_SECOND_MIDI_NOTE_VEL)), "Failed to add note to second item.")
         self.logger.info("Added note to second MIDI item.")
 
         selected_items = self.controller.get_selected_items()

@@ -2,38 +2,8 @@ import unittest
 from unittest.mock import patch, MagicMock
 from dataclasses import dataclass
 
-# Constants to replace magic numbers
-DEFAULT_MIDI_LENGTH = 4.0
-DEFAULT_MIDI_VELOCITY = 96
-DEFAULT_MIDI_CHANNEL = 0
-MAX_MIDI_PITCH = 127
-MIN_MIDI_PITCH = 0
-DEFAULT_TRACK_INDEX = 0
-DEFAULT_ITEM_ID = 0
-DEFAULT_POSITION = 0.0
-DEFAULT_TAKE_COUNT = 1
-DEFAULT_ACTIVE_TAKE = 0
-DEFAULT_NEW_POSITION = 2.0
-DEFAULT_NEW_LENGTH = 4.0
-DEFAULT_AUDIO_START_TIME = 2.0
-DEFAULT_AUDIO_LENGTH = 4.0
-DEFAULT_MIDI_NOTE_COUNT = 3
-DEFAULT_MIDI_NOTE_PITCHES = [60, 64, 67]  # C4, E4, G4
-DEFAULT_MIDI_NOTE_LENGTH = 1.0
-DEFAULT_MIDI_NOTE_VELOCITY = 100
-DEFAULT_TIME_RANGE_START = 0.0
-DEFAULT_TIME_RANGE_END = 10.0
-DEFAULT_AUDIO_FILE_POSITION = 12.0
-DEFAULT_AUDIO_ITEM_ID = 2
+from src.controllers.midi.midi_controller import MIDIController
 
-@dataclass
-class MIDINoteParams:
-    """Data class to hold MIDI note parameters for testing."""
-    pitch: int
-    start_time: float
-    length: float
-    velocity: int = DEFAULT_MIDI_VELOCITY
-    channel: int = DEFAULT_MIDI_CHANNEL
 
 # Create a simplified ReaperController mock to use for testing
 class MockReaperController:
@@ -46,10 +16,10 @@ class MockReaperController:
         return True
 
     def create_track(self, name=None):
-        return DEFAULT_TRACK_INDEX  # Return first track index
+        return MIDIController.DEFAULT_TRACK_INDEX  # Return first track index
         
-    def create_midi_item(self, track_index, start_time, length=DEFAULT_MIDI_LENGTH):
-        item_id = DEFAULT_ITEM_ID  # Simple item ID for testing
+    def create_midi_item(self, track_index, start_time, length=MIDIController.DEFAULT_MIDI_LENGTH):
+        item_id = MIDIController.DEFAULT_ITEM_ID  # Simple item ID for testing
         item_key = f"{track_index}:{item_id}"
         self._test_midi_items[item_key] = {
             'track_index': track_index,
@@ -60,7 +30,7 @@ class MockReaperController:
         }
         return item_id
         
-    def add_midi_note(self, track_index, item_id, note_params: MIDINoteParams):
+    def add_midi_note(self, track_index, item_id, note_params: MIDIController.MIDINoteParams):
         item_key = f"{track_index}:{item_id}"
         if item_key not in self._test_midi_items:
             self._test_midi_items[item_key] = {
@@ -84,7 +54,7 @@ class MockReaperController:
             return self._test_midi_items[item_key]['notes']
         return []
         
-    def find_midi_notes_by_pitch(self, pitch_min=MIN_MIDI_PITCH, pitch_max=MAX_MIDI_PITCH):
+    def find_midi_notes_by_pitch(self, pitch_min=MIDIController.MIN_MIDI_PITCH, pitch_max=MIDIController.MAX_MIDI_PITCH):
         found_notes = []
         for item_key, item_data in self._test_midi_items.items():
             for note in item_data['notes']:
@@ -101,8 +71,8 @@ class MockReaperController:
             {
                 'track_index': data['track_index'],
                 'item_id': data['item_id'],
-                'position': data.get('position', DEFAULT_POSITION),
-                'length': data.get('length', DEFAULT_MIDI_LENGTH),
+                'position': data.get('position', MIDIController.DEFAULT_POSITION),
+                'length': data.get('length', MIDIController.DEFAULT_MIDI_LENGTH),
                 'name': f"MIDI Item {data['item_id']}"
             }
             for item_key, data in self._test_midi_items.items()
@@ -120,24 +90,24 @@ class MockReaperController:
             return {
                 'track_index': track_index,
                 'item_id': item_id,
-                'position': self._test_midi_items[item_key].get('position', DEFAULT_POSITION),
-                'length': self._test_midi_items[item_key].get('length', DEFAULT_MIDI_LENGTH),
+                'position': self._test_midi_items[item_key].get('position', MIDIController.DEFAULT_POSITION),
+                'length': self._test_midi_items[item_key].get('length', MIDIController.DEFAULT_MIDI_LENGTH),
                 'name': f"MIDI Item {item_id}",
                 'is_selected': False,
                 'is_muted': False,
-                'take_count': DEFAULT_TAKE_COUNT,
-                'active_take': DEFAULT_ACTIVE_TAKE
+                'take_count': MIDIController.DEFAULT_TAKE_COUNT,
+                'active_take': MIDIController.DEFAULT_ACTIVE_TAKE
             }
         return {
             'track_index': track_index,
             'item_id': item_id,
-            'position': DEFAULT_POSITION,
-            'length': DEFAULT_MIDI_LENGTH,
+            'position': MIDIController.DEFAULT_POSITION,
+            'length': MIDIController.DEFAULT_MIDI_LENGTH,
             'name': f"MIDI Item {item_id}",
             'is_selected': False,
             'is_muted': False, 
-            'take_count': DEFAULT_TAKE_COUNT,
-            'active_take': DEFAULT_ACTIVE_TAKE
+            'take_count': MIDIController.DEFAULT_TAKE_COUNT,
+            'active_take': MIDIController.DEFAULT_ACTIVE_TAKE
         }
         
     def set_item_position(self, track_index, item_id, position):
@@ -161,8 +131,8 @@ class MockReaperController:
             self._test_midi_items[new_key] = {
                 'track_index': track_index,
                 'item_id': new_item_id,
-                'position': new_position if new_position is not None else source_item.get('position', DEFAULT_POSITION),
-                'length': source_item.get('length', DEFAULT_MIDI_LENGTH),
+                'position': new_position if new_position is not None else source_item.get('position', MIDIController.DEFAULT_POSITION),
+                'length': source_item.get('length', MIDIController.DEFAULT_MIDI_LENGTH),
                 'notes': [note.copy() for note in source_item.get('notes', [])]
             }
         return new_item_id
@@ -171,8 +141,8 @@ class MockReaperController:
         items = []
         for item_key, data in self._test_midi_items.items():
             if data['track_index'] == track_index:
-                pos = data.get('position', DEFAULT_POSITION)
-                length = data.get('length', DEFAULT_MIDI_LENGTH)
+                pos = data.get('position', MIDIController.DEFAULT_POSITION)
+                length = data.get('length', MIDIController.DEFAULT_MIDI_LENGTH)
                 # Check if item overlaps with time range
                 if pos + length >= start_time and pos <= end_time:
                     items.append({
@@ -191,13 +161,13 @@ class MockReaperController:
         return True
         
     def insert_audio_item(self, track_index, file_path, start_time):
-        audio_item_id = DEFAULT_AUDIO_ITEM_ID  # For simplicity use 2 as the audio item ID
+        audio_item_id = MIDIController.DEFAULT_AUDIO_ITEM_ID  # For simplicity use 2 as the audio item ID
         item_key = f"{track_index}:{audio_item_id}"
         self._test_midi_items[item_key] = {
             'track_index': track_index,
             'item_id': audio_item_id,
             'position': start_time,
-            'length': DEFAULT_AUDIO_LENGTH,  # Default length
+            'length': MIDIController.DEFAULT_AUDIO_LENGTH,  # Default length
             'notes': [],
             'is_audio': True,
             'file_path': file_path
@@ -215,8 +185,8 @@ class TestMIDIOperations(unittest.TestCase):
         track_index = self.controller.create_track("MIDI Test Track")
         
         # Create MIDI item
-        start_time = DEFAULT_POSITION
-        length = DEFAULT_MIDI_LENGTH
+        start_time = MIDIController.DEFAULT_POSITION
+        length = MIDIController.DEFAULT_MIDI_LENGTH
         midi_item_id = self.controller.create_midi_item(track_index, start_time, length)
         
         # Check if the MIDI item ID is valid - handle both string and integer IDs
@@ -226,18 +196,18 @@ class TestMIDIOperations(unittest.TestCase):
             self.assertGreaterEqual(midi_item_id, 0, "MIDI item ID should be >= 0")
         
         # Add MIDI notes
-        for pitch in DEFAULT_MIDI_NOTE_PITCHES:
+        for pitch in MIDIController.DEFAULT_MIDI_NOTE_PITCHES:
             self.assertTrue(self.controller.add_midi_note(
-                track_index, midi_item_id, MIDINoteParams(pitch, DEFAULT_POSITION, DEFAULT_MIDI_NOTE_LENGTH)
+                track_index, midi_item_id, MIDIController.MIDINoteParams(pitch, MIDIController.DEFAULT_POSITION, MIDIController.DEFAULT_MIDI_NOTE_LENGTH)
             ))
         
         # Get all MIDI notes from the item
         midi_notes = self.controller.get_midi_notes(track_index, midi_item_id)
-        self.assertEqual(len(midi_notes), DEFAULT_MIDI_NOTE_COUNT, "Should have retrieved 3 MIDI notes")
+        self.assertEqual(len(midi_notes), MIDIController.DEFAULT_MIDI_NOTE_COUNT, "Should have retrieved 3 MIDI notes")
         
         # Verify notes have correct pitches
         pitches = sorted([note['pitch'] for note in midi_notes])
-        self.assertEqual(pitches, DEFAULT_MIDI_NOTE_PITCHES, "Retrieved notes should have correct pitches")
+        self.assertEqual(pitches, MIDIController.DEFAULT_MIDI_NOTE_PITCHES, "Retrieved notes should have correct pitches")
         
         # Test finding notes by pitch
         c_notes = self.controller.find_midi_notes_by_pitch(60, 60)
@@ -259,7 +229,7 @@ class TestMIDIOperations(unittest.TestCase):
         track_index = self.controller.create_track("Audio Test Track")
         
         # Create a MIDI item to test item operations (since we may not have an audio file)
-        midi_item_id = self.controller.create_midi_item(track_index, DEFAULT_POSITION, DEFAULT_MIDI_LENGTH)
+        midi_item_id = self.controller.create_midi_item(track_index, MIDIController.DEFAULT_POSITION, MIDIController.DEFAULT_MIDI_LENGTH)
         
         # Check if the item ID is valid - handle both string and integer IDs
         if isinstance(midi_item_id, str):
@@ -273,11 +243,11 @@ class TestMIDIOperations(unittest.TestCase):
         self.assertIsInstance(properties, dict)
         
         # Set item position
-        new_position = DEFAULT_NEW_POSITION
+        new_position = MIDIController.DEFAULT_NEW_POSITION
         self.assertTrue(self.controller.set_item_position(track_index, midi_item_id, new_position))
         
         # Set item length
-        new_length = DEFAULT_NEW_LENGTH
+        new_length = MIDIController.DEFAULT_NEW_LENGTH
         self.assertTrue(self.controller.set_item_length(track_index, midi_item_id, new_length))
         
         # Duplicate item
@@ -289,7 +259,7 @@ class TestMIDIOperations(unittest.TestCase):
             self.assertGreaterEqual(duplicated_id, 0, "Duplicated item ID should be >= 0")
         
         # Get items in time range
-        items = self.controller.get_items_in_time_range(track_index, 0.0, 10.0)
+        items = self.controller.get_items_in_time_range(track_index, MIDIController.DEFAULT_TIME_RANGE_START, MIDIController.DEFAULT_TIME_RANGE_END)
         self.assertGreaterEqual(len(items), 2)  # Should include both items
         
         # Delete the duplicated item

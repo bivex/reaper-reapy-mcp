@@ -7,32 +7,32 @@ from .base_controller import BaseController
 from src.utils.item_utils import get_item_by_id_or_index, get_item_properties
 from src.utils.item_operations import select_item, delete_item
 
-# Constants to replace magic numbers
-DEFAULT_MIDI_LENGTH = 4.0
-DEFAULT_MIDI_VELOCITY = 96
-DEFAULT_MIDI_CHANNEL = 0
-MAX_MIDI_PITCH = 127
-MIN_MIDI_PITCH = 0
-MAX_MIDI_CHANNEL = 15
-
-@dataclass
-class MIDIItemTarget:
-    """Data class to hold MIDI item target parameters."""
-    track_index: int
-    item_id: Union[int, str]
-
-@dataclass
-class MIDINoteParams:
-    """Data class to hold MIDI note parameters."""
-    pitch: int
-    start_time: float
-    length: float
-    velocity: int = DEFAULT_MIDI_VELOCITY
-    channel: int = DEFAULT_MIDI_CHANNEL
-
 class MIDIController:
     """Controller for MIDI-related operations in Reaper."""
-    
+
+    # Constants to replace magic numbers
+    DEFAULT_MIDI_LENGTH = 4.0
+    DEFAULT_MIDI_VELOCITY = 96
+    DEFAULT_MIDI_CHANNEL = 0
+    MAX_MIDI_PITCH = 127
+    MIN_MIDI_PITCH = 0
+    MAX_MIDI_CHANNEL = 15
+
+    @dataclass
+    class MIDIItemTarget:
+        """Data class to hold MIDI item target parameters."""
+        track_index: int
+        item_id: Union[int, str]
+
+    @dataclass
+    class MIDINoteParams:
+        """Data class to hold MIDI note parameters."""
+        pitch: int
+        start_time: float
+        length: float
+        velocity: int = DEFAULT_MIDI_VELOCITY
+        channel: int = DEFAULT_MIDI_CHANNEL
+
     def __init__(self, debug: bool = False):
         self.logger = logging.getLogger(__name__)
         if debug:
@@ -94,7 +94,7 @@ class MIDIController:
         return select_item(item)
     
     def create_midi_item(self, track_index: int, start_time: float, 
-                         *, length: float = DEFAULT_MIDI_LENGTH) -> Union[int, str]:
+                         *, length: float = MIDIController.DEFAULT_MIDI_LENGTH) -> Union[int, str]:
         """
         Create an empty MIDI item on a track.
         
@@ -150,7 +150,7 @@ class MIDIController:
         return track_index, start_time, length
 
     def add_midi_note(self, track_index: int, item_id: Union[int, str], 
-                     note_params: MIDINoteParams) -> bool:
+                     note_params: MIDIController.MIDINoteParams) -> bool:
         """
         Add a MIDI note to a MIDI item.
         
@@ -207,7 +207,7 @@ class MIDIController:
             self.logger.error(f"Failed to add MIDI note: {e}")
             return False
 
-    def add_midi_note_simple(self, midi_item_target: MIDIItemTarget, note_params: MIDINoteParams) -> bool:
+    def add_midi_note_simple(self, midi_item_target: MIDIController.MIDIItemTarget, note_params: MIDIController.MIDINoteParams) -> bool:
         """
         Convenience method to add a MIDI note with individual parameters.
         
@@ -222,16 +222,16 @@ class MIDIController:
 
     def _validate_midi_note_params(self, pitch: int, velocity: int, channel: int) -> bool:
         """Validate MIDI note parameters."""
-        if not (MIN_MIDI_PITCH <= pitch <= MAX_MIDI_PITCH):
-            self.logger.error(f"Invalid pitch: {pitch}. Must be between {MIN_MIDI_PITCH} and {MAX_MIDI_PITCH}")
+        if not (MIDIController.MIN_MIDI_PITCH <= pitch <= MIDIController.MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid pitch: {pitch}. Must be between {MIDIController.MIN_MIDI_PITCH} and {MIDIController.MAX_MIDI_PITCH}")
             return False
         
-        if not (0 <= velocity <= MAX_MIDI_PITCH):
-            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {MAX_MIDI_PITCH}")
+        if not (0 <= velocity <= MIDIController.MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {MIDIController.MAX_MIDI_PITCH}")
             return False
         
-        if not (0 <= channel <= MAX_MIDI_CHANNEL):
-            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and {MAX_MIDI_CHANNEL}")
+        if not (0 <= channel <= MIDIController.MAX_MIDI_CHANNEL):
+            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and {MIDIController.MAX_MIDI_CHANNEL}")
             return False
         
         return True
@@ -326,8 +326,8 @@ class MIDIController:
             self.logger.error(f"Failed to get MIDI notes: {e}")
             return []
 
-    def find_midi_notes_by_pitch(self, pitch_min: int = MIN_MIDI_PITCH, 
-                                pitch_max: int = MAX_MIDI_PITCH) -> List[Dict[str, Any]]:
+    def find_midi_notes_by_pitch(self, pitch_min: int = MIDIController.MIN_MIDI_PITCH, 
+                                pitch_max: int = MIDIController.MAX_MIDI_PITCH) -> List[Dict[str, Any]]:
         """
         Find all MIDI notes within a specific pitch range across the project.
         
@@ -374,11 +374,11 @@ class MIDIController:
 
     def _validate_pitch_range(self, pitch_min: int, pitch_max: int) -> bool:
         """Validate pitch range parameters."""
-        if not (MIN_MIDI_PITCH <= pitch_min <= MAX_MIDI_PITCH):
+        if not (MIDIController.MIN_MIDI_PITCH <= pitch_min <= MIDIController.MAX_MIDI_PITCH):
             self.logger.error(f"Invalid pitch_min: {pitch_min}")
             return False
         
-        if not (MIN_MIDI_PITCH <= pitch_max <= MAX_MIDI_PITCH):
+        if not (MIDIController.MIN_MIDI_PITCH <= pitch_max <= MIDIController.MAX_MIDI_PITCH):
             self.logger.error(f"Invalid pitch_max: {pitch_max}")
             return False
         
