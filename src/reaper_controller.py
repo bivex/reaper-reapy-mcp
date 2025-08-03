@@ -10,13 +10,13 @@ repo_root = os.path.dirname(script_dir)
 sys.path.insert(0, script_dir)  # Add script directory to path
 
 # Import controllers directly from the local directory
-from controllers.track_controller import TrackController
-from controllers.fx_controller import FXController
-from controllers.marker_controller import MarkerController
-from controllers.midi_controller import MIDIController
-from controllers.audio_controller import AudioController
-from controllers.master_controller import MasterController
-from controllers.project_controller import ProjectController
+from controllers.track.track_controller import TrackController
+from controllers.fx.fx_controller import FXController
+from controllers.marker.marker_controller import MarkerController
+from controllers.midi.midi_controller import MIDIController
+from controllers.audio.audio_controller import AudioController
+from controllers.master.master_controller import MasterController
+from controllers.project.project_controller import ProjectController
 
 # Constants to replace magic numbers
 DEFAULT_MIDI_VELOCITY = 100
