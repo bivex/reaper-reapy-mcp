@@ -22,14 +22,15 @@ class AudioController:
             self.logger.setLevel(logging.INFO)
 
     def insert_audio_item(self, track_index: int, file_path: str, 
-                         start_time: float) -> Union[int, str]:
+                         start_time: float = None, start_measure: str = None) -> Union[int, str]:
         """
         Insert an audio file as a media item on a track.
         
         Args:
             track_index (int): Index of the track to add the audio item to
             file_path (str): Path to the audio file
-            start_time (float): Start time in seconds
+            start_time (float): Start time in seconds (default: 0.0)
+            start_measure (str): Start measure (optional, not used)
             
         Returns:
             int or str: ID of the created item
@@ -41,6 +42,10 @@ class AudioController:
                 
             project = reapy.Project()
             track = project.tracks[track_index]
+            
+            # Use 0.0 as default start time if None is provided
+            if start_time is None:
+                start_time = 0.0
             
             # Select the track and set cursor position
             self._prepare_track_for_insertion(track, start_time)
@@ -67,9 +72,14 @@ class AudioController:
         # Clear all track selections and select only this track
         RPR.SetOnlyTrackSelected(track.id)
         
-        # Set the cursor to the start position
-        project = reapy.Project()
-        project.cursor_position = start_time
+        # Set the cursor to the start position (default to 0 if None)
+        if start_time is not None:
+            project = reapy.Project()
+            project.cursor_position = start_time
+        else:
+            # Set cursor to beginning if no start time specified
+            project = reapy.Project()
+            project.cursor_position = 0.0
 
     def _find_inserted_item(self, track, start_time, num_items_before):
         """Find the newly inserted item after media insertion."""

@@ -98,6 +98,26 @@ python -m src.run_mcp_server
 | `clear_all_sends` | Remove all sends from a track | `track_index` |
 | `clear_all_receives` | Remove all receives from a track | `track_index` |
 
+### Advanced Routing & Bussing
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `create_folder_track` | Create a folder track that can contain other tracks | `name` |
+| `create_bus_track` | Create a bus track for grouping and processing multiple tracks | `name` |
+| `set_track_parent` | Set a track's parent folder track | `child_track_index`, `parent_track_index` |
+| `get_track_children` | Get all child tracks of a parent track | `parent_track_index` |
+| `set_track_folder_depth` | Set the folder depth of a track | `track_index`, `depth` |
+| `get_track_folder_depth` | Get the folder depth of a track | `track_index` |
+
+### Automation & Modulation
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `create_automation_envelope` | Create an automation envelope on a track | `track_index`, `envelope_name` |
+| `add_automation_point` | Add an automation point to an envelope | `track_index`, `envelope_name`, `time`, `value`, `shape` |
+| `get_automation_points` | Get all automation points from an envelope | `track_index`, `envelope_name` |
+| `set_automation_mode` | Set the automation mode for a track | `track_index`, `mode` |
+| `get_automation_mode` | Get the current automation mode for a track | `track_index` |
+| `delete_automation_point` | Delete an automation point from an envelope | `track_index`, `envelope_name`, `point_index` |
+
 ### FX Management
 | Tool | Description |
 |------|-------------|
@@ -150,6 +170,18 @@ python -m src.run_mcp_server
 | `delete_item` | Delete a media item | - |
 | `get_items_in_time_range` | Get items within a time range | Time & Measure:Beat |
 | `get_selected_items` | Get all selected items | - |
+
+### Advanced Item Operations
+| Tool | Description | Parameters |
+|------|-------------|------------|
+| `split_item` | Split an item at a specific time | `track_index`, `item_index`, `split_time` |
+| `glue_items` | Glue multiple items together into a single item | `track_index`, `item_indices` |
+| `fade_in` | Add a fade-in to an item | `track_index`, `item_index`, `fade_length`, `fade_curve` |
+| `fade_out` | Add a fade-out to an item | `track_index`, `item_index`, `fade_length`, `fade_curve` |
+| `crossfade_items` | Create a crossfade between two items | `track_index`, `item1_index`, `item2_index`, `crossfade_length` |
+| `normalize_item` | Normalize an item to a target level | `track_index`, `item_index`, `target_level` |
+| `reverse_item` | Reverse an item | `track_index`, `item_index` |
+| `get_item_fade_info` | Get fade information for an item | `track_index`, `item_index` |
 
 ### Item ID System
 All item operations use a sequential index system (0..n) for item identification. This makes it easier to work with items in scripts and automation:
@@ -242,6 +274,68 @@ clear_all_receives(track_index=1)
 ```
 
 **Note**: All routing tools are fully functional and tested. The `destination_track` field now correctly shows track indices instead of -1.0, and all send/receive operations work reliably with proper MediaTrack pointer handling.
+
+### Advanced Routing Examples
+
+#### Folder and Bus Track Creation
+```python
+# Create a folder track for drums
+create_folder_track("Drums")
+
+# Create a bus track for effects
+create_bus_track("FX Bus")
+
+# Set track 1 as child of the drums folder
+set_track_parent(child_track_index=1, parent_track_index=0)
+
+# Get all children of the drums folder
+get_track_children(parent_track_index=0)
+```
+
+### Automation Examples
+
+#### Creating and Managing Automation
+```python
+# Create a volume automation envelope
+create_automation_envelope(track_index=0, envelope_name="volume")
+
+# Add automation points
+add_automation_point(track_index=0, envelope_name="volume", time=0.0, value=0.0)
+add_automation_point(track_index=0, envelope_name="volume", time=2.0, value=1.0)
+add_automation_point(track_index=0, envelope_name="volume", time=4.0, value=0.5)
+
+# Set automation mode to write
+set_automation_mode(track_index=0, mode="write")
+
+# Get all automation points
+get_automation_points(track_index=0, envelope_name="volume")
+```
+
+### Advanced Item Operations Examples
+
+#### Item Editing and Processing
+```python
+# Split an item at 2 seconds
+split_item(track_index=0, item_index=0, split_time=2.0)
+
+# Add fade-in to an item
+fade_in(track_index=0, item_index=0, fade_length=0.5, fade_curve=0)
+
+# Add fade-out to an item
+fade_out(track_index=0, item_index=1, fade_length=1.0, fade_curve=2)
+
+# Create crossfade between two items
+crossfade_items(track_index=0, item1_index=0, item2_index=1, crossfade_length=0.5)
+
+# Normalize an item to -1 dB
+normalize_item(track_index=0, item_index=0, target_level=-1.0)
+
+# Reverse an item
+reverse_item(track_index=0, item_index=0)
+
+# Glue multiple items together
+glue_items(track_index=0, item_indices=[0, 1, 2])
+```
 
 ### MCP Client Configuration
 

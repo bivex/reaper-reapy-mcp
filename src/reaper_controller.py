@@ -18,6 +18,9 @@ from src.controllers.audio.audio_controller import AudioController
 from src.controllers.master.master_controller import MasterController
 from src.controllers.project.project_controller import ProjectController
 from src.controllers.routing.routing_controller import RoutingController
+from src.controllers.routing.advanced_routing_controller import AdvancedRoutingController
+from src.controllers.automation.automation_controller import AutomationController
+from src.controllers.audio.advanced_item_controller import AdvancedItemController
 
 # Constants to replace magic numbers
 DEFAULT_MIDI_VELOCITY = 100
@@ -39,6 +42,9 @@ class ReaperController:
         self.master = MasterController(debug=debug)
         self.project = ProjectController(debug=debug)
         self.routing = RoutingController(debug=debug)
+        self.advanced_routing = AdvancedRoutingController(debug=debug)
+        self.automation = AutomationController(debug=debug)
+        self.advanced_items = AdvancedItemController(debug=debug)
         
         # Store debug setting for logging
         self.debug = debug
@@ -309,6 +315,87 @@ class ReaperController:
     def clear_all_receives(self, track_index: int) -> bool:
         """Remove all receives from a track."""
         return self.routing.clear_all_receives(track_index)
+
+    # Advanced Routing & Bussing operations
+    def create_folder_track(self, name: str = "Folder Track") -> int:
+        """Create a folder track that can contain other tracks."""
+        return self.advanced_routing.create_folder_track(name)
+
+    def create_bus_track(self, name: str = "Bus Track") -> int:
+        """Create a bus track for grouping and processing multiple tracks."""
+        return self.advanced_routing.create_bus_track(name)
+
+    def set_track_parent(self, child_track_index: int, parent_track_index: int) -> bool:
+        """Set a track's parent folder track."""
+        return self.advanced_routing.set_track_parent(child_track_index, parent_track_index)
+
+    def get_track_children(self, parent_track_index: int) -> List[int]:
+        """Get all child tracks of a parent track."""
+        return self.advanced_routing.get_track_children(parent_track_index)
+
+    def set_track_folder_depth(self, track_index: int, depth: int) -> bool:
+        """Set the folder depth of a track."""
+        return self.advanced_routing.set_track_folder_depth(track_index, depth)
+
+    def get_track_folder_depth(self, track_index: int) -> int:
+        """Get the folder depth of a track."""
+        return self.advanced_routing.get_track_folder_depth(track_index)
+
+    # Automation & Modulation operations
+    def create_automation_envelope(self, track_index: int, envelope_name: str) -> int:
+        """Create an automation envelope on a track."""
+        return self.automation.create_automation_envelope(track_index, envelope_name)
+
+    def add_automation_point(self, track_index: int, envelope_name: str, time: float, value: float, shape: int = 0) -> bool:
+        """Add an automation point to an envelope."""
+        return self.automation.add_automation_point(track_index, envelope_name, time, value, shape)
+
+    def get_automation_points(self, track_index: int, envelope_name: str) -> List[Dict[str, Any]]:
+        """Get all automation points from an envelope."""
+        return self.automation.get_automation_points(track_index, envelope_name)
+
+    def set_automation_mode(self, track_index: int, mode: str) -> bool:
+        """Set the automation mode for a track."""
+        return self.automation.set_automation_mode(track_index, mode)
+
+    def get_automation_mode(self, track_index: int) -> str:
+        """Get the current automation mode for a track."""
+        return self.automation.get_automation_mode(track_index)
+
+    def delete_automation_point(self, track_index: int, envelope_name: str, point_index: int) -> bool:
+        """Delete an automation point from an envelope."""
+        return self.automation.delete_automation_point(track_index, envelope_name, point_index)
+
+    # Advanced Item Operations
+    def split_item(self, track_index: int, item_index: int, split_time: float) -> List[int]:
+        """Split an item at a specific time."""
+        return self.advanced_items.split_item(track_index, item_index, split_time)
+
+    def glue_items(self, track_index: int, item_indices: List[int]) -> int:
+        """Glue multiple items together into a single item."""
+        return self.advanced_items.glue_items(track_index, item_indices)
+
+    def fade_in(self, track_index: int, item_index: int, fade_length: float, fade_curve: int = 0) -> bool:
+        """Add a fade-in to an item."""
+        return self.advanced_items.fade_in(track_index, item_index, fade_length, fade_curve)
+
+    def fade_out(self, track_index: int, item_index: int, fade_length: float, fade_curve: int = 0) -> bool:
+        """Add a fade-out to an item."""
+        return self.advanced_items.fade_out(track_index, item_index, fade_length, fade_curve)
+
+    def crossfade_items(self, track_index: int, item1_index: int, item2_index: int, crossfade_length: float) -> bool:
+        """Create a crossfade between two items."""
+        return self.advanced_items.crossfade_items(track_index, item1_index, item2_index, crossfade_length)
+
+
+
+    def reverse_item(self, track_index: int, item_index: int) -> bool:
+        """Reverse an item."""
+        return self.advanced_items.reverse_item(track_index, item_index)
+
+    def get_item_fade_info(self, track_index: int, item_index: int) -> Dict[str, Any]:
+        """Get fade information for an item."""
+        return self.advanced_items.get_item_fade_info(track_index, item_index)
 
 # Re-export the ReaperController class for backward compatibility
 __all__ = ['ReaperController']

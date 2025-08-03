@@ -401,7 +401,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
             if start_measure:
                 start_time = time_to_measure(start_measure)
             
-            item_id = controller.insert_audio_item(track_index, file_path, start_time)
+            item_id = controller.insert_audio_item(track_index, file_path, start_time, start_measure)
             return _create_success_response(
                 f"Inserted audio item {item_id} on track {track_index}"
             )
@@ -625,6 +625,184 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
         )
 
 
+def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
+    """Setup advanced routing and bussing MCP tools."""
+    
+    @mcp.tool("create_folder_track")
+    def create_folder_track(ctx: Context, name: str = "Folder Track") -> Dict[str, Any]:
+        """Create a folder track that can contain other tracks."""
+        return _handle_controller_operation(
+            f"Create folder track '{name}'",
+            controller.create_folder_track, name
+        )
+
+    @mcp.tool("create_bus_track")
+    def create_bus_track(ctx: Context, name: str = "Bus Track") -> Dict[str, Any]:
+        """Create a bus track for grouping and processing multiple tracks."""
+        return _handle_controller_operation(
+            f"Create bus track '{name}'",
+            controller.create_bus_track, name
+        )
+
+    @mcp.tool("set_track_parent")
+    def set_track_parent(ctx: Context, child_track_index: int, parent_track_index: int) -> Dict[str, Any]:
+        """Set a track's parent folder track."""
+        return _handle_controller_operation(
+            f"Set track {child_track_index} as child of track {parent_track_index}",
+            controller.set_track_parent, child_track_index, parent_track_index
+        )
+
+    @mcp.tool("get_track_children")
+    def get_track_children(ctx: Context, parent_track_index: int) -> Dict[str, Any]:
+        """Get all child tracks of a parent track."""
+        try:
+            children = controller.get_track_children(parent_track_index)
+            return _create_success_response(f"Children of track {parent_track_index}: {children}")
+        except Exception as e:
+            logger.error(f"Failed to get track children: {str(e)}")
+            return _create_error_response(f"Failed to get track children: {str(e)}")
+
+    @mcp.tool("set_track_folder_depth")
+    def set_track_folder_depth(ctx: Context, track_index: int, depth: int) -> Dict[str, Any]:
+        """Set the folder depth of a track."""
+        return _handle_controller_operation(
+            f"Set track {track_index} folder depth to {depth}",
+            controller.set_track_folder_depth, track_index, depth
+        )
+
+    @mcp.tool("get_track_folder_depth")
+    def get_track_folder_depth(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the folder depth of a track."""
+        try:
+            depth = controller.get_track_folder_depth(track_index)
+            return _create_success_response(f"Track {track_index} folder depth: {depth}")
+        except Exception as e:
+            logger.error(f"Failed to get track folder depth: {str(e)}")
+            return _create_error_response(f"Failed to get track folder depth: {str(e)}")
+
+
+def _setup_automation_tools(mcp: FastMCP, controller) -> None:
+    """Setup automation and modulation MCP tools."""
+    
+    @mcp.tool("create_automation_envelope")
+    def create_automation_envelope(ctx: Context, track_index: int, envelope_name: str) -> Dict[str, Any]:
+        """Create an automation envelope on a track."""
+        return _handle_controller_operation(
+            f"Create automation envelope '{envelope_name}' on track {track_index}",
+            controller.create_automation_envelope, track_index, envelope_name
+        )
+
+    @mcp.tool("add_automation_point")
+    def add_automation_point(ctx: Context, track_index: int, envelope_name: str, time: float, value: float, shape: int = 0) -> Dict[str, Any]:
+        """Add an automation point to an envelope."""
+        return _handle_controller_operation(
+            f"Add automation point at {time}s with value {value} on track {track_index}",
+            controller.add_automation_point, track_index, envelope_name, time, value, shape
+        )
+
+    @mcp.tool("get_automation_points")
+    def get_automation_points(ctx: Context, track_index: int, envelope_name: str) -> Dict[str, Any]:
+        """Get all automation points from an envelope."""
+        try:
+            points = controller.get_automation_points(track_index, envelope_name)
+            return _create_success_response(f"Automation points for '{envelope_name}' on track {track_index}: {points}")
+        except Exception as e:
+            logger.error(f"Failed to get automation points: {str(e)}")
+            return _create_error_response(f"Failed to get automation points: {str(e)}")
+
+    @mcp.tool("set_automation_mode")
+    def set_automation_mode(ctx: Context, track_index: int, mode: str) -> Dict[str, Any]:
+        """Set the automation mode for a track."""
+        return _handle_controller_operation(
+            f"Set automation mode to '{mode}' on track {track_index}",
+            controller.set_automation_mode, track_index, mode
+        )
+
+    @mcp.tool("get_automation_mode")
+    def get_automation_mode(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the current automation mode for a track."""
+        try:
+            mode = controller.get_automation_mode(track_index)
+            return _create_success_response(f"Track {track_index} automation mode: {mode}")
+        except Exception as e:
+            logger.error(f"Failed to get automation mode: {str(e)}")
+            return _create_error_response(f"Failed to get automation mode: {str(e)}")
+
+    @mcp.tool("delete_automation_point")
+    def delete_automation_point(ctx: Context, track_index: int, envelope_name: str, point_index: int) -> Dict[str, Any]:
+        """Delete an automation point from an envelope."""
+        return _handle_controller_operation(
+            f"Delete automation point {point_index} from '{envelope_name}' on track {track_index}",
+            controller.delete_automation_point, track_index, envelope_name, point_index
+        )
+
+
+def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
+    """Setup advanced item operations MCP tools."""
+    
+    @mcp.tool("split_item")
+    def split_item(ctx: Context, track_index: int, item_index: int, split_time: float) -> Dict[str, Any]:
+        """Split an item at a specific time."""
+        try:
+            new_items = controller.split_item(track_index, item_index, split_time)
+            return _create_success_response(f"Split item {item_index} at {split_time}s, created {len(new_items)} new items: {new_items}")
+        except Exception as e:
+            logger.error(f"Failed to split item: {str(e)}")
+            return _create_error_response(f"Failed to split item: {str(e)}")
+
+    @mcp.tool("glue_items")
+    def glue_items(ctx: Context, track_index: int, item_indices: List[int]) -> Dict[str, Any]:
+        """Glue multiple items together into a single item."""
+        return _handle_controller_operation(
+            f"Glue {len(item_indices)} items on track {track_index}",
+            controller.glue_items, track_index, item_indices
+        )
+
+    @mcp.tool("fade_in")
+    def fade_in(ctx: Context, track_index: int, item_index: int, fade_length: float, fade_curve: int = 0) -> Dict[str, Any]:
+        """Add a fade-in to an item."""
+        return _handle_controller_operation(
+            f"Add {fade_length}s fade-in to item {item_index} on track {track_index}",
+            controller.fade_in, track_index, item_index, fade_length, fade_curve
+        )
+
+    @mcp.tool("fade_out")
+    def fade_out(ctx: Context, track_index: int, item_index: int, fade_length: float, fade_curve: int = 0) -> Dict[str, Any]:
+        """Add a fade-out to an item."""
+        return _handle_controller_operation(
+            f"Add {fade_length}s fade-out to item {item_index} on track {track_index}",
+            controller.fade_out, track_index, item_index, fade_length, fade_curve
+        )
+
+    @mcp.tool("crossfade_items")
+    def crossfade_items(ctx: Context, track_index: int, item1_index: int, item2_index: int, crossfade_length: float) -> Dict[str, Any]:
+        """Create a crossfade between two items."""
+        return _handle_controller_operation(
+            f"Create {crossfade_length}s crossfade between items {item1_index} and {item2_index}",
+            controller.crossfade_items, track_index, item1_index, item2_index, crossfade_length
+        )
+
+
+
+    @mcp.tool("reverse_item")
+    def reverse_item(ctx: Context, track_index: int, item_index: int) -> Dict[str, Any]:
+        """Reverse an item."""
+        return _handle_controller_operation(
+            f"Reverse item {item_index} on track {track_index}",
+            controller.reverse_item, track_index, item_index
+        )
+
+    @mcp.tool("get_item_fade_info")
+    def get_item_fade_info(ctx: Context, track_index: int, item_index: int) -> Dict[str, Any]:
+        """Get fade information for an item."""
+        try:
+            fade_info = controller.get_item_fade_info(track_index, item_index)
+            return _create_success_response(f"Fade info for item {item_index} on track {track_index}: {fade_info}")
+        except Exception as e:
+            logger.error(f"Failed to get item fade info: {str(e)}")
+            return _create_error_response(f"Failed to get item fade info: {str(e)}")
+
+
 def setup_mcp_tools(mcp: FastMCP, controller) -> None:
     """Setup MCP tools for Reaper control."""
     _setup_connection_tools(mcp, controller)
@@ -636,3 +814,6 @@ def setup_mcp_tools(mcp: FastMCP, controller) -> None:
     _setup_midi_tools(mcp, controller)
     _setup_audio_tools(mcp, controller)
     _setup_routing_tools(mcp, controller)
+    _setup_advanced_routing_tools(mcp, controller)
+    _setup_automation_tools(mcp, controller)
+    _setup_advanced_item_tools(mcp, controller)
