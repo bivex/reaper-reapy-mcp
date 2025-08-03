@@ -387,9 +387,7 @@ class ReaperController:
         """Create a crossfade between two items."""
         return self.advanced_items.crossfade_items(track_index, item1_index, item2_index, crossfade_length)
 
-    def normalize_item(self, track_index: int, item_index: int, target_level: float = -1.0) -> bool:
-        """Normalize an item to a target level."""
-        return self.advanced_items.normalize_item(track_index, item_index, target_level)
+
 
     def reverse_item(self, track_index: int, item_index: int) -> bool:
         """Reverse an item."""

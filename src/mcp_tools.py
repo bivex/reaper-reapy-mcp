@@ -782,13 +782,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
             controller.crossfade_items, track_index, item1_index, item2_index, crossfade_length
         )
 
-    @mcp.tool("normalize_item")
-    def normalize_item(ctx: Context, track_index: int, item_index: int, target_level: float = -1.0) -> Dict[str, Any]:
-        """Normalize an item to a target level."""
-        return _handle_controller_operation(
-            f"Normalize item {item_index} to {target_level} dB",
-            controller.normalize_item, track_index, item_index, target_level
-        )
+
 
     @mcp.tool("reverse_item")
     def reverse_item(ctx: Context, track_index: int, item_index: int) -> Dict[str, Any]:

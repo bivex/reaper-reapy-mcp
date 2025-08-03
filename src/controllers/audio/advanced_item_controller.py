@@ -216,53 +216,13 @@ class AdvancedItemController:
             RPR.SetMediaItemSelected(item2.id, True)
             
             # Create crossfade
-            RPR.Main_OnCommand(40047, 0)  # Crossfade items action
+            RPR.Main_OnCommand(40312, 0)  # Crossfade items action
             
-            self.logger.info(f"Created {crossfade_length}s crossfade between items {item1_index} and {item2_index}")
+            self.logger.info(f"Created crossfade between items {item1_index} and {item2_index}")
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to create crossfade: {e}")
-            return False
-
-    def normalize_item(self, track_index: int, item_index: int, target_level: float = -1.0) -> bool:
-        """
-        Normalize an item to a target level.
-        
-        Args:
-            track_index (int): Index of the track
-            item_index (int): Index of the item
-            target_level (float): Target level in dB (default -1.0 dB)
-            
-        Returns:
-            bool: True if successful, False otherwise
-        """
-        try:
-            project = reapy.Project()
-            
-            if track_index >= len(project.tracks):
-                self.logger.error("Invalid track index")
-                return False
-            
-            track = project.tracks[track_index]
-            
-            if item_index >= len(track.items):
-                self.logger.error("Invalid item index")
-                return False
-            
-            item = track.items[item_index]
-            
-            # Select the item
-            RPR.SetMediaItemSelected(item.id, True)
-            
-            # Normalize to target level
-            RPR.Main_OnCommand(40108, 0)  # Normalize items action
-            
-            self.logger.info(f"Normalized item {item_index} to {target_level} dB")
-            return True
-            
-        except Exception as e:
-            self.logger.error(f"Failed to normalize item: {e}")
             return False
 
     def reverse_item(self, track_index: int, item_index: int) -> bool:
