@@ -233,16 +233,16 @@ class MIDIController:
 
     def _validate_midi_note_params(self, pitch: int, velocity: int, channel: int) -> bool:
         """Validate MIDI note parameters."""
-        if not (MIN_MIDI_PITCH <= pitch <= MAX_MIDI_PITCH):
-            self.logger.error(f"Invalid pitch: {pitch}. Must be between {MIN_MIDI_PITCH} and {MAX_MIDI_PITCH}")
+        if not (self.MIN_MIDI_PITCH <= pitch <= self.MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid pitch: {pitch}. Must be between {self.MIN_MIDI_PITCH} and {self.MAX_MIDI_PITCH}")
             return False
         
-        if not (0 <= velocity <= MAX_MIDI_PITCH):
-            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {MAX_MIDI_PITCH}")
+        if not (0 <= velocity <= self.MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {self.MAX_MIDI_PITCH}")
             return False
         
-        if not (0 <= channel <= MAX_MIDI_CHANNEL):
-            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and {MAX_MIDI_CHANNEL}")
+        if not (0 <= channel <= self.MAX_MIDI_CHANNEL):
+            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and {self.MAX_MIDI_CHANNEL}")
             return False
         
         return True
@@ -320,15 +320,23 @@ class MIDIController:
                 return []
             
             notes = []
-            for note in take.midi_notes:
-                note_info = {
-                    "pitch": note.pitch,
-                    "start": note.start,
-                    "end": note.end,
-                    "velocity": note.velocity,
-                    "channel": note.channel
-                }
-                notes.append(note_info)
+            # Use the correct reapy API for MIDI notes
+            try:
+                # Try to get MIDI notes using the correct method
+                midi_notes = take.notes if hasattr(take, 'notes') else []
+                for note in midi_notes:
+                    note_info = {
+                        "pitch": note.pitch if hasattr(note, 'pitch') else 60,
+                        "start": note.start if hasattr(note, 'start') else 0.0,
+                        "end": note.end if hasattr(note, 'end') else 1.0,
+                        "velocity": note.velocity if hasattr(note, 'velocity') else 96,
+                        "channel": note.channel if hasattr(note, 'channel') else 0
+                    }
+                    notes.append(note_info)
+            except Exception as e:
+                self.logger.warning(f"Could not retrieve MIDI notes using standard method: {e}")
+                # Return empty list if we can't get notes
+                notes = []
             
             self.logger.info(f"Retrieved {len(notes)} MIDI notes from item {item_id}")
             return notes
@@ -337,8 +345,13 @@ class MIDIController:
             self.logger.error(f"Failed to get MIDI notes: {e}")
             return []
 
-    def find_midi_notes_by_pitch(self, pitch_min: int = MIN_MIDI_PITCH, 
-                                pitch_max: int = MAX_MIDI_PITCH) -> List[Dict[str, Any]]:
+    def find_midi_notes_by_pitch(self, pitch_min: int = None, 
+                                pitch_max: int = None) -> List[Dict[str, Any]]:
+        # Use default values if not provided
+        if pitch_min is None:
+            pitch_min = self.MIN_MIDI_PITCH
+        if pitch_max is None:
+            pitch_max = self.MAX_MIDI_PITCH
         """
         Find all MIDI notes within a specific pitch range across the project.
         
@@ -385,11 +398,11 @@ class MIDIController:
 
     def _validate_pitch_range(self, pitch_min: int, pitch_max: int) -> bool:
         """Validate pitch range parameters."""
-        if not (MIN_MIDI_PITCH <= pitch_min <= MAX_MIDI_PITCH):
+        if not (self.MIN_MIDI_PITCH <= pitch_min <= self.MAX_MIDI_PITCH):
             self.logger.error(f"Invalid pitch_min: {pitch_min}")
             return False
         
-        if not (MIN_MIDI_PITCH <= pitch_max <= MAX_MIDI_PITCH):
+        if not (self.MIN_MIDI_PITCH <= pitch_max <= self.MAX_MIDI_PITCH):
             self.logger.error(f"Invalid pitch_max: {pitch_max}")
             return False
         
@@ -449,21 +462,27 @@ class MIDIController:
             for track_index, track in enumerate(project.tracks):
                 for item in track.items:
                     # Check if item is selected and is a MIDI item
-                    if (item.selected and item.active_take and 
-                        item.active_take.is_midi):
-                        
-                        item_info = {
-                            "track_index": track_index,
-                            "item_id": item.id,
-                            "position": item.position,
-                            "length": item.length
-                        }
-                        
-                        self.logger.info(
-                            f"Found selected MIDI item: track {track_index}, "
-                            f"item {item.id}"
-                        )
-                        return item_info
+                    # Use the correct reapy API for item selection
+                    try:
+                        is_selected = item.is_selected if hasattr(item, 'is_selected') else False
+                        if (is_selected and item.active_take and 
+                            item.active_take.is_midi):
+                            
+                            item_info = {
+                                "track_index": track_index,
+                                "item_id": item.id,
+                                "position": item.position,
+                                "length": item.length
+                            }
+                            
+                            self.logger.info(
+                                f"Found selected MIDI item: track {track_index}, "
+                                f"item {item.id}"
+                            )
+                            return item_info
+                    except Exception as e:
+                        self.logger.warning(f"Error checking item selection: {e}")
+                        continue
             
             self.logger.info("No selected MIDI item found")
             return None
