@@ -8,12 +8,12 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.reaper_controller import ReaperController
-from src.mcp_tools import McpTools
+from src.mcp_tools import setup_mcp_tools
 from src.controllers.midi.midi_controller import MIDIController
 
 # Mock reapy objects and methods for testing
 class MockReapyItem:
-    def __init__(self, item_id, position=0.0, length=MIDIController.DEFAULT_MIDI_LENGTH):
+    def __init__(self, item_id, position=0.0, length=4.0):
         self.id = item_id
         self.position = position
         self.length = length

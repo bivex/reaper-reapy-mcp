@@ -5,8 +5,8 @@ from typing import Union
 import time
 from reapy import reascript_api as RPR
 
-from utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
-from utils.item_operations import select_item, delete_item
+from src.utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
+from src.utils.item_operations import select_item, delete_item
 
 # Constants to replace magic numbers
 POSITION_TOLERANCE = 0.01
