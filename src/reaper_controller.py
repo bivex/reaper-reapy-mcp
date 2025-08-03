@@ -202,9 +202,22 @@ class ReaperController:
         return self.marker.delete_marker(marker_index)
     
     # Additional MIDI operations
+    def create_midi_item(self, track_index: int, start_time: Optional[float] = None, length: float = 4.0) -> Optional[int]:
+        """Create a MIDI item on a track."""
+        if start_time is None:
+            start_time = 0.0
+        return self.midi.create_midi_item(track_index, start_time, length=length)
+    
     def add_midi_note(self, track_index: int, item_id: int, pitch: int, start_time: float, length: float, velocity: int = 96) -> bool:
         """Add a MIDI note to a MIDI item."""
-        return self.midi.add_midi_note(track_index, item_id, pitch, start_time, length, velocity)
+        from src.controllers.midi.midi_controller import MIDIController
+        note_params = MIDIController.MIDINoteParams(
+            pitch=pitch,
+            start_time=start_time,
+            length=length,
+            velocity=velocity
+        )
+        return self.midi.add_midi_note(track_index, item_id, note_params)
     
     def clear_midi_item(self, track_index: int, item_id: int) -> bool:
         """Clear all MIDI notes from a MIDI item."""
