@@ -8,11 +8,14 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 
 - **Track Management**: Create, rename, and color tracks
 - **FX Management**: Add, remove, and control effect parameters
-- **Project Control**: Set tempo, manage regions and markers
+- **Project Control**: Set tempo, manage regions and markers, clear all items
 - **Master Track Control**: Volume, pan, mute, and solo operations
 - **MIDI Operations**: Create items, add/get notes, clear items with musical positioning
 - **Audio Item Operations**: Insert, duplicate, modify with enhanced positioning support
 - **Routing Management**: Create, manage, and control track sends and receives
+- **Advanced Routing & Bussing**: Folder tracks, bus tracks, parent-child relationships
+- **Automation & Modulation**: Create envelopes, add points, manage automation modes
+- **Advanced Item Operations**: Split, glue, fade, crossfade, reverse items
 - **Dual Position Format**: Support both time (seconds) and measure:beat notation
 - **Reliable Duplication**: Uses REAPER's built-in commands for accurate item copying
 - **MCP Integration**: Model Context Protocol server for AI assistant control
@@ -135,6 +138,7 @@ python -m src.run_mcp_server
 |------|-------------|
 | `set_tempo` | Set project tempo |
 | `get_tempo` | Get current tempo |
+| `clear_project` | Clear all items from all tracks in the project |
 | `create_region` | Create a region |
 | `delete_region` | Delete a region |
 | `create_marker` | Create a marker |
@@ -171,6 +175,8 @@ python -m src.run_mcp_server
 | `get_items_in_time_range` | Get items within a time range | Time & Measure:Beat |
 | `get_selected_items` | Get all selected items | - |
 
+**Note**: The `get_items_in_time_range` function now properly handles optional time parameters and supports both time and measure:beat formats. The `insert_audio_item` function has been fixed to handle None values for start_time properly.
+
 ### Advanced Item Operations
 | Tool | Description | Parameters |
 |------|-------------|------------|
@@ -179,7 +185,6 @@ python -m src.run_mcp_server
 | `fade_in` | Add a fade-in to an item | `track_index`, `item_index`, `fade_length`, `fade_curve` |
 | `fade_out` | Add a fade-out to an item | `track_index`, `item_index`, `fade_length`, `fade_curve` |
 | `crossfade_items` | Create a crossfade between two items | `track_index`, `item1_index`, `item2_index`, `crossfade_length` |
-| `normalize_item` | Normalize an item to a target level | `track_index`, `item_index`, `target_level` |
 | `reverse_item` | Reverse an item | `track_index`, `item_index` |
 | `get_item_fade_info` | Get fade information for an item | `track_index`, `item_index` |
 
@@ -327,14 +332,14 @@ fade_out(track_index=0, item_index=1, fade_length=1.0, fade_curve=2)
 # Create crossfade between two items
 crossfade_items(track_index=0, item1_index=0, item2_index=1, crossfade_length=0.5)
 
-# Normalize an item to -1 dB
-normalize_item(track_index=0, item_index=0, target_level=-1.0)
-
 # Reverse an item
 reverse_item(track_index=0, item_index=0)
 
 # Glue multiple items together
 glue_items(track_index=0, item_indices=[0, 1, 2])
+
+# Clear all items from the entire project
+clear_project()
 ```
 
 ### MCP Client Configuration
