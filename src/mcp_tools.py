@@ -2,7 +2,11 @@ from mcp import types
 from mcp.server.fastmcp import FastMCP, Context
 from typing import Optional, Dict, Any, List, Union
 import reapy
+import logging
 from src.utils.position_utils import position_to_time, time_to_measure
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 # Constants to replace magic numbers
 DEFAULT_MIDI_LENGTH = 4.0
