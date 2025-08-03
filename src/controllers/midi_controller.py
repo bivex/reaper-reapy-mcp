@@ -3,7 +3,8 @@ import logging
 from typing import List, Dict, Any, Optional, Union, Tuple
 
 from .base_controller import BaseController
-from src.utils.item_utils import get_item_by_id_or_index, get_item_properties, select_item, delete_item
+from src.utils.item_utils import get_item_by_id_or_index, get_item_properties
+from src.utils.item_operations import select_item, delete_item
 
 class MIDIController:
     """Controller for MIDI-related operations in Reaper."""

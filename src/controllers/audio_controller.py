@@ -6,7 +6,8 @@ import time
 from reapy import reascript_api as RPR
 
 
-from utils.item_utils import get_item_by_id_or_index, get_item_properties, select_item, delete_item
+from utils.item_utils import get_item_by_id_or_index, get_item_properties
+from utils.item_operations import select_item, delete_item
 
 class AudioController:
     """Controller for audio-related operations in Reaper."""
