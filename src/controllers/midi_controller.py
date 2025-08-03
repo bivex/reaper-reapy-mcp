@@ -1,6 +1,7 @@
 import reapy
 import logging
 from typing import List, Dict, Any, Optional, Union, Tuple
+from dataclasses import dataclass
 
 from .base_controller import BaseController
 from src.utils.item_utils import get_item_by_id_or_index, get_item_properties
@@ -13,6 +14,15 @@ DEFAULT_MIDI_CHANNEL = 0
 MAX_MIDI_PITCH = 127
 MIN_MIDI_PITCH = 0
 MAX_MIDI_CHANNEL = 15
+
+@dataclass
+class MIDINoteParams:
+    """Data class to hold MIDI note parameters."""
+    pitch: int
+    start_time: float
+    length: float
+    velocity: int = DEFAULT_MIDI_VELOCITY
+    channel: int = DEFAULT_MIDI_CHANNEL
 
 class MIDIController:
     """Controller for MIDI-related operations in Reaper."""
@@ -135,28 +145,24 @@ class MIDIController:
         
         return track_index, start_time, length
 
-    def add_midi_note(self, track_index: int, item_id: Union[int, str], pitch: int, 
-                     start_time: float, length: float, 
-                     velocity: int = DEFAULT_MIDI_VELOCITY, 
-                     channel: int = DEFAULT_MIDI_CHANNEL) -> bool:
+    def add_midi_note(self, track_index: int, item_id: Union[int, str], 
+                     note_params: MIDINoteParams) -> bool:
         """
         Add a MIDI note to a MIDI item.
         
         Args:
             track_index (int): Index of the track containing the MIDI item
             item_id (int or str): ID of the MIDI item
-            pitch (int): MIDI pitch (0-127)
-            start_time (float): Start time within the MIDI item in seconds
-            length (float): Length of the note in seconds
-            velocity (int): MIDI velocity (0-127)
-            channel (int): MIDI channel (0-15)
+            note_params (MIDINoteParams): MIDI note parameters
             
         Returns:
             bool: True if successful, False otherwise
         """
         try:
             # Validate parameters
-            if not self._validate_midi_note_params(pitch, velocity, channel):
+            if not self._validate_midi_note_params(
+                note_params.pitch, note_params.velocity, note_params.channel
+            ):
                 return False
             
             # Get the track and item
@@ -177,15 +183,50 @@ class MIDIController:
             
             # Add the note using the MIDI take
             take.add_midi_note(
-                pitch, start_time, start_time + length, velocity, channel
+                note_params.pitch, 
+                note_params.start_time, 
+                note_params.start_time + note_params.length, 
+                note_params.velocity, 
+                note_params.channel
             )
             
-            self.logger.info(f"Added MIDI note: pitch={pitch}, velocity={velocity}, channel={channel}")
+            self.logger.info(
+                f"Added MIDI note: pitch={note_params.pitch}, "
+                f"velocity={note_params.velocity}, channel={note_params.channel}"
+            )
             return True
             
         except Exception as e:
             self.logger.error(f"Failed to add MIDI note: {e}")
             return False
+
+    def add_midi_note_simple(self, track_index: int, item_id: Union[int, str], pitch: int, 
+                           start_time: float, length: float, 
+                           velocity: int = DEFAULT_MIDI_VELOCITY, 
+                           channel: int = DEFAULT_MIDI_CHANNEL) -> bool:
+        """
+        Convenience method to add a MIDI note with individual parameters.
+        
+        Args:
+            track_index (int): Index of the track containing the MIDI item
+            item_id (int or str): ID of the MIDI item
+            pitch (int): MIDI pitch (0-127)
+            start_time (float): Start time within the MIDI item in seconds
+            length (float): Length of the note in seconds
+            velocity (int): MIDI velocity (0-127)
+            channel (int): MIDI channel (0-15)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        note_params = MIDINoteParams(
+            pitch=pitch,
+            start_time=start_time,
+            length=length,
+            velocity=velocity,
+            channel=channel
+        )
+        return self.add_midi_note(track_index, item_id, note_params)
 
     def _validate_midi_note_params(self, pitch: int, velocity: int, channel: int) -> bool:
         """Validate MIDI note parameters."""

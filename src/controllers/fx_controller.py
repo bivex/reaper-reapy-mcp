@@ -7,6 +7,7 @@ from reapy import reascript_api as RPR
 
 # Constants to replace magic numbers
 PLUGIN_NAME_INDEX = 2  # Index of plugin name in comma-separated format
+MIN_COMMA_PARTS_FOR_PLUGIN_NAME = 3  # Minimum parts needed for plugin name extraction
 
 class FXController:
     """Controller for FX-related operations in Reaper."""
@@ -339,7 +340,7 @@ class FXController:
         # Try to extract names in the format: dll=ID,number,PluginName
         if ',' in right_part:
             comma_parts = right_part.split(',')
-            if len(comma_parts) >= 3:
+            if len(comma_parts) >= MIN_COMMA_PARTS_FOR_PLUGIN_NAME:
                 plugin_name = comma_parts[PLUGIN_NAME_INDEX].strip()
                 if plugin_name:
                     return plugin_name

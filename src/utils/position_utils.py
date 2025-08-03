@@ -1,6 +1,10 @@
 import reapy
 from reapy import reascript_api as RPR
 from typing import Union
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 # Constants to replace magic numbers
 DEFAULT_BEATS_PER_MEASURE = 4
@@ -54,8 +58,19 @@ def _convert_measure_beat_to_time(measure: float, beat: float, project=None) -> 
         return time
         
     except Exception as e:
-        # Fallback - just return the beat value as seconds
-        return beat
+        # Log the error and use fallback values
+        logger.warning(f"Failed to convert measure:beat to time using project settings: {e}. Using fallback values.")
+        return _convert_measure_beat_to_time_fallback(measure, beat)
+
+def _convert_measure_beat_to_time_fallback(measure: float, beat: float) -> float:
+    """Convert measure and beat to time using default values as fallback."""
+    seconds_per_beat = DEFAULT_SECONDS_PER_BEAT
+    seconds_per_measure = DEFAULT_SECONDS_PER_MEASURE
+    
+    # Convert measure:beat to time (measures are 1-based in our interface)
+    time = ((measure - 1) * seconds_per_measure + 
+            (beat - 1) * seconds_per_beat)
+    return time
 
 def _get_beats_per_measure(project) -> int:
     """Get the number of beats per measure from the project."""
@@ -64,8 +79,8 @@ def _get_beats_per_measure(project) -> int:
         if time_sig_num > 0:
             return time_sig_num
     except Exception as e:
-        # Use default if getting time signature fails
-        pass
+        # Log the error and use default value
+        logger.warning(f"Failed to get time signature from project: {e}. Using default beats per measure.")
     
     return DEFAULT_BEATS_PER_MEASURE
 
@@ -100,7 +115,8 @@ def time_to_measure(time: float, project=None) -> str:
         return f"{measure}:{beat:.3f}"
         
     except Exception as e:
-        # Fallback: estimate based on default values
+        # Log the error and use fallback values
+        logger.warning(f"Failed to convert time to measure:beat using project settings: {e}. Using fallback values.")
         return _time_to_measure_fallback(time)
 
 def _time_to_measure_fallback(time: float) -> str:

@@ -15,6 +15,7 @@ REQUEST_TIMEOUT = 30  # seconds
 CHUNK_SIZE = 8192
 PROGRESS_LOG_INTERVAL = 10  # percentage
 RETRY_WAIT_MULTIPLIER = 5  # seconds
+PERCENTAGE_BASE = 100  # Base for percentage calculations
 
 def ensure_sample_file() -> str:
     """
@@ -86,6 +87,6 @@ def _save_downloaded_file(response: requests.Response, local_path: Path) -> None
 def _log_download_progress(downloaded: int, total_size: int) -> None:
     """Log download progress at regular intervals."""
     if total_size > 0:
-        progress = (downloaded / total_size) * 100
+        progress = (downloaded / total_size) * PERCENTAGE_BASE
         if int(progress) % PROGRESS_LOG_INTERVAL == 0:
             logger.info(f"Download progress: {progress:.1f}%") 
