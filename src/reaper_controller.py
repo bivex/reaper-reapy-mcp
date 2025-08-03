@@ -18,6 +18,9 @@ from controllers.audio_controller import AudioController
 from controllers.master_controller import MasterController
 from controllers.project_controller import ProjectController
 
+# Constants to replace magic numbers
+DEFAULT_MIDI_VELOCITY = 100
+
 # Create a combined controller that inherits from all controllers
 class ReaperController:
     """Controller for interacting with Reaper using reapy.
@@ -91,7 +94,8 @@ class ReaperController:
         """Create a MIDI item on a track."""
         return self.midi.create_midi_item(track_index, position, length)
     
-    def add_midi_note(self, item_id: int, note: int, start: float, length: float, velocity: int = 100) -> bool:
+    def add_midi_note(self, item_id: int, note: int, start: float, length: float, 
+                     velocity: int = DEFAULT_MIDI_VELOCITY) -> bool:
         """Add a MIDI note to a MIDI item."""
         return self.midi.add_midi_note(item_id, note, start, length, velocity)
     

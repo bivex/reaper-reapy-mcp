@@ -10,7 +10,8 @@ This package contains specialized controllers for different aspects of Reaper fu
 - MasterController: Master track operations
 - ProjectController: Project-level operations
 
-The ReaperController class (defined in `reaper_controller.py`) combines all these controllers into a single, easy-to-use class using composition.
+The ReaperController class (defined in `reaper_controller.py`) combines all these controllers 
+into a single, easy-to-use class using composition.
 """
 
 # Import controllers so they can be imported from the controllers package

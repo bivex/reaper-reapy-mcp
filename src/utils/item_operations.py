@@ -43,19 +43,34 @@ def delete_item(item: reapy.Item) -> bool:
         item.delete()
         
         # Verify the item was deleted
-        try:
-            # Try to find the item again - it should be gone
-            for i in item.track.items:
-                if str(i.id) == str(item.id):
-                    logger.error("Item still exists after deletion")
-                    return False
-        except Exception as e:
-            # If we get an error trying to access the item, it probably means it was deleted
-            pass
+        if not _verify_item_deletion(item):
+            logger.error("Item still exists after deletion")
+            return False
         
         logger.info(f"Deleted item with ID: {item.id}")
         return True
         
     except Exception as e:
         logger.error(f"Failed to delete item: {e}")
-        return False 
+        return False
+
+def _verify_item_deletion(item: reapy.Item) -> bool:
+    """
+    Verify that an item was successfully deleted.
+    
+    Args:
+        item (reapy.Item): The item that should have been deleted
+        
+    Returns:
+        bool: True if item is confirmed deleted, False if it still exists
+    """
+    try:
+        # Try to find the item again - it should be gone
+        for i in item.track.items:
+            if str(i.id) == str(item.id):
+                return False
+        return True
+    except Exception as e:
+        # If we get an error trying to access the item, it probably means it was deleted
+        logger.debug(f"Error during deletion verification (likely item was deleted): {e}")
+        return True 

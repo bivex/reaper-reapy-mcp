@@ -2,6 +2,11 @@ import reapy
 from reapy import reascript_api as RPR
 from typing import Dict
 
+# Constants to replace magic numbers
+DEFAULT_BPM = 120.0
+DEFAULT_TIME_SIG_NUM = 4
+DEFAULT_TIME_SIG_DEN = 4
+
 def get_time_map_info(project=None) -> dict:
     """
     Get time map information for the project.
@@ -29,8 +34,12 @@ def get_time_map_info(project=None) -> dict:
         }
     except Exception as e:
         # Return defaults if getting info fails
-        return {
-            'bpm': 120.0,
-            'time_sig_num': 4,
-            'time_sig_den': 4
-        } 
+        return _get_default_time_map_info()
+
+def _get_default_time_map_info() -> Dict:
+    """Get default time map information."""
+    return {
+        'bpm': DEFAULT_BPM,
+        'time_sig_num': DEFAULT_TIME_SIG_NUM,
+        'time_sig_den': DEFAULT_TIME_SIG_DEN
+    } 

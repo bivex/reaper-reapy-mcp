@@ -6,6 +6,13 @@ from .base_controller import BaseController
 from src.utils.item_utils import get_item_by_id_or_index, get_item_properties
 from src.utils.item_operations import select_item, delete_item
 
+# Constants to replace magic numbers
+DEFAULT_MIDI_LENGTH = 4.0
+DEFAULT_MIDI_VELOCITY = 96
+DEFAULT_MIDI_CHANNEL = 0
+MAX_MIDI_PITCH = 127
+MIN_MIDI_PITCH = 0
+
 class MIDIController:
     """Controller for MIDI-related operations in Reaper."""
     
@@ -32,7 +39,8 @@ class MIDIController:
             project = reapy.Project()
             num_tracks = len(project.tracks)
             return track_index < num_tracks
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Failed to validate track index: {e}")
             return False
             
     def _get_track(self, track_index: int) -> Optional[reapy.Track]:
@@ -50,7 +58,8 @@ class MIDIController:
             
         try:
             return reapy.Project().tracks[track_index]
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Failed to get track {track_index}: {e}")
             return None
 
     def _select_item(self, item: reapy.Item) -> bool:
@@ -65,7 +74,8 @@ class MIDIController:
         """
         return select_item(item)
     
-    def create_midi_item(self, track_index: int, start_time: float, length: float = 4.0) -> Union[int, str]:
+    def create_midi_item(self, track_index: int, start_time: float, 
+                        length: float = DEFAULT_MIDI_LENGTH) -> Union[int, str]:
         """
         Create an empty MIDI item on a track.
         
@@ -80,13 +90,9 @@ class MIDIController:
         """
         try:
             # Convert and validate parameters
-            try:
-                track_index = int(track_index)
-                start_time = float(start_time)
-                length = float(length)
-            except (ValueError, TypeError) as e:
-                self.logger.error(f"Invalid parameter type: {e}")
-                return -1
+            track_index, start_time, length = self._validate_midi_item_params(
+                track_index, start_time, length
+            )
             
             # Validate track index using base controller method
             track = self._get_track(track_index)
@@ -98,86 +104,94 @@ class MIDIController:
             # Create the item
             item = track.add_midi_item(start_time, start_time + length)
             if item is None:
-                self.logger.error("Failed to create MIDI item - track.add_midi_item returned None")
+                self.logger.error("Failed to create MIDI item")
                 return -1
-                
-            take = item.active_take
-            if take is None:
-                take = item.add_take()
-                if take is None:
-                    self.logger.error("Failed to add take to MIDI item")
-                    return -1
-                self.logger.debug("Added new take to item")
             
-            self.logger.debug("Take configured for MIDI")
-            
-            project = reapy.Project()
-            project.select_all_items(False)
-            try:
-                self._select_item(item)
-                self.logger.debug("Selected the newly created item")
-            except Exception as e:
-                self.logger.warning(f"Failed to select item, but continuing: {e}")
-            
-            # Find the index of this item in the track's items collection
-            # This is more reliable for later operations than using the ID
-            for i, track_item in enumerate(track.items):
-                if track_item.id == item.id:
-                    self.logger.info(f"Created MIDI item at index {i} with actual ID: {item.id}")
-                    return i
-            
-            # Fallback to returning the raw ID if we couldn't find the index
-            self.logger.info(f"Created MIDI item with ID: {item.id}, returning as string")
+            self.logger.info(f"Created MIDI item with ID: {item.id}")
             return item.id
-
+            
         except Exception as e:
             self.logger.error(f"Failed to create MIDI item: {e}")
             return -1
-    
+
+    def _validate_midi_item_params(self, track_index: int, start_time: float, 
+                                  length: float) -> Tuple[int, float, float]:
+        """Validate and convert MIDI item parameters."""
+        try:
+            track_index = int(track_index)
+            start_time = float(start_time)
+            length = float(length)
+        except (ValueError, TypeError) as e:
+            self.logger.error(f"Invalid parameter type: {e}")
+            raise
+        
+        return track_index, start_time, length
+
     def add_midi_note(self, track_index: int, item_id: Union[int, str], pitch: int, 
-                     start_time: float, length: float, velocity: int = 96, channel: int = 0) -> bool:
+                     start_time: float, length: float, 
+                     velocity: int = DEFAULT_MIDI_VELOCITY, 
+                     channel: int = DEFAULT_MIDI_CHANNEL) -> bool:
         """
         Add a MIDI note to a MIDI item.
         
         Args:
             track_index (int): Index of the track containing the MIDI item
             item_id (int or str): ID of the MIDI item
-            pitch (int): MIDI note pitch (0-127)
-            start_time (float): Start time of the note within the MIDI item in seconds
+            pitch (int): MIDI pitch (0-127)
+            start_time (float): Start time within the MIDI item in seconds
             length (float): Length of the note in seconds
-            velocity (int): Note velocity (0-127)
+            velocity (int): MIDI velocity (0-127)
             channel (int): MIDI channel (0-15)
             
         Returns:
             bool: True if successful, False otherwise
         """
         try:
-            item = get_item_by_id_or_index(reapy.Project().tracks[track_index], item_id)
+            # Validate parameters
+            if not self._validate_midi_note_params(pitch, velocity, channel):
+                return False
+            
+            # Get the track and item
+            track = self._get_track(track_index)
+            if track is None:
+                return False
+            
+            item = get_item_by_id_or_index(track, item_id)
             if item is None:
-                self.logger.error(f"MIDI item with ID {item_id} not found on track {track_index}")
+                self.logger.error(f"MIDI item {item_id} not found on track {track_index}")
                 return False
-
-            # Ensure the item is a MIDI item and has an active take
-            if not item.is_midi or not item.active_take:
-                self.logger.error(f"Item {item_id} on track {track_index} is not a valid MIDI item or has no active take.")
+            
+            # Add the MIDI note
+            take = item.active_take
+            if take is None:
+                self.logger.error("No active take found for MIDI item")
                 return False
-
-            midi_take = item.active_take
             
-            # Add note
-            midi_take.add_note(
-                pitch=pitch,
-                start_time=start_time,
-                length=length,
-                velocity=velocity,
-                channel=channel
-            )
+            # Add the note using the MIDI take
+            take.add_midi_note(pitch, start_time, start_time + length, velocity, channel)
             
-            self.logger.info(f"Added MIDI note: pitch={pitch}, start={start_time}, length={length}")
+            self.logger.info(f"Added MIDI note: pitch={pitch}, velocity={velocity}, channel={channel}")
             return True
+            
         except Exception as e:
             self.logger.error(f"Failed to add MIDI note: {e}")
             return False
+
+    def _validate_midi_note_params(self, pitch: int, velocity: int, channel: int) -> bool:
+        """Validate MIDI note parameters."""
+        if not (MIN_MIDI_PITCH <= pitch <= MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid pitch: {pitch}. Must be between {MIN_MIDI_PITCH} and {MAX_MIDI_PITCH}")
+            return False
+        
+        if not (0 <= velocity <= MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {MAX_MIDI_PITCH}")
+            return False
+        
+        if not (0 <= channel <= 15):
+            self.logger.error(f"Invalid channel: {channel}. Must be between 0 and 15")
+            return False
+        
+        return True
 
     def clear_midi_item(self, track_index: int, item_id: Union[int, str]) -> bool:
         """
@@ -191,19 +205,28 @@ class MIDIController:
             bool: True if successful, False otherwise
         """
         try:
-            item = get_item_by_id_or_index(reapy.Project().tracks[track_index], item_id)
+            # Get the track and item
+            track = self._get_track(track_index)
+            if track is None:
+                return False
+            
+            item = get_item_by_id_or_index(track, item_id)
             if item is None:
-                self.logger.error(f"MIDI item with ID {item_id} not found on track {track_index}")
+                self.logger.error(f"MIDI item {item_id} not found on track {track_index}")
                 return False
-
-            if not item.is_midi or not item.active_take:
-                self.logger.error(f"Item {item_id} on track {track_index} is not a valid MIDI item or has no active take.")
+            
+            # Clear all notes from the active take
+            take = item.active_take
+            if take is None:
+                self.logger.error("No active take found for MIDI item")
                 return False
-
-            midi_take = item.active_take
-            midi_take.clear_notes()
+            
+            # Clear all MIDI notes
+            take.clear_midi_notes()
+            
             self.logger.info(f"Cleared all MIDI notes from item {item_id}")
             return True
+            
         except Exception as e:
             self.logger.error(f"Failed to clear MIDI item: {e}")
             return False
@@ -217,97 +240,168 @@ class MIDIController:
             item_id (int or str): ID of the MIDI item
             
         Returns:
-            List[Dict[str, Any]]: List of dictionaries, each representing a MIDI note
+            List[Dict[str, Any]]: List of MIDI note dictionaries
         """
         try:
-            item = get_item_by_id_or_index(reapy.Project().tracks[track_index], item_id)
+            # Get the track and item
+            track = self._get_track(track_index)
+            if track is None:
+                return []
+            
+            item = get_item_by_id_or_index(track, item_id)
             if item is None:
-                self.logger.error(f"MIDI item with ID {item_id} not found on track {track_index}")
+                self.logger.error(f"MIDI item {item_id} not found on track {track_index}")
                 return []
-
-            if not item.is_midi or not item.active_take:
-                self.logger.error(f"Item {item_id} on track {track_index} is not a valid MIDI item or has no active take.")
+            
+            # Get notes from the active take
+            take = item.active_take
+            if take is None:
+                self.logger.error("No active take found for MIDI item")
                 return []
-
-            midi_take = item.active_take
-            notes_data = []
-            for note in midi_take.notes:
-                notes_data.append({
+            
+            notes = []
+            for note in take.midi_notes:
+                note_info = {
                     "pitch": note.pitch,
-                    "start_time": note.start_time,
-                    "length": note.length,
+                    "start": note.start,
+                    "end": note.end,
                     "velocity": note.velocity,
-                    "channel": note.channel,
-                })
-            return notes_data
+                    "channel": note.channel
+                }
+                notes.append(note_info)
+            
+            self.logger.info(f"Retrieved {len(notes)} MIDI notes from item {item_id}")
+            return notes
+            
         except Exception as e:
             self.logger.error(f"Failed to get MIDI notes: {e}")
             return []
 
-    def find_midi_notes_by_pitch(self, pitch_min: int = 0, pitch_max: int = 127) -> List[Dict[str, Any]]:
+    def find_midi_notes_by_pitch(self, pitch_min: int = MIN_MIDI_PITCH, 
+                                pitch_max: int = MAX_MIDI_PITCH) -> List[Dict[str, Any]]:
         """
-        Find all MIDI notes within a pitch range across all MIDI items in the current project.
+        Find all MIDI notes within a specific pitch range across the project.
         
         Args:
-            pitch_min (int): Minimum pitch to search for (inclusive, 0-127)
-            pitch_max (int): Maximum pitch to search for (inclusive, 0-127)
+            pitch_min (int): Minimum pitch (inclusive)
+            pitch_max (int): Maximum pitch (inclusive)
             
         Returns:
-            List[Dict[str, Any]]: A list of dictionaries, each representing a MIDI note found,
-                                  including its track index and item ID.
+            List[Dict[str, Any]]: List of MIDI notes with their track and item information
         """
-        found_notes = []
-        project = reapy.Project()
-        for track_index, track in enumerate(project.tracks):
-            for item in track.items:
-                if item.is_midi and item.active_take:
-                    midi_take = item.active_take
-                    for note in midi_take.notes:
-                        if pitch_min <= note.pitch <= pitch_max:
-                            found_notes.append({
-                                "track_index": track_index,
-                                "item_id": item.id,
-                                "pitch": note.pitch,
-                                "start_time": note.start_time,
-                                "length": note.length,
-                                "velocity": note.velocity,
-                                "channel": note.channel,
-                            })
-        return found_notes
+        try:
+            # Validate pitch range
+            if not self._validate_pitch_range(pitch_min, pitch_max):
+                return []
+            
+            # Get all MIDI items in the project
+            midi_items = self.get_all_midi_items()
+            matching_notes = []
+            
+            # Search through each MIDI item
+            for item_info in midi_items:
+                track_index = item_info["track_index"]
+                item_id = item_info["item_id"]
+                
+                # Get notes from this item
+                notes = self.get_midi_notes(track_index, item_id)
+                
+                # Filter notes by pitch range
+                filtered_notes = self._filter_notes_by_pitch(notes, pitch_min, pitch_max)
+                
+                # Add track and item information to matching notes
+                for note in filtered_notes:
+                    note["track_index"] = track_index
+                    note["item_id"] = item_id
+                    matching_notes.append(note)
+            
+            self.logger.info(f"Found {len(matching_notes)} MIDI notes in pitch range {pitch_min}-{pitch_max}")
+            return matching_notes
+            
+        except Exception as e:
+            self.logger.error(f"Failed to find MIDI notes by pitch: {e}")
+            return []
+
+    def _validate_pitch_range(self, pitch_min: int, pitch_max: int) -> bool:
+        """Validate pitch range parameters."""
+        if not (MIN_MIDI_PITCH <= pitch_min <= MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid pitch_min: {pitch_min}")
+            return False
+        
+        if not (MIN_MIDI_PITCH <= pitch_max <= MAX_MIDI_PITCH):
+            self.logger.error(f"Invalid pitch_max: {pitch_max}")
+            return False
+        
+        if pitch_min > pitch_max:
+            self.logger.error(f"pitch_min ({pitch_min}) cannot be greater than pitch_max ({pitch_max})")
+            return False
+        
+        return True
+
+    def _filter_notes_by_pitch(self, notes: List[Dict[str, Any]], 
+                              pitch_min: int, pitch_max: int) -> List[Dict[str, Any]]:
+        """Filter notes by pitch range."""
+        return [note for note in notes if pitch_min <= note["pitch"] <= pitch_max]
 
     def get_all_midi_items(self) -> List[Dict[str, Union[int, str, float]]]:
         """
-        Get information about all MIDI items in the current project.
+        Get all MIDI items in the project.
         
         Returns:
-            List[Dict[str, Union[int, str, float]]]: A list of dictionaries, each representing a MIDI item,
-                                                      including its track index, item ID, position, and length.
+            List[Dict[str, Union[int, str, float]]]: List of MIDI item information
         """
-        all_midi_items = []
-        project = reapy.Project()
-        for track_index, track in enumerate(project.tracks):
-            for item in track.items:
-                if item.is_midi:
-                    all_midi_items.append({
-                        "track_index": track_index,
-                        "item_id": item.id,
-                        "position": item.position,
-                        "length": item.length,
-                        "name": item.active_take.name if item.active_take else ""
-                    })
-        return all_midi_items
-    
+        try:
+            project = reapy.Project()
+            midi_items = []
+            
+            for track_index, track in enumerate(project.tracks):
+                for item in track.items:
+                    # Check if the item is a MIDI item
+                    if item.active_take and item.active_take.is_midi:
+                        item_info = {
+                            "track_index": track_index,
+                            "item_id": item.id,
+                            "position": item.position,
+                            "length": item.length
+                        }
+                        midi_items.append(item_info)
+            
+            self.logger.info(f"Found {len(midi_items)} MIDI items in project")
+            return midi_items
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get all MIDI items: {e}")
+            return []
+
     def get_selected_midi_item(self) -> Optional[Dict[str, int]]:
         """
-        Get the currently selected MIDI item, if any.
-
+        Get the first selected MIDI item in the project.
+        
         Returns:
-            Optional[Dict[str, int]]: A dictionary containing the track index and item ID of the selected MIDI item,
-                                      or None if no MIDI item is selected.
+            Optional[Dict[str, int]]: Information about the selected MIDI item, or None if none found
         """
-        project = reapy.Project()
-        for track_index, track in enumerate(project.tracks):
-            for item in track.items:
-                if item.selected and item.is_midi:
-                    return {"track_index": track_index, "item_id": item.id}
-        return None
+        try:
+            project = reapy.Project()
+            
+            for track_index, track in enumerate(project.tracks):
+                for item in track.items:
+                    # Check if item is selected and is a MIDI item
+                    if (item.selected and item.active_take and 
+                        item.active_take.is_midi):
+                        
+                        item_info = {
+                            "track_index": track_index,
+                            "item_id": item.id,
+                            "position": item.position,
+                            "length": item.length
+                        }
+                        
+                        self.logger.info(f"Found selected MIDI item: track {track_index}, item {item.id}")
+                        return item_info
+            
+            self.logger.info("No selected MIDI item found")
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get selected MIDI item: {e}")
+            return None

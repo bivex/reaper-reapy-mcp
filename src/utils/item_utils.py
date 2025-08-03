@@ -4,7 +4,8 @@ from typing import Union, Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
 
-def get_item_by_id_or_index(track: reapy.Track, item_id: Union[int, str]) -> Optional[reapy.Item]:
+def get_item_by_id_or_index(track: reapy.Track, 
+                           item_id: Union[int, str]) -> Optional[reapy.Item]:
     """
     Get an item from a track by its ID or index.
     
@@ -56,7 +57,7 @@ def get_item_properties(item: reapy.Item) -> Dict[str, Any]:
         if take and not take.is_midi:
             is_audio = True
             try:
-                source_file = take.source.filename if hasattr(take, 'source') and hasattr(take.source, 'filename') else ""
+                source_file = _get_source_filename(take)
             except Exception as e:
                 logger.warning(f"Failed to get source filename: {e}")
         
@@ -75,4 +76,11 @@ def get_item_properties(item: reapy.Item) -> Dict[str, Any]:
         }
     except Exception as e:
         logger.error(f"Failed to get item properties: {e}")
-        return {} 
+        return {}
+
+def _get_source_filename(take: reapy.Take) -> str:
+    """Get the source filename from a take."""
+    if (hasattr(take, 'source') and 
+        hasattr(take.source, 'filename')):
+        return take.source.filename
+    return "" 

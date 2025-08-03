@@ -2,9 +2,8 @@ import reapy
 import logging
 import os
 import re
-import time
-from typing import List, Dict, Any
-
+from typing import List, Dict, Any, Optional
+from reapy import reascript_api as RPR
 
 class FXController:
     """Controller for FX-related operations in Reaper."""
@@ -23,14 +22,22 @@ class FXController:
             fx_name (str): Name of the FX to add
             
         Returns:
-            int: Index of the added FX
+            int: Index of the added FX, or -1 if failed
         """
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
-            fx = track.add_fx(fx_name)
-            return fx.index
-
+            
+            # Add the FX using ReaScript API
+            fx_index = RPR.TrackFX_AddByName(track.id, fx_name, False, 0)
+            
+            if fx_index >= 0:
+                self.logger.info(f"Added FX '{fx_name}' to track {track_index} at index {fx_index}")
+            else:
+                self.logger.error(f"Failed to add FX '{fx_name}' to track {track_index}")
+            
+            return fx_index
+            
         except Exception as e:
             self.logger.error(f"Failed to add FX: {e}")
             return -1
@@ -49,17 +56,25 @@ class FXController:
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
-            # Get the FX object first, then remove it
-            fx = track.fxs[fx_index]
-            fx.delete()
-            return True
+            
+            # Remove the FX using ReaScript API
+            success = RPR.TrackFX_Delete(track.id, fx_index)
+            
+            if success:
+                self.logger.info(f"Removed FX {fx_index} from track {track_index}")
+            else:
+                self.logger.error(f"Failed to remove FX {fx_index} from track {track_index}")
+            
+            return success
+            
         except Exception as e:
             self.logger.error(f"Failed to remove FX: {e}")
             return False
 
-    def set_fx_param(self, track_index: int, fx_index: int, param_name: str, value: float) -> bool:
+    def set_fx_param(self, track_index: int, fx_index: int, param_name: str, 
+                    value: float) -> bool:
         """
-        Set an FX parameter value.
+        Set a parameter value for an FX.
         
         Args:
             track_index (int): Index of the track
@@ -73,51 +88,29 @@ class FXController:
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
-            fx = track.fxs[fx_index]
             
-            # Try to find parameter by name
-            for param_index in range(fx.n_params):
-                if fx.params[param_index].name.lower() == param_name.lower():
-                    # Store current value for logging
-                    try:
-                        current_value = fx.params[param_index].value
-                    except Exception:
-                        current_value = None
-                    
-                    # Set the new value using multiple approaches
-                    try:
-                        # Set using reapy's API
-                        fx.params[param_index].value = value
-                    except Exception as e:
-                        self.logger.debug(f"Failed to set parameter via reapy API: {e}")
-                    
-                    # Also use ReaScript API directly which may be more reliable
-                    try:
-                        reapy.reascript_api.TrackFX_SetParamNormalized(track.id, fx_index, param_index, value)
-                    except Exception as e:
-                        self.logger.debug(f"Failed to set parameter via ReaScript API: {e}")
-                    
-                    # Wait longer for REAPER to update (0.1s instead of 0.01s)
-                    time.sleep(0.1)
-                    
-                    # Verify the change was applied
-                    try:
-                        new_value = reapy.reascript_api.TrackFX_GetParamNormalized(track.id, fx_index, param_index)
-                        self.logger.debug(f"Verified new value is {new_value}")
-                    except Exception:
-                        pass
-                    
-                    return True
+            # Get the parameter index by name
+            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
             
-            self.logger.warning(f"FX parameter '{param_name}' not found 1")
+            for i in range(param_count):
+                param_name_retrieved = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                if param_name_retrieved == param_name:
+                    # Set the parameter value
+                    success = RPR.TrackFX_SetParam(track.id, fx_index, i, value)
+                    if success:
+                        self.logger.info(f"Set FX parameter '{param_name}' to {value}")
+                    return success
+            
+            self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
             return False
+            
         except Exception as e:
             self.logger.error(f"Failed to set FX parameter: {e}")
             return False
 
     def get_fx_param(self, track_index: int, fx_index: int, param_name: str) -> float:
         """
-        Get an FX parameter value.
+        Get a parameter value from an FX.
         
         Args:
             track_index (int): Index of the track
@@ -125,41 +118,26 @@ class FXController:
             param_name (str): Name of the parameter
             
         Returns:
-            float: Current value of the parameter, or 0.0 if not found
+            float: Parameter value, or 0.0 if failed
         """
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
-            fx = track.fxs[fx_index]
             
-            # Try to find parameter by name
-            for param_index in range(fx.n_params):
-                if fx.params[param_index].name.lower() == param_name.lower():
-                    param = fx.params[param_index]
-                    
-                    # First try using the ReaScript API directly, which might be more reliable
-                    try:
-                        # Try to get the normalized value directly from REAPER
-                        value = reapy.reascript_api.TrackFX_GetParamNormalized(track.id, fx_index, param_index)
-                        if value is not None:
-                            return value
-                    except Exception:
-                        pass
-                    
-                    # Safely get the parameter value using reapy's API
-                    try:
-                        value = param.value
-                        return value
-                    except AttributeError:
-                        # If direct access fails, try using get_value() method
-                        try:
-                            value = param.get_value() if hasattr(param, 'get_value') else 0.0
-                            return value
-                        except Exception:
-                            self.logger.warning(f"Could not get value for parameter {param_name}")
-                            return 0.0
-            self.logger.warning(f"FX parameter '{param_name}' not found 2")
+            # Get the parameter index by name
+            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            
+            for i in range(param_count):
+                param_name_retrieved = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                if param_name_retrieved == param_name:
+                    # Get the parameter value
+                    value = RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    self.logger.info(f"Got FX parameter '{param_name}': {value}")
+                    return value
+            
+            self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
             return 0.0
+            
         except Exception as e:
             self.logger.error(f"Failed to get FX parameter: {e}")
             return 0.0
@@ -173,44 +151,29 @@ class FXController:
             fx_index (int): Index of the FX
             
         Returns:
-            List[Dict[str, Any]]: List of parameter information dictionaries
+            List[Dict[str, Any]]: List of parameter dictionaries
         """
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
-            fx = track.fxs[fx_index]
             
             param_list = []
-            for param_index in range(fx.n_params):
-                param = fx.params[param_index]
+            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            
+            for i in range(param_count):
+                param_name = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_value = RPR.TrackFX_GetParam(track.id, fx_index, i)
+                
                 param_info = {
-                    "index": param_index,
-                    "name": param.name
+                    "index": i,
+                    "name": param_name,
+                    "value": param_value
                 }
-                
-                # Safely get parameter value using exception handling
-                try:
-                    param_info["value"] = param.value
-                except AttributeError:
-                    # If direct value access fails, try using get_value() method
-                    try:
-                        param_info["value"] = param.get_value() if hasattr(param, 'get_value') else 0.0
-                    except Exception:
-                        # As a fallback, provide a default value
-                        param_info["value"] = 0.0
-                        self.logger.warning(f"Could not get value for parameter {param.name}")
-                
-                # Safely get formatted value
-                try:
-                    param_info["formatted_value"] = param.formatted_value if hasattr(param, 'formatted_value') else str(param_info["value"])
-                except Exception:
-                    param_info["formatted_value"] = str(param_info["value"])
-                
                 param_list.append(param_info)
-                
-            self.logger.info(f"Retrieved {len(param_list)} parameters for FX {fx.name}")
+            
+            self.logger.info(f"Retrieved {len(param_list)} parameters for FX {fx_index}")
             return param_list
-
+            
         except Exception as e:
             self.logger.error(f"Failed to get FX parameter list: {e}")
             return []
@@ -223,32 +186,36 @@ class FXController:
             track_index (int): Index of the track
             
         Returns:
-            List[Dict[str, Any]]: List of FX information dictionaries
+            List[Dict[str, Any]]: List of FX dictionaries
         """
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
             
             fx_list = []
-            for fx_index, fx in enumerate(track.fxs):
+            fx_count = RPR.TrackFX_GetCount(track.id)
+            
+            for i in range(fx_count):
+                fx_name = RPR.TrackFX_GetFXName(track.id, i, "")
+                enabled = RPR.TrackFX_GetEnabled(track.id, i)
+                
                 fx_info = {
-                    "index": fx_index,
-                    "name": fx.name,
-                    "enabled": fx.enabled if hasattr(fx, 'enabled') else True
+                    "index": i,
+                    "name": fx_name,
+                    "enabled": enabled
                 }
                 fx_list.append(fx_info)
             
             self.logger.info(f"Retrieved {len(fx_list)} FX for track {track_index}")
             return fx_list
-
+            
         except Exception as e:
             self.logger.error(f"Failed to get FX list: {e}")
             return []
 
     def get_available_fx_list(self) -> List[str]:
         """
-        Get a list of all available FX plugins in Reaper by reading Reaper's INI files
-        and using reapy's API functions.
+        Get a list of all available FX plugins in Reaper.
         
         Returns:
             List[str]: List of available FX names
@@ -256,66 +223,8 @@ class FXController:
         try:
             fx_list = []
             
-            # Try to find and read Reaper's reaper-plugs.ini file
-            try:
-                self.logger.info("Attempting to read Reaper plugin database files")
-                # Determine likely locations for Reaper's config files
-                reaper_resource_paths = []
-                
-                # Check common Windows locations
-                appdata = os.environ.get('APPDATA')
-                if appdata:
-                    reaper_resource_paths.append(os.path.join(appdata, 'REAPER'))
-                
-                # Check if ReaperResourcePath is available through reapy
-                try:
-                    resource_path = reapy.reascript_api.GetResourcePath()
-                    if resource_path:
-                        reaper_resource_paths.append(resource_path)
-                except Exception as e:
-                    self.logger.warning(f"Failed to get Reaper resource path: {e}")
-                
-                # Try to find and read the plugin database files
-                for resource_path in reaper_resource_paths:
-                    self.logger.info(f"Checking resource path: {resource_path}")
-                    plugin_ini_files = ['reaper-plugs.ini', 'reaper-plugs64.ini', 'reaper-vstplugins.ini', 'reaper-vstplugins64.ini']
-                    
-                    for ini_file in plugin_ini_files:
-                        ini_path = os.path.join(resource_path, ini_file)
-                        if os.path.exists(ini_path):
-                            self.logger.info(f"Found plugin database at: {ini_path}")
-                            # Read the file and parse it for plugin names
-                            with open(ini_path, 'r', encoding='utf-8', errors='ignore') as f:
-                                for line in f:
-                                    # Plugin entries typically contain an equals sign
-                                    if '=' in line:
-                                        parts = line.strip().split('=')
-                                        if len(parts) > 1:
-                                            right_part = parts[1]
-                                            
-                                            # Try to extract names in the format: dll=ID,number,PluginName
-                                            # Example: reacast.dll=00EF6D73D190DA01,1919246691,ReaCast (Cockos)
-                                            if ',' in right_part:
-                                                comma_parts = right_part.split(',')
-                                                if len(comma_parts) >= 3:
-                                                    # The plugin name is typically after the second comma
-                                                    plugin_name = comma_parts[2].strip()
-                                                    if plugin_name and plugin_name not in fx_list:
-                                                        fx_list.append(plugin_name)
-                                                        continue  # Skip other checks for this line
-                                            
-                                            # Also try the old method for other formats
-                                            # Sometimes plugin names are in quotes
-                                            for part in parts:
-                                                if part.strip() and '"' in part:
-                                                    # Extract the name within quotes
-                                                    name_match = re.search(r'"([^"]+)"', part)
-                                                    if name_match:
-                                                        plugin_name = name_match.group(1)
-                                                        if plugin_name not in fx_list:
-                                                            fx_list.append(plugin_name)
-            except Exception as e:
-                self.logger.warning(f"Failed to read Reaper plugin database: {e}")
+            # Try to read Reaper's plugin database files
+            fx_list.extend(self._read_plugin_database())
             
             # Deduplicate and sort the list
             if fx_list:
@@ -329,6 +238,103 @@ class FXController:
         except Exception as e:
             self.logger.error(f"Failed to get available FX list: {e}")
             return []
+
+    def _read_plugin_database(self) -> List[str]:
+        """Read Reaper's plugin database files to extract FX names."""
+        fx_list = []
+        
+        try:
+            self.logger.info("Attempting to read Reaper plugin database files")
+            resource_paths = self._get_reaper_resource_paths()
+            
+            for resource_path in resource_paths:
+                self.logger.info(f"Checking resource path: {resource_path}")
+                fx_list.extend(self._parse_plugin_files(resource_path))
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to read Reaper plugin database: {e}")
+        
+        return fx_list
+
+    def _get_reaper_resource_paths(self) -> List[str]:
+        """Get possible Reaper resource paths."""
+        resource_paths = []
+        
+        # Check common Windows locations
+        appdata = os.environ.get('APPDATA')
+        if appdata:
+            resource_paths.append(os.path.join(appdata, 'REAPER'))
+        
+        # Check if ReaperResourcePath is available through reapy
+        try:
+            resource_path = reapy.reascript_api.GetResourcePath()
+            if resource_path:
+                resource_paths.append(resource_path)
+        except Exception as e:
+            self.logger.warning(f"Failed to get Reaper resource path: {e}")
+        
+        return resource_paths
+
+    def _parse_plugin_files(self, resource_path: str) -> List[str]:
+        """Parse plugin database files in a resource path."""
+        fx_list = []
+        plugin_ini_files = [
+            'reaper-plugs.ini', 
+            'reaper-plugs64.ini', 
+            'reaper-vstplugins.ini', 
+            'reaper-vstplugins64.ini'
+        ]
+        
+        for ini_file in plugin_ini_files:
+            ini_path = os.path.join(resource_path, ini_file)
+            if os.path.exists(ini_path):
+                self.logger.info(f"Found plugin database at: {ini_path}")
+                fx_list.extend(self._parse_plugin_file(ini_path))
+        
+        return fx_list
+
+    def _parse_plugin_file(self, file_path: str) -> List[str]:
+        """Parse a single plugin database file."""
+        fx_list = []
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+                for line in f:
+                    plugin_name = self._extract_plugin_name(line)
+                    if plugin_name and plugin_name not in fx_list:
+                        fx_list.append(plugin_name)
+        except Exception as e:
+            self.logger.warning(f"Failed to parse plugin file {file_path}: {e}")
+        
+        return fx_list
+
+    def _extract_plugin_name(self, line: str) -> Optional[str]:
+        """Extract plugin name from a database line."""
+        if '=' not in line:
+            return None
+        
+        parts = line.strip().split('=')
+        if len(parts) <= 1:
+            return None
+        
+        right_part = parts[1]
+        
+        # Try to extract names in the format: dll=ID,number,PluginName
+        if ',' in right_part:
+            comma_parts = right_part.split(',')
+            if len(comma_parts) >= 3:
+                plugin_name = comma_parts[2].strip()
+                if plugin_name:
+                    return plugin_name
+        
+        # Try to extract names in quotes
+        for part in parts:
+            if part.strip() and '"' in part:
+                name_match = re.search(r'"([^"]+)"', part)
+                if name_match:
+                    return name_match.group(1)
+        
+        return None
 
     def toggle_fx(self, track_index: int, fx_index: int, enable: bool = None) -> bool:
         """
@@ -345,13 +351,23 @@ class FXController:
         try:
             project = reapy.Project()
             track = project.tracks[track_index]
-            fx = track.fxs[fx_index]
+            
             if enable is None:
-                fx.enabled = not fx.enabled
+                # Toggle the current state
+                current_state = RPR.TrackFX_GetEnabled(track.id, fx_index)
+                enable = not current_state
+            
+            # Set the enabled state
+            success = RPR.TrackFX_SetEnabled(track.id, fx_index, enable)
+            
+            if success:
+                state_str = "enabled" if enable else "disabled"
+                self.logger.info(f"{state_str.capitalize()} FX {fx_index} on track {track_index}")
             else:
-                fx.enabled = enable
-            return True
-
+                self.logger.error(f"Failed to toggle FX {fx_index} on track {track_index}")
+            
+            return success
+            
         except Exception as e:
             self.logger.error(f"Failed to toggle FX: {e}")
             return False
