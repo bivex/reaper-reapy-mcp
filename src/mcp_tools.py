@@ -2,567 +2,637 @@ from mcp import types
 from mcp.server.fastmcp import FastMCP, Context
 from typing import Optional, Dict, Any, List, Union
 import reapy
-from utils.position_utils import position_to_time, time_to_measure
+import logging
+from src.utils.position_utils import position_to_time, time_to_measure
 
-def setup_mcp_tools(mcp: FastMCP, controller) -> None:
-    """Setup MCP tools for Reaper control."""
+# Setup logger
+logger = logging.getLogger(__name__)
+
+# Constants to replace magic numbers
+DEFAULT_MIDI_LENGTH = 4.0
+DEFAULT_MIDI_VELOCITY = 96
+MAX_MIDI_PITCH = 127
+MIN_MIDI_PITCH = 0
+
+def _create_success_response(message: str) -> Dict[str, Any]:
+    """Create a standardized success response."""
+    return {"status": "success", "message": message}
+
+def _create_error_response(message: str) -> Dict[str, Any]:
+    """Create a standardized error response."""
+    return {"status": "error", "message": message}
+
+def _handle_controller_operation(operation_name: str, operation_func, *args, **kwargs) -> Dict[str, Any]:
+    """Generic handler for controller operations with proper error handling."""
+    try:
+        result = operation_func(*args, **kwargs)
+        if result is not None and result is not False:
+            return _create_success_response(f"{operation_name} completed successfully")
+        return _create_error_response(f"Failed to {operation_name.lower()}")
+    except Exception as e:
+        logger.error(f"Controller operation failed: {operation_name} - {str(e)}")
+        return _create_error_response(f"Failed to {operation_name.lower()}: {str(e)}")
+
+def _setup_connection_tools(mcp: FastMCP, controller) -> None:
+    """Setup connection-related MCP tools."""
     
     @mcp.tool("test_connection")
     def test_connection(ctx: Context) -> Dict[str, Any]:
         """Test connection to Reaper."""
-        try:
-            if controller.verify_connection():
-                return {"status": "success", "message": "Connected to Reaper"}
-            return {"status": "error", "message": "Failed to connect to Reaper"}
-        except Exception as e:
-            return {"status": "error", "message": f"Connection test failed: {str(e)}"}
+        return _handle_controller_operation("Connection test", controller.verify_connection)
 
+def _setup_track_tools(mcp: FastMCP, controller) -> None:
+    """Setup track-related MCP tools."""
+    
     @mcp.tool("create_track")
     def create_track(ctx: Context, name: Optional[str] = None) -> Dict[str, Any]:
         """Create a new track in Reaper."""
         try:
             track_index = controller.create_track(name)
-            return {"status": "success", "message": f"Created track {track_index}"}
+            return _create_success_response(f"Created track {track_index}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to create track: {str(e)}"}
+            logger.error(f"Failed to create track: {str(e)}")
+            return _create_error_response(f"Failed to create track: {str(e)}")
 
     @mcp.tool("rename_track")
     def rename_track(ctx: Context, track_index: int, new_name: str) -> Dict[str, Any]:
         """Rename an existing track."""
-        try:
-            if controller.rename_track(track_index, new_name):
-                return {"status": "success", "message": f"Renamed track {track_index} to {new_name}"}
-            return {"status": "error", "message": f"Failed to rename track {track_index}"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to rename track: {str(e)}"}
-
-    @mcp.tool("set_tempo")
-    def set_tempo(ctx: Context, bpm: float) -> Dict[str, Any]:
-        """Set the project tempo."""
-        try:
-            if controller.set_tempo(bpm):
-                return {"status": "success", "message": f"Set tempo to {bpm} BPM"}
-            return {"status": "error", "message": "Failed to set tempo"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set tempo: {str(e)}"}
-
-    @mcp.tool("get_tempo")
-    def get_tempo(ctx: Context) -> Dict[str, Any]:
-        """Get the current project tempo."""
-        try:
-            tempo = controller.get_tempo()
-            return {"status": "success", "message": f"Current tempo: {tempo} BPM"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to get tempo: {str(e)}"}
+        operation_message = (
+            f"Rename track {track_index} to {new_name}"
+        )
+        return _handle_controller_operation(
+            operation_message,
+            controller.rename_track, track_index, new_name
+        )
 
     @mcp.tool("set_track_color")
     def set_track_color(ctx: Context, track_index: int, color: str) -> Dict[str, Any]:
         """Set the color of a track."""
-        try:
-            if controller.set_track_color(track_index, color):
-                return {"status": "success", "message": f"Set color of track {track_index} to {color}"}
-            return {"status": "error", "message": f"Failed to set color for track {track_index}"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set track color: {str(e)}"}
+        operation_message = (
+            f"Set color of track {track_index} to {color}"
+        )
+        return _handle_controller_operation(
+            operation_message,
+            controller.set_track_color, track_index, color
+        )
 
     @mcp.tool("get_track_color")
     def get_track_color(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the color of a track."""
         try:
             color = controller.get_track_color(track_index)
-            return {"status": "success", "message": f"Color of track {track_index}: {color}"}
+            return _create_success_response(f"Color of track {track_index}: {color}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get track color: {str(e)}"}
+            logger.error(f"Failed to get track color: {str(e)}")
+            return _create_error_response(f"Failed to get track color: {str(e)}")
 
+    @mcp.tool("get_track_count")
+    def get_track_count(ctx: Context) -> Dict[str, Any]:
+        """Get the number of tracks in the project."""
+        try:
+            count = controller.get_track_count()
+            return _create_success_response(f"Track count: {count}")
+        except Exception as e:
+            logger.error(f"Failed to get track count: {str(e)}")
+            return _create_error_response(f"Failed to get track count: {str(e)}")
+
+def _setup_project_tools(mcp: FastMCP, controller) -> None:
+    """Setup project-related MCP tools."""
+    
+    @mcp.tool("set_tempo")
+    def set_tempo(ctx: Context, bpm: float) -> Dict[str, Any]:
+        """Set the project tempo."""
+        return _handle_controller_operation(
+            f"Set tempo to {bpm} BPM",
+            controller.set_tempo, bpm
+        )
+
+    @mcp.tool("get_tempo")
+    def get_tempo(ctx: Context) -> Dict[str, Any]:
+        """Get the current project tempo."""
+        try:
+            tempo = controller.get_tempo()
+            return _create_success_response(f"Current tempo: {tempo} BPM")
+        except Exception as e:
+            logger.error(f"Failed to get tempo: {str(e)}")
+            return _create_error_response(f"Failed to get tempo: {str(e)}")
+
+def _setup_fx_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX-related MCP tools."""
+    _setup_fx_add_remove_tools(mcp, controller)
+    _setup_fx_param_tools(mcp, controller)
+    _setup_fx_list_tools(mcp, controller)
+    _setup_fx_toggle_tool(mcp, controller)
+
+def _setup_fx_add_remove_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX add and remove MCP tools."""
     @mcp.tool("add_fx")
     def add_fx(ctx: Context, track_index: int, fx_name: str) -> Dict[str, Any]:
         """Add an FX to a track."""
         try:
             fx_index = controller.add_fx(track_index, fx_name)
             if fx_index >= 0:
-                return {"status": "success", "message": f"Added FX {fx_name} to track {track_index} at index {fx_index}"}
-            return {"status": "error", "message": f"Failed to add FX to track {track_index}"}
+                return _create_success_response(
+                    f"Added FX {fx_name} to track {track_index} "
+                    f"at index {fx_index}"
+                )
+            return _create_error_response(f"Failed to add FX to track {track_index}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to add FX: {str(e)}"}
+            logger.error(f"Failed to add FX: {str(e)}")
+            return _create_error_response(f"Failed to add FX: {str(e)}")
 
     @mcp.tool("remove_fx")
     def remove_fx(ctx: Context, track_index: int, fx_index: int) -> Dict[str, Any]:
         """Remove an FX from a track."""
-        try:
-            if controller.remove_fx(track_index, fx_index):
-                return {"status": "success", "message": f"Removed FX {fx_index} from track {track_index}"}
-            return {"status": "error", "message": f"Failed to remove FX from track {track_index}"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to remove FX: {str(e)}"}
+        return _handle_controller_operation(
+            f"Remove FX {fx_index} from track {track_index}",
+            controller.remove_fx, track_index, fx_index
+        )
 
+def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX parameter-related MCP tools."""
     @mcp.tool("set_fx_param")
-    def set_fx_param(ctx: Context, track_index: int, fx_index: int, param_name: str, value: float) -> Dict[str, Any]:
+    def set_fx_param(ctx: Context, track_index: int, fx_index: int, 
+                    param_name: str, value: float) -> Dict[str, Any]:
         """Set an FX parameter value."""
-        try:
-            if controller.set_fx_param(track_index, fx_index, param_name, value):
-                return {"status": "success", "message": f"Set parameter {param_name} to {value} for FX {fx_index} on track {track_index}"}
-            return {"status": "error", "message": "Failed to set FX parameter"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set FX parameter: {str(e)}"}
+        return _handle_controller_operation(
+            f"Set FX parameter {param_name} to {value}",
+            controller.set_fx_param, track_index, fx_index, param_name, value
+        )
 
     @mcp.tool("get_fx_param")
-    def get_fx_param(ctx: Context, track_index: int, fx_index: int, param_name: str) -> Dict[str, Any]:
+    def get_fx_param(ctx: Context, track_index: int, fx_index: int, 
+                    param_name: str) -> Dict[str, Any]:
         """Get an FX parameter value."""
         try:
             value = controller.get_fx_param(track_index, fx_index, param_name)
-            return {"status": "success", "message": f"Parameter {param_name} value: {value}"}
+            return _create_success_response(f"FX parameter {param_name}: {value}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get FX parameter: {str(e)}"}
-            
+            logger.error(f"Failed to get FX parameter: {str(e)}")
+            return _create_error_response(f"Failed to get FX parameter: {str(e)}")
+
     @mcp.tool("get_fx_param_list")
     def get_fx_param_list(ctx: Context, track_index: int, fx_index: int) -> Dict[str, Any]:
-        """Get a list of all parameters for an FX."""
+        """Get list of FX parameters."""
         try:
-            param_list = controller.get_fx_param_list(track_index, fx_index)
-            if param_list:
-                return {"status": "success", "message": f"Retrieved {len(param_list)} parameters", "parameters": param_list}
-            return {"status": "error", "message": f"Failed to get parameters for FX {fx_index} on track {track_index}"}
+            params = controller.get_fx_param_list(track_index, fx_index)
+            return _create_success_response(f"FX parameters: {params}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get FX parameter list: {str(e)}"}
-            
+            logger.error(f"Failed to get FX parameters: {str(e)}")
+            return _create_error_response(f"Failed to get FX parameters: {str(e)}")
+
+def _setup_fx_list_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX list-related MCP tools."""
     @mcp.tool("get_fx_list")
     def get_fx_list(ctx: Context, track_index: int) -> Dict[str, Any]:
-        """Get a list of all FX on a track."""
+        """Get list of FX on a track."""
         try:
             fx_list = controller.get_fx_list(track_index)
-            if fx_list:
-                return {"status": "success", "message": f"Retrieved {len(fx_list)} FX on track {track_index}", "fx_list": fx_list}
-            return {"status": "error", "message": f"Failed to get FX list for track {track_index}"}
+            return _create_success_response(f"FX list for track {track_index}: {fx_list}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get FX list: {str(e)}"}
-            
+            logger.error(f"Failed to get FX list: {str(e)}")
+            return _create_error_response(f"Failed to get FX list: {str(e)}")
+
     @mcp.tool("get_available_fx_list")
     def get_available_fx_list(ctx: Context) -> Dict[str, Any]:
-        """Get a list of all available FX plugins in Reaper."""
+        """Get list of available FX."""
         try:
             fx_list = controller.get_available_fx_list()
-            if fx_list:
-                return {"status": "success", "message": f"Retrieved {len(fx_list)} available FX plugins", "fx_list": fx_list}
-            return {"status": "error", "message": "Failed to get available FX list"}
+            return _create_success_response(f"Available FX: {fx_list}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get available FX list: {str(e)}"}
+            logger.error(f"Failed to get available FX: {str(e)}")
+            return _create_error_response(f"Failed to get available FX: {str(e)}")
 
+def _setup_fx_toggle_tool(mcp: FastMCP, controller) -> None:
+    """Setup FX toggle MCP tool."""
     @mcp.tool("toggle_fx")
-    def toggle_fx(ctx: Context, track_index: int, fx_index: int, enable: Optional[bool] = None) -> Dict[str, Any]:
-        """Toggle or set the enable/disable state of an FX."""
-        try:
-            if controller.toggle_fx(track_index, fx_index, enable):
-                state = "enabled" if enable else "disabled" if enable is not None else "toggled"
-                return {"status": "success", "message": f"{state} FX {fx_index} on track {track_index}"}
-            return {"status": "error", "message": "Failed to toggle FX"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to toggle FX: {str(e)}"}
+    def toggle_fx(ctx: Context, track_index: int, fx_index: int, 
+                 enable: Optional[bool] = None) -> Dict[str, Any]:
+        """Toggle FX on/off."""
+        action = "enable" if enable else "toggle"
+        operation_name = f"{action.capitalize()} FX {fx_index} on track {track_index}"
+        return _handle_controller_operation(
+            operation_name,
+            controller.toggle_fx, track_index, fx_index, enable
+        )
 
+def _setup_marker_tools(mcp: FastMCP, controller) -> None:
+    """Setup marker and region-related MCP tools."""
+    
     @mcp.tool("create_region")
-    def create_region(ctx: Context, start_time: float, end_time: float, name: str) -> Dict[str, Any]:
+    def create_region(ctx: Context, start_time: float, end_time: float, 
+                     name: str) -> Dict[str, Any]:
         """Create a region in the project."""
-        try:
-            region_index = controller.create_region(start_time, end_time, name)
-            if region_index >= 0:
-                return {"status": "success", "message": f"Created region {region_index}: {name}"}
-            return {"status": "error", "message": "Failed to create region"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to create region: {str(e)}"}
+        operation_name = f"Create region '{name}' from {start_time} to {end_time}"
+        return _handle_controller_operation(
+            operation_name,
+            controller.create_region, start_time, end_time, name
+        )
 
     @mcp.tool("delete_region")
     def delete_region(ctx: Context, region_index: int) -> Dict[str, Any]:
         """Delete a region from the project."""
-        try:
-            if controller.delete_region(region_index):
-                return {"status": "success", "message": f"Deleted region {region_index}"}
-            return {"status": "error", "message": f"Failed to delete region {region_index}"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to delete region: {str(e)}"}
+        return _handle_controller_operation(
+            f"Delete region {region_index}",
+            controller.delete_region, region_index
+        )
 
     @mcp.tool("create_marker")
     def create_marker(ctx: Context, time: float, name: str) -> Dict[str, Any]:
-        """Create a marker in the project."""
-        try:
-            marker_index = controller.create_marker(time, name)
-            if marker_index >= 0:
-                return {"status": "success", "message": f"Created marker {marker_index}: {name}"}
-            return {"status": "error", "message": "Failed to create marker"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to create marker: {str(e)}"}
+        """Create a marker at the specified time."""
+        return _handle_controller_operation(
+            f"Create marker '{name}' at {time}",
+            controller.create_marker, time, name
+        )
 
     @mcp.tool("delete_marker")
     def delete_marker(ctx: Context, marker_index: int) -> Dict[str, Any]:
         """Delete a marker from the project."""
-        try:
-            if controller.delete_marker(marker_index):
-                return {"status": "success", "message": f"Deleted marker {marker_index}"}
-            return {"status": "error", "message": f"Failed to delete marker {marker_index}"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to delete marker: {str(e)}"}
+        return _handle_controller_operation(
+            f"Delete marker {marker_index}",
+            controller.delete_marker, marker_index
+        )
 
+def _setup_master_tools(mcp: FastMCP, controller) -> None:
+    """Setup master track-related MCP tools."""
+    
     @mcp.tool("get_master_track")
     def get_master_track(ctx: Context) -> Dict[str, Any]:
-        """Get information about the master track."""
+        """Get master track information."""
         try:
-            info = controller.get_master_track()
-            return {"status": "success", "message": f"Master track info: {info}"}
+            master_info = controller.get_master_track()
+            return _create_success_response(f"Master track info: {master_info}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get master track info: {str(e)}"}
+            logger.error(f"Failed to get master track: {str(e)}")
+            return _create_error_response(f"Failed to get master track: {str(e)}")
 
     @mcp.tool("set_master_volume")
     def set_master_volume(ctx: Context, volume: float) -> Dict[str, Any]:
-        """Set the master track volume."""
-        try:
-            if controller.set_master_volume(volume):
-                return {"status": "success", "message": f"Set master volume to {volume}"}
-            return {"status": "error", "message": "Failed to set master volume"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set master volume: {str(e)}"}
+        """Set master track volume."""
+        return _handle_controller_operation(
+            f"Set master volume to {volume}",
+            controller.set_master_volume, volume
+        )
 
     @mcp.tool("set_master_pan")
     def set_master_pan(ctx: Context, pan: float) -> Dict[str, Any]:
-        """Set the master track pan."""
-        try:
-            if controller.set_master_pan(pan):
-                return {"status": "success", "message": f"Set master pan to {pan}"}
-            return {"status": "error", "message": "Failed to set master pan"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set master pan: {str(e)}"}
+        """Set master track pan."""
+        return _handle_controller_operation(
+            f"Set master pan to {pan}",
+            controller.set_master_pan, pan
+        )
 
     @mcp.tool("toggle_master_mute")
     def toggle_master_mute(ctx: Context, mute: Optional[bool] = None) -> Dict[str, Any]:
-        """Toggle or set the master track mute state."""
-        try:
-            if controller.toggle_master_mute(mute):
-                state = "muted" if mute else "unmuted" if mute is not None else "toggled"
-                return {"status": "success", "message": f"Master track {state}"}
-            return {"status": "error", "message": "Failed to toggle master mute"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to toggle master mute: {str(e)}"}
+        """Toggle master track mute."""
+        action = "mute" if mute else "toggle mute"
+        return _handle_controller_operation(
+            f"{action.capitalize()} master track",
+            controller.toggle_master_mute, mute
+        )
 
     @mcp.tool("toggle_master_solo")
     def toggle_master_solo(ctx: Context, solo: Optional[bool] = None) -> Dict[str, Any]:
-        """Toggle or set the master track solo state."""
-        try:
-            if controller.toggle_master_solo(solo):
-                state = "soloed" if solo else "unsoloed" if solo is not None else "toggled"
-                return {"status": "success", "message": f"Master track {state}"}
-            return {"status": "error", "message": "Failed to toggle master solo"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to toggle master solo: {str(e)}"}
-            
-    @mcp.tool("get_track_count")
-    def get_track_count(ctx: Context) -> Dict[str, Any]:
-        """Get the number of tracks in the project."""
-        try:
-            count = controller.get_track_count()
-            return {"status": "success", "track_count": count}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to get track count: {str(e)}"}
-            
-    # ----- MIDI Operations -----
+        """Toggle master track solo."""
+        action = "solo" if solo else "toggle solo"
+        return _handle_controller_operation(
+            f"{action.capitalize()} master track",
+            controller.toggle_master_solo, solo
+        )
+
+def _setup_midi_tools(mcp: FastMCP, controller) -> None:
+    """Setup MIDI-related MCP tools."""
     
     @mcp.tool("create_midi_item")
-    def create_midi_item(ctx: Context, track_index: int, start_time: Optional[float] = None, 
-                        start_measure: Optional[str] = None, length: float = 4.0) -> Dict[str, Any]:
-        """Create an empty MIDI item on a track.
-        
-        Args:
-            track_index: Index of the track
-            start_time: Start position in seconds (optional if start_measure is provided)
-            start_measure: Start position as "measure:beat" (optional if start_time is provided)
-            length: Length in seconds
-        """
+    def create_midi_item(ctx: Context, track_index: int, 
+                        start_time: Optional[float] = None,
+                        start_measure: Optional[str] = None, 
+                        length: float = DEFAULT_MIDI_LENGTH) -> Dict[str, Any]:
+        """Create a MIDI item."""
         try:
-            # Determine the time position
-            if start_time is not None:
-                time_pos = float(start_time)
-                measure_pos = time_to_measure(time_pos)
-            elif start_measure is not None:
-                time_pos = position_to_time(start_measure)
-                measure_pos = start_measure
-            else:
-                return {"status": "error", "message": "Either start_time or start_measure must be provided"}
-                
-            item_id = controller.create_midi_item(track_index, time_pos, length)
-            if (isinstance(item_id, int) and item_id >= 0) or (isinstance(item_id, str) and item_id):
-                return {"status": "success", "message": f"Created MIDI item at position {measure_pos} (time: {time_pos:.3f}s)", "item_id": item_id}
-            return {"status": "error", "message": "Failed to create MIDI item"}
+            # Handle time conversion if measure is provided
+            if start_measure:
+                start_time = time_to_measure(start_measure)
+            
+            item_id = controller.create_midi_item(track_index, start_time, length)
+            return _create_success_response(f"Created MIDI item {item_id} on track {track_index}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to create MIDI item: {str(e)}"}
-    
+            error_message = f"Failed to create MIDI item: {str(e)}"
+            logger.error(error_message)
+            return _create_error_response(error_message)
+
     @mcp.tool("add_midi_note")
-    def add_midi_note(ctx: Context, track_index: int, item_id: int, pitch: int, 
-                     start_time: float, length: float, velocity: int = 96) -> Dict[str, Any]:
+    def add_midi_note(ctx: Context, track_index: int, item_id: int, pitch: int,
+                     start_time: float, length: float, 
+                     velocity: int = DEFAULT_MIDI_VELOCITY) -> Dict[str, Any]:
         """Add a MIDI note to a MIDI item."""
         try:
-            if controller.add_midi_note(track_index, item_id, pitch, start_time, length, velocity):
-                return {"status": "success", "message": f"Added MIDI note (pitch: {pitch}, velocity: {velocity}) to item {item_id}"}
-            return {"status": "error", "message": "Failed to add MIDI note"}
+            from src.controllers.midi.midi_controller import MIDIController
+            note_params = MIDIController.MIDINoteParams(
+                pitch=pitch,
+                start_time=start_time,
+                length=length,
+                velocity=velocity
+            )
+            success = controller.add_midi_note(track_index, item_id, note_params)
+            if success:
+                return _create_success_response(f"Added MIDI note pitch {pitch} to item {item_id}")
+            return _create_error_response(f"Failed to add MIDI note pitch {pitch} to item {item_id}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to add MIDI note: {str(e)}"}
-    
+            logger.error(f"Failed to add MIDI note: {str(e)}")
+            return _create_error_response(f"Failed to add MIDI note: {str(e)}")
+
     @mcp.tool("clear_midi_item")
     def clear_midi_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
         """Clear all MIDI notes from a MIDI item."""
-        try:
-            if controller.clear_midi_item(track_index, item_id):
-                return {"status": "success", "message": f"Cleared all notes from MIDI item {item_id}"}
-            return {"status": "error", "message": "Failed to clear MIDI item"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to clear MIDI item: {str(e)}"}
-            
+        return _handle_controller_operation(
+            f"Clear MIDI item {item_id} on track {track_index}",
+            controller.clear_midi_item, track_index, item_id
+        )
+
     @mcp.tool("get_midi_notes")
     def get_midi_notes(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
         """Get all MIDI notes from a MIDI item."""
         try:
             notes = controller.get_midi_notes(track_index, item_id)
-            return {"status": "success", "notes": notes}
+            return _create_success_response(f"MIDI notes in item {item_id}: {notes}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get MIDI notes: {str(e)}"}
+            logger.error(f"Failed to get MIDI notes: {str(e)}")
+            return _create_error_response(f"Failed to get MIDI notes: {str(e)}")
 
     @mcp.tool("find_midi_notes_by_pitch")
-    def find_midi_notes_by_pitch(ctx: Context, pitch_min: int = 0, pitch_max: int = 127) -> Dict[str, Any]:
-        """Find all MIDI notes within a specific pitch range across the project."""
+    def find_midi_notes_by_pitch(ctx: Context, pitch_min: int = MIN_MIDI_PITCH, 
+                                pitch_max: int = MAX_MIDI_PITCH) -> Dict[str, Any]:
+        """Find MIDI notes within a pitch range."""
         try:
             notes = controller.find_midi_notes_by_pitch(pitch_min, pitch_max)
-            return {"status": "success", "notes": notes}
+            return _create_success_response(f"MIDI notes in pitch range {pitch_min}-{pitch_max}: {notes}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to find MIDI notes by pitch: {str(e)}"}
-            
+            logger.error(f"Failed to find MIDI notes: {str(e)}")
+            return _create_error_response(f"Failed to find MIDI notes: {str(e)}")
+
     @mcp.tool("get_selected_midi_item")
     def get_selected_midi_item(ctx: Context) -> Dict[str, Any]:
-        """Get the first selected MIDI item in the project."""
+        """Get the currently selected MIDI item."""
         try:
-            result = controller.get_selected_midi_item()
-            if result:
-                return {"status": "success", **result}
-            else:
-                return {"status": "error", "message": "No selected MIDI item found"}
+            item_info = controller.get_selected_midi_item()
+            return _create_success_response(f"Selected MIDI item: {item_info}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get selected MIDI item: {str(e)}"}
-            
-    # ----- Media Item Operations -----
+            logger.error(f"Failed to get selected MIDI item: {str(e)}")
+            return _create_error_response(f"Failed to get selected MIDI item: {str(e)}")
+
+def _setup_audio_tools(mcp: FastMCP, controller) -> None:
+    """Setup audio-related MCP tools."""
+    _setup_audio_item_tools(mcp, controller)
+    _setup_item_property_tools(mcp, controller)
+    _setup_item_selection_tools(mcp, controller)
+
+
+def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
+    """Setup audio item creation and manipulation tools."""
     
     @mcp.tool("insert_audio_item")
-    def insert_audio_item(ctx: Context, track_index: int, file_path: str, 
-                         start_time: Optional[float] = None, start_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Insert an audio file as a media item on a track.
-        
-        Args:
-            track_index: Index of the track
-            file_path: Path to the audio file
-            start_time: Start position in seconds (optional if start_measure is provided)
-            start_measure: Start position as "measure:beat" (optional if start_time is provided)
-        """
+    def insert_audio_item(ctx: Context, track_index: int, file_path: str,
+                         start_time: Optional[float] = None, 
+                         start_measure: Optional[str] = None) -> Dict[str, Any]:
+        """Insert an audio file as an item on a track."""
         try:
-            # Determine the time position
-            if start_time is not None:
-                time_pos = float(start_time)
-                measure_pos = time_to_measure(time_pos)
-            elif start_measure is not None:
-                time_pos = position_to_time(start_measure)
-                measure_pos = start_measure
-            else:
-                return {"status": "error", "message": "Either start_time or start_measure must be provided"}
-                
-            item_id = controller.insert_audio_item(track_index, file_path, time_pos)
-            # Convert any type of item_id to an index
-            if isinstance(item_id, str):
-                # If it's a string (pointer), find its index in the track
-                project = reapy.Project()
-                track = project.tracks[track_index]
-                for i, item in enumerate(track.items):
-                    if str(item.id) == item_id:
-                        return {"status": "success", "message": f"Inserted audio item at position {measure_pos} (time: {time_pos:.3f}s)", "item_id": i}
-                return {"status": "error", "message": "Failed to find inserted item index"}
-            elif isinstance(item_id, int):
-                # If it's already an index, use it directly
-                if item_id >= 0:
-                    return {"status": "success", "message": f"Inserted audio item at position {measure_pos} (time: {time_pos:.3f}s)", "item_id": item_id}
-            return {"status": "error", "message": "Failed to insert audio item"}
+            # Handle time conversion if measure is provided
+            if start_measure:
+                start_time = time_to_measure(start_measure)
+            
+            item_id = controller.insert_audio_item(track_index, file_path, start_time)
+            return _create_success_response(
+                f"Inserted audio item {item_id} on track {track_index}"
+            )
         except Exception as e:
-            return {"status": "error", "message": f"Failed to insert audio item: {str(e)}"}
-    
+            error_message = f"Failed to insert audio item: {str(e)}"
+            logger.error(error_message)
+            return _create_error_response(error_message)
+
     @mcp.tool("duplicate_item")
-    def duplicate_item(ctx: Context, track_index: int, item_id: int, 
-                      new_time: Optional[float] = None, new_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Duplicate an existing item on a track.
-        
-        Args:
-            track_index: Index of the track
-            item_id: ID of the item to duplicate
-            new_time: New position in seconds (optional)
-            new_measure: New position as "measure:beat" (optional)
-        """
+    def duplicate_item(ctx: Context, track_index: int, item_id: int,
+                      new_time: Optional[float] = None, 
+                      new_measure: Optional[str] = None) -> Dict[str, Any]:
+        """Duplicate an existing item."""
         try:
-            # Determine the time position if any position is provided
-            if new_time is not None:
-                time_pos = float(new_time)
-                measure_pos = time_to_measure(time_pos)
-                new_position = time_pos
-            elif new_measure is not None:
-                time_pos = position_to_time(new_measure)
-                measure_pos = new_measure
-                new_position = time_pos
-            else:
-                new_position = None
-                time_pos = None
-                measure_pos = None
-                
-            new_item_id = controller.duplicate_item(track_index, item_id, new_position)
-            # Convert any type of new_item_id to an index
-            if isinstance(new_item_id, str):
-                # If it's a string (pointer), find its index in the track
-                project = reapy.Project()
-                track = project.tracks[track_index]
-                for i, item in enumerate(track.items):
-                    if str(item.id) == new_item_id:
-                        if new_position is not None:
-                            position_msg = f" at position {measure_pos} (time: {time_pos:.3f}s)"
-                        else:
-                            position_msg = ""
-                        return {"status": "success", "message": f"Duplicated item {item_id}{position_msg}", "item_id": i}
-                return {"status": "error", "message": "Failed to find duplicated item index"}
-            elif isinstance(new_item_id, int):
-                # If it's already an index, use it directly
-                if new_item_id >= 0:
-                    if new_position is not None:
-                        position_msg = f" at position {measure_pos} (time: {time_pos:.3f}s)"
-                    else:
-                        position_msg = ""
-                    return {"status": "success", "message": f"Duplicated item {item_id}{position_msg}", "item_id": new_item_id}
-            return {"status": "error", "message": "Failed to duplicate item"}
+            # Handle time conversion if measure is provided
+            if new_measure:
+                new_time = time_to_measure(new_measure)
+            
+            new_item_id = controller.duplicate_item(track_index, item_id, new_time)
+            return _create_success_response(
+                f"Duplicated item {item_id} to {new_item_id}"
+            )
         except Exception as e:
-            return {"status": "error", "message": f"Failed to duplicate item: {str(e)}"}
+            error_message = f"Failed to duplicate item: {str(e)}"
+            logger.error(error_message)
+            return _create_error_response(error_message)
+
+    @mcp.tool("delete_item")
+    def delete_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
+        """Delete an item from a track."""
+        return _handle_controller_operation(
+            f"Delete item {item_id} from track {track_index}",
+            controller.delete_item, track_index, item_id
+        )
+
+
+def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
+    """Setup item property manipulation tools."""
     
     @mcp.tool("get_item_properties")
     def get_item_properties(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
-        """Get properties of a media item."""
+        """Get properties of an item."""
         try:
             properties = controller.get_item_properties(track_index, item_id)
-            if properties:
-                return {"status": "success", "properties": properties}
-            return {"status": "error", "message": f"Failed to get properties for item {item_id}"}
+            return _create_success_response(f"Item {item_id} properties: {properties}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get item properties: {str(e)}"}
-    
+            logger.error(f"Failed to get item properties: {str(e)}")
+            return _create_error_response(f"Failed to get item properties: {str(e)}")
+
     @mcp.tool("set_item_position")
-    def set_item_position(ctx: Context, track_index: int, item_id: int, 
-                         position_time: Optional[float] = None, position_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Set the position of a media item.
-        
-        Args:
-            track_index: Index of the track
-            item_id: ID of the item
-            position_time: New position in seconds (optional if position_measure is provided)
-            position_measure: New position as "measure:beat" (optional if position_time is provided)
-        """
+    def set_item_position(ctx: Context, track_index: int, item_id: int,
+                         position_time: Optional[float] = None, 
+                         position_measure: Optional[str] = None) -> Dict[str, Any]:
+        """Set the position of an item."""
         try:
-            # Determine the time position
-            if position_time is not None:
-                time_pos = float(position_time)
-                measure_pos = time_to_measure(time_pos)
-            elif position_measure is not None:
-                time_pos = position_to_time(position_measure)
-                measure_pos = position_measure
-            else:
-                return {"status": "error", "message": "Either position_time or position_measure must be provided"}
-                
-            if controller.set_item_position(track_index, item_id, time_pos):
-                return {"status": "success", "message": f"Set item {item_id} position to {measure_pos} (time: {time_pos:.3f}s)"}
-            return {"status": "error", "message": "Failed to set item position"}
+            # Handle time conversion if measure is provided
+            if position_measure:
+                position_time = time_to_measure(position_measure)
+            
+            success = controller.set_item_position(track_index, item_id, position_time)
+            if success:
+                return _create_success_response(f"Set position of item {item_id}")
+            return _create_error_response(f"Failed to set item position")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to set item position: {str(e)}"}
-    
+            logger.error(f"Failed to set item position: {str(e)}")
+            return _create_error_response(f"Failed to set item position: {str(e)}")
+
     @mcp.tool("set_item_length")
-    def set_item_length(ctx: Context, track_index: int, item_id: int, length: float) -> Dict[str, Any]:
-        """Set the length of a media item."""
-        try:
-            if controller.set_item_length(track_index, item_id, length):
-                return {"status": "success", "message": f"Set item {item_id} length to {length} seconds"}
-            return {"status": "error", "message": "Failed to set item length"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to set item length: {str(e)}"}
-    
-    @mcp.tool("delete_item")
-    def delete_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
-        """Delete a media item from a track."""
-        try:
-            if controller.delete_item(track_index, item_id):
-                return {"status": "success", "message": f"Deleted item {item_id} from track {track_index}"}
-            return {"status": "error", "message": "Failed to delete item"}
-        except Exception as e:
-            return {"status": "error", "message": f"Failed to delete item: {str(e)}"}
+    def set_item_length(ctx: Context, track_index: int, item_id: int, 
+                       length: float) -> Dict[str, Any]:
+        """Set the length of an item."""
+        return _handle_controller_operation(
+            f"Set length of item {item_id} to {length}",
+            controller.set_item_length, track_index, item_id, length
+        )
+
+
+def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
+    """Setup item selection and query tools."""
     
     @mcp.tool("get_items_in_time_range")
-    def get_items_in_time_range(ctx: Context, track_index: int, 
-                               start_time: Optional[float] = None, end_time: Optional[float] = None,
-                               start_measure: Optional[str] = None, end_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Get all items on a track within a time range.
-        
-        Args:
-            track_index: Index of the track
-            start_time: Start position in seconds (optional if start_measure is provided)
-            end_time: End position in seconds (optional if end_measure is provided)
-            start_measure: Start position as "measure:beat" (optional if start_time is provided)
-            end_measure: End position as "measure:beat" (optional if end_time is provided)
-        """
+    def get_items_in_time_range(ctx: Context, track_index: int,
+                               start_time: Optional[float] = None, 
+                               end_time: Optional[float] = None,
+                               start_measure: Optional[str] = None, 
+                               end_measure: Optional[str] = None) -> Dict[str, Any]:
+        """Get items within a time range."""
         try:
-            # Determine start position
-            if start_time is not None:
-                time_start = float(start_time)
-                measure_start = time_to_measure(time_start)
-            elif start_measure is not None:
-                time_start = position_to_time(start_measure)
-                measure_start = start_measure
-            else:
-                return {"status": "error", "message": "Either start_time or start_measure must be provided"}
-                
-            # Determine end position
-            if end_time is not None:
-                time_end = float(end_time)
-                measure_end = time_to_measure(time_end)
-            elif end_measure is not None:
-                time_end = position_to_time(end_measure)
-                measure_end = end_measure
-            else:
-                return {"status": "error", "message": "Either end_time or end_measure must be provided"}
-                
-            item_ids = controller.get_items_in_time_range(track_index, time_start, time_end)
-            return {
-                "status": "success", 
-                "message": f"Found {len(item_ids)} items between {measure_start} and {measure_end}",
-                "item_ids": item_ids,
-                "range": {
-                    "start": {"time": time_start, "measure": measure_start},
-                    "end": {"time": time_end, "measure": measure_end}
-                }
-            }
+            # Handle time conversion if measures are provided
+            if start_measure:
+                start_time = time_to_measure(start_measure)
+            if end_measure:
+                end_time = time_to_measure(end_measure)
+            
+            items = controller.get_items_in_time_range(track_index, start_time, end_time)
+            return _create_success_response(f"Items in time range: {items}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get items in time range: {str(e)}"}
-    
+            logger.error(f"Failed to get items in time range: {str(e)}")
+            return _create_error_response(f"Failed to get items in time range: {str(e)}")
+
     @mcp.tool("get_selected_items")
     def get_selected_items(ctx: Context) -> Dict[str, Any]:
-        """Get all selected media items in the project with their properties.
-        
-        Returns:
-            Dict containing status and list of selected items with their properties:
-            - track_index: Index of the track containing the item
-            - item_index: Index of the item in its track
-            - position: Start time in seconds
-            - length: Length in seconds
-            - is_midi: Whether the item is a MIDI item
-            - name: Item name if available
-        """
+        """Get all selected items."""
         try:
-            result = controller.get_selected_items()
-            if result and len(result) > 0:
-                return {
-                    "status": "success", 
-                    "message": f"Found {len(result)} selected item(s)",
-                    "items": result
-                }
-            return {"status": "error", "message": "No selected items found"}
+            items = controller.get_selected_items()
+            return _create_success_response(f"Selected items: {items}")
         except Exception as e:
-            return {"status": "error", "message": f"Failed to get selected items: {str(e)}"}
+            logger.error(f"Failed to get selected items: {str(e)}")
+            return _create_error_response(f"Failed to get selected items: {str(e)}")
+
+
+def _setup_routing_tools(mcp: FastMCP, controller) -> None:
+    """Setup routing-related MCP tools."""
+    
+    @mcp.tool("add_send")
+    def add_send(ctx: Context, source_track: int, destination_track: int, 
+                 volume: float = 0.0, pan: float = 0.0, 
+                 mute: bool = False, phase: bool = False, 
+                 channels: int = 2) -> Dict[str, Any]:
+        """Add a send from source track to destination track."""
+        try:
+            send_id = controller.add_send(source_track, destination_track, volume, pan, mute, phase, channels)
+            if send_id is not None:
+                return _create_success_response(f"Added send from track {source_track} to track {destination_track} with ID {send_id}")
+            return _create_error_response(f"Failed to add send from track {source_track} to track {destination_track}")
+        except Exception as e:
+            logger.error(f"Failed to add send: {str(e)}")
+            return _create_error_response(f"Failed to add send: {str(e)}")
+
+    @mcp.tool("remove_send")
+    def remove_send(ctx: Context, source_track: int, send_id: int) -> Dict[str, Any]:
+        """Remove a send from a track."""
+        return _handle_controller_operation(
+            f"Remove send {send_id} from track {source_track}",
+            controller.remove_send, source_track, send_id
+        )
+
+    @mcp.tool("get_sends")
+    def get_sends(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get all sends from a track."""
+        try:
+            sends = controller.get_sends(track_index)
+            return _create_success_response(f"Sends for track {track_index}: {sends}")
+        except Exception as e:
+            logger.error(f"Failed to get sends: {str(e)}")
+            return _create_error_response(f"Failed to get sends: {str(e)}")
+
+    @mcp.tool("get_receives")
+    def get_receives(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get all receives on a track."""
+        try:
+            receives = controller.get_receives(track_index)
+            return _create_success_response(f"Receives for track {track_index}: {receives}")
+        except Exception as e:
+            logger.error(f"Failed to get receives: {str(e)}")
+            return _create_error_response(f"Failed to get receives: {str(e)}")
+
+    @mcp.tool("set_send_volume")
+    def set_send_volume(ctx: Context, source_track: int, send_id: int, volume: float) -> Dict[str, Any]:
+        """Set the volume of a send."""
+        return _handle_controller_operation(
+            f"Set send {send_id} volume to {volume} dB",
+            controller.set_send_volume, source_track, send_id, volume
+        )
+
+    @mcp.tool("set_send_pan")
+    def set_send_pan(ctx: Context, source_track: int, send_id: int, pan: float) -> Dict[str, Any]:
+        """Set the pan of a send."""
+        return _handle_controller_operation(
+            f"Set send {send_id} pan to {pan}",
+            controller.set_send_pan, source_track, send_id, pan
+        )
+
+    @mcp.tool("toggle_send_mute")
+    def toggle_send_mute(ctx: Context, source_track: int, send_id: int, mute: Optional[bool] = None) -> Dict[str, Any]:
+        """Toggle or set the mute state of a send."""
+        try:
+            success = controller.toggle_send_mute(source_track, send_id, mute)
+            if success:
+                action = "toggled" if mute is None else f"set to {mute}"
+                return _create_success_response(f"Send {send_id} mute {action}")
+            return _create_error_response(f"Failed to toggle send {send_id} mute")
+        except Exception as e:
+            logger.error(f"Failed to toggle send mute: {str(e)}")
+            return _create_error_response(f"Failed to toggle send mute: {str(e)}")
+
+    @mcp.tool("get_track_routing_info")
+    def get_track_routing_info(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get comprehensive routing information for a track."""
+        try:
+            routing_info = controller.get_track_routing_info(track_index)
+            return _create_success_response(f"Routing info for track {track_index}: {routing_info}")
+        except Exception as e:
+            logger.error(f"Failed to get track routing info: {str(e)}")
+            return _create_error_response(f"Failed to get track routing info: {str(e)}")
+
+    @mcp.tool("debug_track_routing")
+    def debug_track_routing(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Debug track routing information for troubleshooting."""
+        try:
+            debug_info = controller.debug_track_routing(track_index)
+            return _create_success_response(f"Debug info for track {track_index}: {debug_info}")
+        except Exception as e:
+            logger.error(f"Failed to debug track routing: {str(e)}")
+            return _create_error_response(f"Failed to debug track routing: {str(e)}")
+
+    @mcp.tool("clear_all_sends")
+    def clear_all_sends(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Remove all sends from a track."""
+        return _handle_controller_operation(
+            f"Clear all sends from track {track_index}",
+            controller.clear_all_sends, track_index
+        )
+
+    @mcp.tool("clear_all_receives")
+    def clear_all_receives(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Remove all receives from a track."""
+        return _handle_controller_operation(
+            f"Clear all receives from track {track_index}",
+            controller.clear_all_receives, track_index
+        )
+
+
+def setup_mcp_tools(mcp: FastMCP, controller) -> None:
+    """Setup MCP tools for Reaper control."""
+    _setup_connection_tools(mcp, controller)
+    _setup_track_tools(mcp, controller)
+    _setup_project_tools(mcp, controller)
+    _setup_fx_tools(mcp, controller)
+    _setup_marker_tools(mcp, controller)
+    _setup_master_tools(mcp, controller)
+    _setup_midi_tools(mcp, controller)
+    _setup_audio_tools(mcp, controller)
+    _setup_routing_tools(mcp, controller)

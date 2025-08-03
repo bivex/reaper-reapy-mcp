@@ -2,11 +2,15 @@ import reapy
 import logging
 from typing import Dict, Any, Optional
 
-from .base_controller import BaseController
 
-class MasterController(BaseController):
+class MasterController:
     """Controller for master track operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def get_master_track(self) -> Dict[str, Any]:
         """Get information about the master track."""
         try:
@@ -48,7 +52,8 @@ class MasterController(BaseController):
             master.volume = volume
             return True
         except Exception as e:
-            self.logger.error(f"Failed to set master volume: {e}")
+            error_message = f"Failed to set master volume: {e}"
+            self.logger.error(error_message)
             return False
 
     def set_master_pan(self, pan: float) -> bool:
@@ -67,7 +72,8 @@ class MasterController(BaseController):
             master.pan = pan
             return True
         except Exception as e:
-            self.logger.error(f"Failed to set master pan: {e}")
+            error_message = f"Failed to set master pan: {e}"
+            self.logger.error(error_message)
             return False
 
     def toggle_master_mute(self, mute: Optional[bool] = None) -> bool:
@@ -89,7 +95,8 @@ class MasterController(BaseController):
                 master.mute = mute
             return True
         except Exception as e:
-            self.logger.error(f"Failed to toggle master mute: {e}")
+            error_message = f"Failed to toggle master mute: {e}"
+            self.logger.error(error_message)
             return False
 
     def toggle_master_solo(self, solo: Optional[bool] = None) -> bool:
@@ -111,5 +118,6 @@ class MasterController(BaseController):
                 master.solo = solo
             return True
         except Exception as e:
-            self.logger.error(f"Failed to toggle master solo: {e}")
+            error_message = f"Failed to toggle master solo: {e}"
+            self.logger.error(error_message)
             return False

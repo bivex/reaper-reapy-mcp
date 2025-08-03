@@ -65,3 +65,6 @@ reapy-api/
 *.pyd
 .Python
 *.so
+CLAUDE.md
+
+.claude/settings.local.json

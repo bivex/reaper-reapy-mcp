@@ -2,10 +2,14 @@ import reapy
 import logging
 from typing import Optional, Union
 
-from .base_controller import BaseController
 
-class ProjectController(BaseController):
+class ProjectController:
     """Controller for project-level operations in Reaper."""
+    
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
     
     def set_tempo(self, bpm: float) -> bool:
         """
@@ -23,7 +27,8 @@ class ProjectController(BaseController):
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to set tempo: {e}")
+            error_message = f"Failed to set tempo to {bpm}: {e}"
+            self.logger.error(error_message)
             return False
     
     def get_tempo(self) -> Optional[float]:
@@ -38,5 +43,6 @@ class ProjectController(BaseController):
             return project.bpm
             
         except Exception as e:
-            self.logger.error(f"Failed to get tempo: {e}")
+            error_message = f"Failed to get tempo: {e}"
+            self.logger.error(error_message)
             return None

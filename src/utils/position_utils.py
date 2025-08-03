@@ -1,80 +1,97 @@
 import reapy
 from reapy import reascript_api as RPR
-from typing import Union, Tuple
+from typing import Union
+import logging
+
+# Set up logging
+logger = logging.getLogger(__name__)
+
+# Constants to replace magic numbers
+DEFAULT_BEATS_PER_MEASURE = 4
+DEFAULT_BPM = 120.0
+SECONDS_PER_MINUTE = 60.0
+DEFAULT_SECONDS_PER_BEAT = SECONDS_PER_MINUTE / DEFAULT_BPM
+DEFAULT_SECONDS_PER_MEASURE = DEFAULT_SECONDS_PER_BEAT * DEFAULT_BEATS_PER_MEASURE
 
 def position_to_time(position: Union[float, str], project=None) -> float:
     """
-    Convert a position (time in seconds or measure:beat string) to time in seconds.
-    
-    Args:
-        position: Either a float (time in seconds) or string in format "measure:beat"
-        project: Optional reapy.Project instance. If None, current project is used.
-        
-    Returns:
-        float: Time position in seconds
+    Convert a position (time in seconds or measure:beat string)
+    to time in seconds.
     """
     if isinstance(position, (int, float)):
         return float(position)
         
     if isinstance(position, str) and ':' in position:
-        measure, beat = map(float, position.split(':'))
-        if project is None:
-            project = reapy.Project()
-        
         try:
-            # Use the project's tempo and time signature for conversion
-            bpm = project.bpm
-            beats_per_measure = 4  # Default to 4/4 time signature
-            
-            # Try to get actual time signature if possible
-            try:
-                time_sig_num, time_sig_den = RPR.TimeMap_GetTimeSigAtTime(project.id, 0)
-                if time_sig_num > 0:
-                    beats_per_measure = time_sig_num
-            except:
-                pass  # Use default if getting time signature fails
-            
-            seconds_per_beat = 60.0 / bpm
-            seconds_per_measure = seconds_per_beat * beats_per_measure
-            
-            # Convert measure:beat to time
-            # Measures are 1-based in our interface
-            time = (measure - 1) * seconds_per_measure + (beat - 1) * seconds_per_beat
-            return time
-        except Exception as e:
-            # Ultimate fallback - just return the beat value as seconds
-            return beat
+            measure, beat = map(float, position.split(':'))
+            return _convert_measure_beat_to_time(measure, beat, project)
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid measure:beat format: {position}"
+            ) from e
         
     return float(position)  # Try direct conversion
+
+def _convert_measure_beat_to_time(measure: float, beat: float, project=None) -> float:
+    """Convert measure and beat to time in seconds."""
+    if project is None:
+        project = reapy.Project()
+    
+    try:
+        # Get project tempo and time signature
+        bpm = project.bpm
+        beats_per_measure = _get_beats_per_measure(project)
+        
+        # Calculate time conversion factors
+        seconds_per_beat = SECONDS_PER_MINUTE / bpm
+        seconds_per_measure = seconds_per_beat * beats_per_measure
+        
+        # Convert measure:beat to time (measures are 1-based in our interface)
+        time = ((measure - 1) * seconds_per_measure + 
+                (beat - 1) * seconds_per_beat)
+        return time
+        
+    except Exception as e:
+        # Log the error and use fallback values
+        logger.warning(f"Failed to convert measure:beat to time using project settings: {e}. Using fallback values.")
+        return _convert_mb_to_time_fallback(measure, beat)
+
+def _convert_mb_to_time_fallback(measure: float, beat: float) -> float:
+    """Convert measure and beat to time using default values as fallback."""
+    seconds_per_beat = DEFAULT_SECONDS_PER_BEAT
+    seconds_per_measure = DEFAULT_SECONDS_PER_MEASURE
+    
+    # Convert measure:beat to time (measures are 1-based in our interface)
+    time = ((measure - 1) * seconds_per_measure + 
+            (beat - 1) * seconds_per_beat)
+    return time
+
+def _get_beats_per_measure(project) -> int:
+    """Get the number of beats per measure from the project."""
+    try:
+        time_sig_num, time_sig_den = RPR.TimeMap_GetTimeSigAtTime(project.id, 0)
+        if time_sig_num > 0:
+            return time_sig_num
+    except Exception as e:
+        # Log the error and use default value
+        logger.warning(f"Failed to get time signature from project: {e}. Using default beats per measure.")
+    
+    return DEFAULT_BEATS_PER_MEASURE
 
 def time_to_measure(time: float, project=None) -> str:
     """
     Convert time in seconds to measure:beat string.
-    
-    Args:
-        time: Time position in seconds
-        project: Optional reapy.Project instance. If None, current project is used.
-        
-    Returns:
-        str: Position as "measure:beat" string
     """
     if project is None:
         project = reapy.Project()
     
     try:
-        # Use the project's tempo and time signature for conversion
+        # Get project tempo and time signature
         bpm = project.bpm
-        beats_per_measure = 4  # Default to 4/4 time signature
+        beats_per_measure = _get_beats_per_measure(project)
         
-        # Try to get actual time signature if possible
-        try:
-            time_sig_num, time_sig_den = RPR.TimeMap_GetTimeSigAtTime(project.id, 0)
-            if time_sig_num > 0:
-                beats_per_measure = time_sig_num
-        except:
-            pass  # Use default if getting time signature fails
-        
-        seconds_per_beat = 60.0 / bpm
+        # Calculate time conversion factors
+        seconds_per_beat = SECONDS_PER_MINUTE / bpm
         seconds_per_measure = seconds_per_beat * beats_per_measure
         
         # Convert time to measure:beat
@@ -83,46 +100,16 @@ def time_to_measure(time: float, project=None) -> str:
         beat = (beat_time / seconds_per_beat) + 1  # 1-based beat
         
         return f"{measure}:{beat:.3f}"
+        
     except Exception as e:
-        # Fallback: estimate based on 120 BPM, 4/4 time
-        seconds_per_beat = 0.5  # 120 BPM
-        seconds_per_measure = 2.0  # 4 beats per measure
-        
-        measure = int(time // seconds_per_measure) + 1
-        beat_time = time % seconds_per_measure
-        beat = (beat_time / seconds_per_beat) + 1
-        
-        return f"{measure}:{beat:.3f}"
+        # Log the error and use fallback values
+        logger.warning(f"Failed to convert time to measure:beat using project settings: {e}. Using fallback values.")
+        return _time_to_measure_fallback(time)
 
-def get_time_map_info(project=None) -> dict:
-    """
-    Get time map information for the project.
+def _time_to_measure_fallback(time: float) -> str:
+    """Convert time to measure:beat using default values as fallback."""
+    measure = int(time // DEFAULT_SECONDS_PER_MEASURE) + 1
+    beat_time = time % DEFAULT_SECONDS_PER_MEASURE
+    beat = (beat_time / DEFAULT_SECONDS_PER_BEAT) + 1
     
-    Args:
-        project: Optional reapy.Project instance. If None, current project is used.
-        
-    Returns:
-        dict: Time map information including:
-            - bpm: Current tempo in BPM
-            - time_sig_num: Time signature numerator
-            - time_sig_den: Time signature denominator
-    """
-    if project is None:
-        project = reapy.Project()
-        
-    try:
-        # Get time signature at current cursor
-        time_sig_num, time_sig_den = RPR.TimeMap_GetTimeSigAtTime(project.id, 0)
-        
-        return {
-            'bpm': project.bpm,
-            'time_sig_num': time_sig_num,
-            'time_sig_den': time_sig_den
-        }
-    except Exception as e:
-        # Return defaults if getting info fails
-        return {
-            'bpm': 120.0,
-            'time_sig_num': 4,
-            'time_sig_den': 4
-        }
+    return f"{measure}:{beat:.3f}"

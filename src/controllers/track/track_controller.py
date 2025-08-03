@@ -2,11 +2,15 @@ import reapy
 import logging
 from typing import Optional
 
-from .base_controller import BaseController
 
-class TrackController(BaseController):
+class TrackController:
     """Controller for track-related operations in Reaper."""
     
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
     def create_track(self, name: Optional[str] = None) -> int:
         """
         Create a new track in Reaper.
@@ -25,7 +29,8 @@ class TrackController(BaseController):
             return track.index
 
         except Exception as e:
-            self.logger.error(f"Failed to create track: {e}")
+            error_message = f"Failed to create track: {e}"
+            self.logger.error(error_message)
             raise
 
     def rename_track(self, track_index: int, new_name: str) -> bool:
@@ -46,7 +51,8 @@ class TrackController(BaseController):
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to rename track: {e}")
+            error_message = f"Failed to rename track: {e}"
+            self.logger.error(error_message)
             return False
 
     def get_track_count(self) -> int:
@@ -81,7 +87,8 @@ class TrackController(BaseController):
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to set track color: {e}")
+            error_message = f"Failed to set track color: {e}"
+            self.logger.error(error_message)
             return False
 
     def get_track_color(self, track_index: int) -> str:
