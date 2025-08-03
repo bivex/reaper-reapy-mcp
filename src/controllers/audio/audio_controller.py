@@ -22,7 +22,7 @@ class AudioController:
             self.logger.setLevel(logging.INFO)
 
     def insert_audio_item(self, track_index: int, file_path: str, 
-                         start_time: float) -> Union[int, str]:
+                         start_time: float, start_measure: str = None) -> Union[int, str]:
         """
         Insert an audio file as a media item on a track.
         
@@ -30,6 +30,7 @@ class AudioController:
             track_index (int): Index of the track to add the audio item to
             file_path (str): Path to the audio file
             start_time (float): Start time in seconds
+            start_measure (str): Start measure (optional, not used)
             
         Returns:
             int or str: ID of the created item

@@ -401,7 +401,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
             if start_measure:
                 start_time = time_to_measure(start_measure)
             
-            item_id = controller.insert_audio_item(track_index, file_path, start_time)
+            item_id = controller.insert_audio_item(track_index, file_path, start_time, start_measure)
             return _create_success_response(
                 f"Inserted audio item {item_id} on track {track_index}"
             )
