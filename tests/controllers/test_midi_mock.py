@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
+from dataclasses import dataclass
 
 # Constants to replace magic numbers
 DEFAULT_MIDI_LENGTH = 4.0
@@ -24,6 +25,15 @@ DEFAULT_TIME_RANGE_START = 0.0
 DEFAULT_TIME_RANGE_END = 10.0
 DEFAULT_AUDIO_FILE_POSITION = 12.0
 DEFAULT_AUDIO_ITEM_ID = 2
+
+@dataclass
+class MIDINoteParams:
+    """Data class to hold MIDI note parameters for testing."""
+    pitch: int
+    start_time: float
+    length: float
+    velocity: int = DEFAULT_MIDI_VELOCITY
+    channel: int = DEFAULT_MIDI_CHANNEL
 
 # Create a simplified ReaperController mock to use for testing
 class MockReaperController:
@@ -50,7 +60,7 @@ class MockReaperController:
         }
         return item_id
         
-    def add_midi_note(self, track_index, item_id, pitch, start_time, length, velocity=DEFAULT_MIDI_VELOCITY, channel=DEFAULT_MIDI_CHANNEL):
+    def add_midi_note(self, track_index, item_id, note_params: MIDINoteParams):
         item_key = f"{track_index}:{item_id}"
         if item_key not in self._test_midi_items:
             self._test_midi_items[item_key] = {
@@ -60,11 +70,11 @@ class MockReaperController:
             }
         
         self._test_midi_items[item_key]['notes'].append({
-            'pitch': pitch,
-            'start_time': start_time,
-            'end_time': start_time + length,
-            'velocity': velocity,
-            'channel': channel
+            'pitch': note_params.pitch,
+            'start_time': note_params.start_time,
+            'end_time': note_params.start_time + note_params.length,
+            'velocity': note_params.velocity,
+            'channel': note_params.channel
         })
         return True
         
@@ -218,8 +228,7 @@ class TestMIDIOperations(unittest.TestCase):
         # Add MIDI notes
         for pitch in DEFAULT_MIDI_NOTE_PITCHES:
             self.assertTrue(self.controller.add_midi_note(
-                track_index, midi_item_id, pitch, DEFAULT_POSITION, 
-                DEFAULT_MIDI_NOTE_LENGTH, DEFAULT_MIDI_NOTE_VELOCITY
+                track_index, midi_item_id, MIDINoteParams(pitch, DEFAULT_POSITION, DEFAULT_MIDI_NOTE_LENGTH)
             ))
         
         # Get all MIDI notes from the item

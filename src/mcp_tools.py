@@ -53,16 +53,22 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     @mcp.tool("rename_track")
     def rename_track(ctx: Context, track_index: int, new_name: str) -> Dict[str, Any]:
         """Rename an existing track."""
+        operation_message = (
+            f"Rename track {track_index} to {new_name}"
+        )
         return _handle_controller_operation(
-            f"Rename track {track_index} to {new_name}",
+            operation_message,
             controller.rename_track, track_index, new_name
         )
 
     @mcp.tool("set_track_color")
     def set_track_color(ctx: Context, track_index: int, color: str) -> Dict[str, Any]:
         """Set the color of a track."""
+        operation_message = (
+            f"Set color of track {track_index} to {color}"
+        )
         return _handle_controller_operation(
-            f"Set color of track {track_index} to {color}",
+            operation_message,
             controller.set_track_color, track_index, color
         )
 
@@ -109,7 +115,13 @@ def _setup_project_tools(mcp: FastMCP, controller) -> None:
 
 def _setup_fx_tools(mcp: FastMCP, controller) -> None:
     """Setup FX-related MCP tools."""
-    
+    _setup_fx_add_remove_tools(mcp, controller)
+    _setup_fx_param_tools(mcp, controller)
+    _setup_fx_list_tools(mcp, controller)
+    _setup_fx_toggle_tool(mcp, controller)
+
+def _setup_fx_add_remove_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX add and remove MCP tools."""
     @mcp.tool("add_fx")
     def add_fx(ctx: Context, track_index: int, fx_name: str) -> Dict[str, Any]:
         """Add an FX to a track."""
@@ -133,6 +145,8 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             controller.remove_fx, track_index, fx_index
         )
 
+def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX parameter-related MCP tools."""
     @mcp.tool("set_fx_param")
     def set_fx_param(ctx: Context, track_index: int, fx_index: int, 
                     param_name: str, value: float) -> Dict[str, Any]:
@@ -163,6 +177,8 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             logger.error(f"Failed to get FX parameters: {str(e)}")
             return _create_error_response(f"Failed to get FX parameters: {str(e)}")
 
+def _setup_fx_list_tools(mcp: FastMCP, controller) -> None:
+    """Setup FX list-related MCP tools."""
     @mcp.tool("get_fx_list")
     def get_fx_list(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get list of FX on a track."""
@@ -183,6 +199,8 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
             logger.error(f"Failed to get available FX: {str(e)}")
             return _create_error_response(f"Failed to get available FX: {str(e)}")
 
+def _setup_fx_toggle_tool(mcp: FastMCP, controller) -> None:
+    """Setup FX toggle MCP tool."""
     @mcp.tool("toggle_fx")
     def toggle_fx(ctx: Context, track_index: int, fx_index: int, 
                  enable: Optional[bool] = None) -> Dict[str, Any]:
@@ -286,7 +304,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
                         start_time: Optional[float] = None,
                         start_measure: Optional[str] = None, 
                         length: float = DEFAULT_MIDI_LENGTH) -> Dict[str, Any]:
-        """Create a MIDI item on a track."""
+        """Create a MIDI item."""
         try:
             # Handle time conversion if measure is provided
             if start_measure:
@@ -295,8 +313,9 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             item_id = controller.create_midi_item(track_index, start_time, length)
             return _create_success_response(f"Created MIDI item {item_id} on track {track_index}")
         except Exception as e:
-            logger.error(f"Failed to create MIDI item: {str(e)}")
-            return _create_error_response(f"Failed to create MIDI item: {str(e)}")
+            error_message = f"Failed to create MIDI item: {str(e)}"
+            logger.error(error_message)
+            return _create_error_response(error_message)
 
     @mcp.tool("add_midi_note")
     def add_midi_note(ctx: Context, track_index: int, item_id: int, pitch: int,
@@ -306,8 +325,10 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
         operation_name = f"Add MIDI note pitch {pitch} to item {item_id}"
         return _handle_controller_operation(
             operation_name,
-            controller.add_midi_note, track_index, item_id, pitch, 
-            start_time, length, velocity
+            controller.add_midi_note(
+                track_index, item_id, pitch,
+                start_time, length, velocity
+            )
         )
 
     @mcp.tool("clear_midi_item")
@@ -374,8 +395,9 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
                 f"Inserted audio item {item_id} on track {track_index}"
             )
         except Exception as e:
-            logger.error(f"Failed to insert audio item: {str(e)}")
-            return _create_error_response(f"Failed to insert audio item: {str(e)}")
+            error_message = f"Failed to insert audio item: {str(e)}"
+            logger.error(error_message)
+            return _create_error_response(error_message)
 
     @mcp.tool("duplicate_item")
     def duplicate_item(ctx: Context, track_index: int, item_id: int,
@@ -392,8 +414,9 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
                 f"Duplicated item {item_id} to {new_item_id}"
             )
         except Exception as e:
-            logger.error(f"Failed to duplicate item: {str(e)}")
-            return _create_error_response(f"Failed to duplicate item: {str(e)}")
+            error_message = f"Failed to duplicate item: {str(e)}"
+            logger.error(error_message)
+            return _create_error_response(error_message)
 
     @mcp.tool("delete_item")
     def delete_item(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:

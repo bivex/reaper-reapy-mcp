@@ -18,8 +18,8 @@ DEFAULT_MIDI_NOTE_VELOCITY = 100
 DEFAULT_SECOND_MIDI_START_TIME = 4.0
 DEFAULT_SECOND_MIDI_LENGTH = 2.0
 DEFAULT_SECOND_MIDI_NOTE_PITCH = 72  # C an octave up
-DEFAULT_SECOND_MIDI_NOTE_LENGTH = 0.5
-DEFAULT_SECOND_MIDI_NOTE_VELOCITY = 90
+DEFAULT_SECOND_MIDI_NOTE_LEN = 0.5
+DEFAULT_SECOND_MIDI_NOTE_VEL = 90
 DEFAULT_SLEEP_TIME = 0.5
 
 
@@ -36,13 +36,13 @@ class TestMcpTemporary(unittest.TestCase):
         if not cls.controller.verify_connection():
             raise Exception("Failed to connect to Reaper for testing.")
 
-    def test_midi_item_creation_and_notes(self):
+    def test_midi_item_creation(self):
         self.logger.info("Testing MIDI and item operations...")
         midi_track_index = self.controller.create_track("MIDI Track")
         self.assertGreaterEqual(midi_track_index, 0, "Failed to create MIDI track.")
         self.logger.info(f"Created MIDI track {midi_track_index}")
 
-        midi_item_id = self.controller.create_midi_item(midi_track_index, DEFAULT_MIDI_START_TIME, DEFAULT_MIDI_LENGTH)
+        midi_item_id = self.controller.create_midi_item(midi_track_index, DEFAULT_MIDI_START_TIME, length=DEFAULT_MIDI_LENGTH)
         self.assertGreaterEqual(midi_item_id, 0, "Failed to create MIDI item.")
         self.logger.info(f"Created MIDI item with ID: {midi_item_id}")
         
@@ -61,13 +61,13 @@ class TestMcpTemporary(unittest.TestCase):
         else:
             self.logger.error("Failed to add first note, not attempting remaining notes")
 
-        midi_item2_id = self.controller.create_midi_item(midi_track_index, DEFAULT_SECOND_MIDI_START_TIME, DEFAULT_SECOND_MIDI_LENGTH)
+        midi_item2_id = self.controller.create_midi_item(midi_track_index, DEFAULT_SECOND_MIDI_START_TIME, length=DEFAULT_SECOND_MIDI_LENGTH)
         self.assertGreaterEqual(midi_item2_id, 0, "Failed to create second MIDI item.")
         self.logger.info(f"Created second MIDI item with ID: {midi_item2_id}")
         
         time.sleep(DEFAULT_SLEEP_TIME)
 
-        note2_result = self.controller.add_midi_note(midi_track_index, midi_item2_id, DEFAULT_SECOND_MIDI_NOTE_PITCH, DEFAULT_SECOND_MIDI_START_TIME, DEFAULT_SECOND_MIDI_NOTE_LENGTH, DEFAULT_SECOND_MIDI_NOTE_VELOCITY)  # C an octave up
+        note2_result = self.controller.add_midi_note(midi_track_index, midi_item2_id, DEFAULT_SECOND_MIDI_NOTE_PITCH, DEFAULT_SECOND_MIDI_START_TIME, DEFAULT_SECOND_MIDI_NOTE_LEN, DEFAULT_SECOND_MIDI_NOTE_VEL)  # C an octave up
         self.assertTrue(note2_result, "Failed to add note to second MIDI item.")
         self.logger.info(f"Result of adding note to second item: {note2_result}")
 

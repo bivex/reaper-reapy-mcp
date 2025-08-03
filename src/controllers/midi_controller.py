@@ -16,6 +16,12 @@ MIN_MIDI_PITCH = 0
 MAX_MIDI_CHANNEL = 15
 
 @dataclass
+class MIDIItemTarget:
+    """Data class to hold MIDI item target parameters."""
+    track_index: int
+    item_id: Union[int, str]
+
+@dataclass
 class MIDINoteParams:
     """Data class to hold MIDI note parameters."""
     pitch: int
@@ -51,9 +57,8 @@ class MIDIController:
             num_tracks = len(project.tracks)
             return track_index < num_tracks
         except Exception as e:
-            self.logger.error(
-                f"Failed to validate track index: {e}"
-            )
+            error_message = f"Failed to validate track index: {e}"
+            self.logger.error(error_message)
             return False
             
     def _get_track(self, track_index: int) -> Optional[reapy.Track]:
@@ -72,9 +77,8 @@ class MIDIController:
         try:
             return reapy.Project().tracks[track_index]
         except Exception as e:
-            self.logger.error(
-                f"Failed to get track {track_index}: {e}"
-            )
+            error_message = f"Failed to get track {track_index}: {e}"
+            self.logger.error(error_message)
             return None
 
     def _select_item(self, item: reapy.Item) -> bool:
@@ -90,7 +94,7 @@ class MIDIController:
         return select_item(item)
     
     def create_midi_item(self, track_index: int, start_time: float, 
-                        length: float = DEFAULT_MIDI_LENGTH) -> Union[int, str]:
+                         *, length: float = DEFAULT_MIDI_LENGTH) -> Union[int, str]:
         """
         Create an empty MIDI item on a track.
         
@@ -115,8 +119,8 @@ class MIDIController:
                 return -1
                 
             self.logger.debug(
-                f"Creating MIDI item on track {track_index} at position {start_time} "
-                f"with length {length}"
+                f"Creating MIDI item on track {track_index} at position "
+                f"{start_time} with length {length}"
             )
             
             # Create the item
@@ -172,7 +176,10 @@ class MIDIController:
             
             item = get_item_by_id_or_index(track, item_id)
             if item is None:
-                self.logger.error(f"MIDI item {item_id} not found on track {track_index}")
+                error_message = (
+                    f"MIDI item {item_id} not found on track {track_index}"
+                )
+                self.logger.error(error_message)
                 return False
             
             # Add the MIDI note
@@ -200,33 +207,18 @@ class MIDIController:
             self.logger.error(f"Failed to add MIDI note: {e}")
             return False
 
-    def add_midi_note_simple(self, track_index: int, item_id: Union[int, str], pitch: int, 
-                           start_time: float, length: float, 
-                           velocity: int = DEFAULT_MIDI_VELOCITY, 
-                           channel: int = DEFAULT_MIDI_CHANNEL) -> bool:
+    def add_midi_note_simple(self, midi_item_target: MIDIItemTarget, note_params: MIDINoteParams) -> bool:
         """
         Convenience method to add a MIDI note with individual parameters.
         
         Args:
-            track_index (int): Index of the track containing the MIDI item
-            item_id (int or str): ID of the MIDI item
-            pitch (int): MIDI pitch (0-127)
-            start_time (float): Start time within the MIDI item in seconds
-            length (float): Length of the note in seconds
-            velocity (int): MIDI velocity (0-127)
-            channel (int): MIDI channel (0-15)
+            midi_item_target (MIDIItemTarget): Target MIDI item.
+            note_params (MIDINoteParams): MIDI note parameters.
             
         Returns:
             bool: True if successful, False otherwise
         """
-        note_params = MIDINoteParams(
-            pitch=pitch,
-            start_time=start_time,
-            length=length,
-            velocity=velocity,
-            channel=channel
-        )
-        return self.add_midi_note(track_index, item_id, note_params)
+        return self.add_midi_note(midi_item_target.track_index, midi_item_target.item_id, note_params)
 
     def _validate_midi_note_params(self, pitch: int, velocity: int, channel: int) -> bool:
         """Validate MIDI note parameters."""
@@ -263,7 +255,10 @@ class MIDIController:
             
             item = get_item_by_id_or_index(track, item_id)
             if item is None:
-                self.logger.error(f"MIDI item {item_id} not found on track {track_index}")
+                error_message = (
+                    f"MIDI item {item_id} not found on track {track_index}"
+                )
+                self.logger.error(error_message)
                 return False
             
             # Clear all notes from the active take
@@ -301,7 +296,10 @@ class MIDIController:
             
             item = get_item_by_id_or_index(track, item_id)
             if item is None:
-                self.logger.error(f"MIDI item {item_id} not found on track {track_index}")
+                error_message = (
+                    f"MIDI item {item_id} not found on track {track_index}"
+                )
+                self.logger.error(error_message)
                 return []
             
             # Get notes from the active take
@@ -370,7 +368,8 @@ class MIDIController:
             return matching_notes
             
         except Exception as e:
-            self.logger.error(f"Failed to find MIDI notes by pitch: {e}")
+            error_message = f"Failed to find MIDI notes by pitch: {e}"
+            self.logger.error(error_message)
             return []
 
     def _validate_pitch_range(self, pitch_min: int, pitch_max: int) -> bool:
@@ -417,7 +416,9 @@ class MIDIController:
                         }
                         midi_items.append(item_info)
             
-            self.logger.info(f"Found {len(midi_items)} MIDI items in project")
+            self.logger.info(
+                f"Found {len(midi_items)} MIDI items in project"
+            )
             return midi_items
             
         except Exception as e:
@@ -447,7 +448,10 @@ class MIDIController:
                             "length": item.length
                         }
                         
-                        self.logger.info(f"Found selected MIDI item: track {track_index}, item {item.id}")
+                        self.logger.info(
+                            f"Found selected MIDI item: track {track_index}, "
+                            f"item {item.id}"
+                        )
                         return item_info
             
             self.logger.info("No selected MIDI item found")

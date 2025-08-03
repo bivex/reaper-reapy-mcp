@@ -17,8 +17,8 @@ DEFAULT_MIDI_NOTE_VELOCITY = 100
 DEFAULT_SECOND_MIDI_START_TIME = 4.0
 DEFAULT_SECOND_MIDI_LENGTH = 2.0
 DEFAULT_SECOND_MIDI_NOTE_PITCH = 72  # C an octave up
-DEFAULT_SECOND_MIDI_NOTE_LENGTH = 0.5
-DEFAULT_SECOND_MIDI_NOTE_VELOCITY = 90
+DEFAULT_SECOND_MIDI_NOTE_LEN = 0.5
+DEFAULT_SECOND_MIDI_NOTE_VEL = 90
 
 
 class TestMidiItemClientOperations(unittest.TestCase):
@@ -40,7 +40,7 @@ class TestMidiItemClientOperations(unittest.TestCase):
         self.assertGreaterEqual(midi_track_index, 0, "Failed to create MIDI track.")
         self.logger.info(f"Created MIDI track {midi_track_index}")
 
-        midi_item_id = self.controller.create_midi_item(midi_track_index, DEFAULT_MIDI_START_TIME, DEFAULT_MIDI_LENGTH)
+        midi_item_id = self.controller.create_midi_item(midi_track_index, DEFAULT_MIDI_START_TIME, length=DEFAULT_MIDI_LENGTH)
         self.assertGreaterEqual(midi_item_id, 0, "Failed to create MIDI item.")
         self.logger.info(f"Created MIDI item {midi_item_id}")
 
@@ -48,11 +48,11 @@ class TestMidiItemClientOperations(unittest.TestCase):
             self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item_id, pitch, 0.0, DEFAULT_MIDI_NOTE_LENGTH, DEFAULT_MIDI_NOTE_VELOCITY), f"Failed to add note with pitch {pitch}.")
         self.logger.info("Added MIDI notes (C major chord)")
 
-        midi_item2_id = self.controller.create_midi_item(midi_track_index, DEFAULT_SECOND_MIDI_START_TIME, DEFAULT_SECOND_MIDI_LENGTH)
+        midi_item2_id = self.controller.create_midi_item(midi_track_index, DEFAULT_SECOND_MIDI_START_TIME, length=DEFAULT_SECOND_MIDI_LENGTH)
         self.assertGreaterEqual(midi_item2_id, 0, "Failed to create second MIDI item.")
         self.logger.info(f"Created second MIDI item {midi_item2_id}")
 
-        self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item2_id, DEFAULT_SECOND_MIDI_NOTE_PITCH, 0.0, DEFAULT_SECOND_MIDI_NOTE_LENGTH, DEFAULT_SECOND_MIDI_NOTE_VELOCITY), "Failed to add note to second item.")
+        self.assertTrue(self.controller.add_midi_note(midi_track_index, midi_item2_id, DEFAULT_SECOND_MIDI_NOTE_PITCH, 0.0, DEFAULT_SECOND_MIDI_NOTE_LEN, DEFAULT_SECOND_MIDI_NOTE_VEL), "Failed to add note to second item.")
         self.logger.info("Added note to second MIDI item.")
 
         selected_items = self.controller.get_selected_items()

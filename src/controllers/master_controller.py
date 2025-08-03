@@ -52,7 +52,8 @@ class MasterController:
             master.volume = volume
             return True
         except Exception as e:
-            self.logger.error(f"Failed to set master volume: {e}")
+            error_message = f"Failed to set master volume: {e}"
+            self.logger.error(error_message)
             return False
 
     def set_master_pan(self, pan: float) -> bool:
@@ -71,7 +72,8 @@ class MasterController:
             master.pan = pan
             return True
         except Exception as e:
-            self.logger.error(f"Failed to set master pan: {e}")
+            error_message = f"Failed to set master pan: {e}"
+            self.logger.error(error_message)
             return False
 
     def toggle_master_mute(self, mute: Optional[bool] = None) -> bool:
@@ -93,7 +95,8 @@ class MasterController:
                 master.mute = mute
             return True
         except Exception as e:
-            self.logger.error(f"Failed to toggle master mute: {e}")
+            error_message = f"Failed to toggle master mute: {e}"
+            self.logger.error(error_message)
             return False
 
     def toggle_master_solo(self, solo: Optional[bool] = None) -> bool:
@@ -115,5 +118,6 @@ class MasterController:
                 master.solo = solo
             return True
         except Exception as e:
-            self.logger.error(f"Failed to toggle master solo: {e}")
+            error_message = f"Failed to toggle master solo: {e}"
+            self.logger.error(error_message)
             return False

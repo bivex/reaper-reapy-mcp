@@ -28,7 +28,8 @@ class MarkerController:
             region = project.add_region(start_time, end_time, name)
             return region.index
         except Exception as e:
-            self.logger.error(f"Failed to create region: {e}")
+            error_message = f"Failed to create region: {e}"
+            self.logger.error(error_message)
             return -1
 
     def delete_region(self, region_index: int) -> bool:
@@ -70,10 +71,14 @@ class MarkerController:
                 from reapy import reascript_api as RPR
                 result = RPR.DeleteProjectMarker(0, region_index, True)  # isRegion=True
                 if result:
-                    self.logger.info(f"Deleted region using ReaScript API {region_index}")
+                    self.logger.info(
+                        f"Deleted region using ReaScript API {region_index}"
+                    )
                     return True
             except Exception as e:
-                self.logger.warning(f"Failed to delete region with ReaScript API: {e}")
+                self.logger.warning(
+                    f"Failed to delete region with ReaScript API: {e}"
+                )
                 
             # As a fallback, try the project's method
             try:
@@ -107,7 +112,8 @@ class MarkerController:
             marker = project.add_marker(time, name)
             return marker.index
         except Exception as e:
-            self.logger.error(f"Failed to create marker: {e}")
+            error_message = f"Failed to create marker: {e}"
+            self.logger.error(error_message)
             return -1
 
     def delete_marker(self, marker_index: int) -> bool:
@@ -125,8 +131,12 @@ class MarkerController:
             
             # Log all marker indices for debugging
             marker_indices = [m.index for m in project.markers]
-            self.logger.debug(f"Available marker indices: {marker_indices}")
-            self.logger.debug(f"Attempting to delete marker with index: {marker_index}")
+            self.logger.debug(
+                f"Available marker indices: {marker_indices}"
+            )
+            self.logger.debug(
+                f"Attempting to delete marker with index: {marker_index}"
+            )
             
             # First try direct access with safer index checking
             try:

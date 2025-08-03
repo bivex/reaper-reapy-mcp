@@ -7,7 +7,7 @@ from reapy import reascript_api as RPR
 
 # Constants to replace magic numbers
 PLUGIN_NAME_INDEX = 2  # Index of plugin name in comma-separated format
-MIN_COMMA_PARTS_FOR_PLUGIN_NAME = 3  # Minimum parts needed for plugin name extraction
+MIN_PLUGIN_NAME_PARTS = 3  # Minimum parts needed for plugin name extraction
 
 class FXController:
     """Controller for FX-related operations in Reaper."""
@@ -38,9 +38,13 @@ class FXController:
             )
             
             if fx_index >= 0:
-                self.logger.info(f"Added FX '{fx_name}' to track {track_index} at index {fx_index}")
+                self.logger.info(
+                    f"Added FX '{fx_name}' to track {track_index} at index {fx_index}"
+                )
             else:
-                self.logger.error(f"Failed to add FX '{fx_name}' to track {track_index}")
+                self.logger.error(
+                    f"Failed to add FX '{fx_name}' to track {track_index}"
+                )
             
             return fx_index
             
@@ -69,9 +73,13 @@ class FXController:
             )
             
             if success:
-                self.logger.info(f"Removed FX {fx_index} from track {track_index}")
+                self.logger.info(
+                    f"Removed FX {fx_index} from track {track_index}"
+                )
             else:
-                self.logger.error(f"Failed to remove FX {fx_index} from track {track_index}")
+                self.logger.error(
+                    f"Failed to remove FX {fx_index} from track {track_index}"
+                )
             
             return success
             
@@ -111,7 +119,9 @@ class FXController:
                         self.logger.info(f"Set FX parameter '{param_name}' to {value}")
                     return success
             
-            self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
+            self.logger.error(
+                f"Parameter '{param_name}' not found in FX {fx_index}"
+            )
             return False
             
         except Exception as e:
@@ -147,11 +157,14 @@ class FXController:
                     self.logger.info(f"Got FX parameter '{param_name}': {value}")
                     return value
             
-            self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
+            self.logger.error(
+                f"Parameter '{param_name}' not found in FX {fx_index}"
+            )
             return 0.0
             
         except Exception as e:
-            self.logger.error(f"Failed to get FX parameter: {e}")
+            error_message = f"Failed to get FX parameter '{param_name}': {e}"
+            self.logger.error(error_message)
             return 0.0
 
     def get_fx_param_list(self, track_index: int, fx_index: int) -> List[Dict[str, Any]]:
@@ -189,7 +202,8 @@ class FXController:
             return param_list
             
         except Exception as e:
-            self.logger.error(f"Failed to get FX parameter list: {e}")
+            error_message = f"Failed to get FX parameter list for FX {fx_index}: {e}"
+            self.logger.error(error_message)
             return []
 
     def get_fx_list(self, track_index: int) -> List[Dict[str, Any]]:
@@ -226,7 +240,8 @@ class FXController:
             return fx_list
             
         except Exception as e:
-            self.logger.error(f"Failed to get FX list: {e}")
+            error_message = f"Failed to get FX list for track {track_index}: {e}"
+            self.logger.error(error_message)
             return []
 
     def get_available_fx_list(self) -> List[str]:
@@ -254,7 +269,8 @@ class FXController:
                 return []
 
         except Exception as e:
-            self.logger.error(f"Failed to get available FX list: {e}")
+            error_message = f"Failed to get available FX list: {e}"
+            self.logger.error(error_message)
             return []
 
     def _read_plugin_database(self) -> List[str]:
@@ -340,7 +356,7 @@ class FXController:
         # Try to extract names in the format: dll=ID,number,PluginName
         if ',' in right_part:
             comma_parts = right_part.split(',')
-            if len(comma_parts) >= MIN_COMMA_PARTS_FOR_PLUGIN_NAME:
+            if len(comma_parts) >= MIN_PLUGIN_NAME_PARTS:
                 plugin_name = comma_parts[PLUGIN_NAME_INDEX].strip()
                 if plugin_name:
                     return plugin_name
@@ -384,10 +400,13 @@ class FXController:
                     f"{state_str.capitalize()} FX {fx_index} on track {track_index}"
                 )
             else:
-                self.logger.error(f"Failed to toggle FX {fx_index} on track {track_index}")
+                self.logger.error(
+                    f"Failed to toggle FX {fx_index} on track {track_index}"
+                )
             
             return success
             
         except Exception as e:
-            self.logger.error(f"Failed to toggle FX: {e}")
+            error_message = f"Failed to toggle FX: {e}"
+            self.logger.error(error_message)
             return False

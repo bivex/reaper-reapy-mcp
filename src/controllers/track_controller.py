@@ -29,7 +29,8 @@ class TrackController:
             return track.index
 
         except Exception as e:
-            self.logger.error(f"Failed to create track: {e}")
+            error_message = f"Failed to create track: {e}"
+            self.logger.error(error_message)
             raise
 
     def rename_track(self, track_index: int, new_name: str) -> bool:
@@ -50,7 +51,8 @@ class TrackController:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to rename track: {e}")
+            error_message = f"Failed to rename track: {e}"
+            self.logger.error(error_message)
             return False
 
     def get_track_count(self) -> int:
@@ -85,7 +87,8 @@ class TrackController:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to set track color: {e}")
+            error_message = f"Failed to set track color: {e}"
+            self.logger.error(error_message)
             return False
 
     def get_track_color(self, track_index: int) -> str:

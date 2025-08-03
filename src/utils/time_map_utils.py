@@ -13,16 +13,8 @@ DEFAULT_TIME_SIG_DEN = 4
 
 def get_time_map_info(project=None) -> dict:
     """
-    Get time map information for the project.
-    
-    Args:
-        project: Optional reapy.Project instance. If None, current project is used.
-        
-    Returns:
-        dict: Time map information including:
-            - bpm: Current tempo in BPM
-            - time_sig_num: Time signature numerator
-            - time_sig_den: Time signature denominator
+    Get time map information for the project, including BPM,
+    time signature numerator, and time signature denominator.
     """
     if project is None:
         project = reapy.Project()

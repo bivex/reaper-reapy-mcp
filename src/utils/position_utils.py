@@ -15,14 +15,8 @@ DEFAULT_SECONDS_PER_MEASURE = DEFAULT_SECONDS_PER_BEAT * DEFAULT_BEATS_PER_MEASU
 
 def position_to_time(position: Union[float, str], project=None) -> float:
     """
-    Convert a position (time in seconds or measure:beat string) to time in seconds.
-    
-    Args:
-        position: Either a float (time in seconds) or string in format "measure:beat"
-        project: Optional reapy.Project instance. If None, current project is used.
-        
-    Returns:
-        float: Time position in seconds
+    Convert a position (time in seconds or measure:beat string)
+    to time in seconds.
     """
     if isinstance(position, (int, float)):
         return float(position)
@@ -60,9 +54,9 @@ def _convert_measure_beat_to_time(measure: float, beat: float, project=None) -> 
     except Exception as e:
         # Log the error and use fallback values
         logger.warning(f"Failed to convert measure:beat to time using project settings: {e}. Using fallback values.")
-        return _convert_measure_beat_to_time_fallback(measure, beat)
+        return _convert_mb_to_time_fallback(measure, beat)
 
-def _convert_measure_beat_to_time_fallback(measure: float, beat: float) -> float:
+def _convert_mb_to_time_fallback(measure: float, beat: float) -> float:
     """Convert measure and beat to time using default values as fallback."""
     seconds_per_beat = DEFAULT_SECONDS_PER_BEAT
     seconds_per_measure = DEFAULT_SECONDS_PER_MEASURE
@@ -87,13 +81,6 @@ def _get_beats_per_measure(project) -> int:
 def time_to_measure(time: float, project=None) -> str:
     """
     Convert time in seconds to measure:beat string.
-    
-    Args:
-        time: Time position in seconds
-        project: Optional reapy.Project instance. If None, current project is used.
-        
-    Returns:
-        str: Position as "measure:beat" string
     """
     if project is None:
         project = reapy.Project()

@@ -19,10 +19,7 @@ PERCENTAGE_BASE = 100  # Base for percentage calculations
 
 def ensure_sample_file() -> str:
     """
-    Ensure the sample audio file exists, downloading it if necessary.
-    
-    Returns:
-        str: Path to the sample audio file
+    Ensure the sample audio file exists, downloading if necessary.
     """
     try:
         # Create samples directory if it doesn't exist

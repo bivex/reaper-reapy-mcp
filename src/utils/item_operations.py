@@ -7,12 +7,6 @@ logger = logging.getLogger(__name__)
 def select_item(item: reapy.Item) -> bool:
     """
     Select a media item.
-    
-    Args:
-        item (reapy.Item): The item to select
-        
-    Returns:
-        bool: True if successful, False otherwise
     """
     try:
         # Always use the ReaScript API directly
@@ -25,7 +19,8 @@ def select_item(item: reapy.Item) -> bool:
         RPR.SetMediaItemSelected(item.id, True)
         return True
     except Exception as e:
-        logger.error(f"Failed to select item: {e}")
+        error_message = f"Failed to select item {item.id}: {e}"
+        logger.error(error_message)
         return False
 
 def delete_item(item: reapy.Item) -> bool:
@@ -44,14 +39,15 @@ def delete_item(item: reapy.Item) -> bool:
         
         # Verify the item was deleted
         if not _verify_item_deletion(item):
-            logger.error("Item still exists after deletion")
+            logger.error(f"Item {item.id} still exists after deletion")
             return False
         
         logger.info(f"Deleted item with ID: {item.id}")
         return True
         
     except Exception as e:
-        logger.error(f"Failed to delete item: {e}")
+        error_message = f"Failed to delete item {item.id}: {e}"
+        logger.error(error_message)
         return False
 
 def _verify_item_deletion(item: reapy.Item) -> bool:
@@ -72,5 +68,5 @@ def _verify_item_deletion(item: reapy.Item) -> bool:
         return True
     except Exception as e:
         # If we get an error trying to access the item, it probably means it was deleted
-        logger.debug(f"Error during deletion verification (likely item was deleted): {e}")
+        logger.debug(f"Error during deletion verification (likely item {item.id} was deleted): {e}")
         return True 

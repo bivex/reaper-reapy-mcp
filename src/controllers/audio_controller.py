@@ -58,7 +58,8 @@ class AudioController:
             return self._find_inserted_item(track, start_time, num_items_before)
 
         except Exception as e:
-            self.logger.error(f"Failed to insert audio item: {e}")
+            error_message = f"Failed to insert audio item: {e}"
+            self.logger.error(error_message)
             return -1
 
     def _prepare_track_for_insertion(self, track, start_time):
@@ -96,13 +97,6 @@ class AudioController:
     def get_item_properties(self, track_index, item_id):
         """
         Get properties of a media item.
-        
-        Args:
-            track_index (int): Index of the track containing the item
-            item_id (int or str): ID of the item
-            
-        Returns:
-            dict: Dictionary of item properties
         """
         try:                
             # Find the item in the actual project
@@ -112,13 +106,15 @@ class AudioController:
             # Use shared utility to find the item
             item = get_item_by_id_or_index(track, item_id)
             if item is None:
+                self.logger.warning(f"Item {item_id} not found on track {track_index}")
                 return {}
             
             # Get properties using shared utility
             return get_item_props(item)
             
         except Exception as e:
-            self.logger.error(f"Failed to get item properties: {e}")
+            error_message = f"Failed to get properties for item {item_id}: {e}"
+            self.logger.error(error_message)
             return {}
 
     def set_item_position(self, track_index, item_id, position):
@@ -139,6 +135,7 @@ class AudioController:
             
             item = get_item_by_id_or_index(track, item_id)
             if item is None:
+                self.logger.warning(f"Item {item_id} not found on track {track_index}")
                 return False
             
             item.position = position
@@ -146,7 +143,8 @@ class AudioController:
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to set item position: {e}")
+            error_message = f"Failed to set item {item_id} position to {position}: {e}"
+            self.logger.error(error_message)
             return False
 
     def set_item_length(self, track_index, item_id, length):
@@ -167,6 +165,7 @@ class AudioController:
             
             item = get_item_by_id_or_index(track, item_id)
             if item is None:
+                self.logger.warning(f"Item {item_id} not found on track {track_index}")
                 return False
             
             item.length = length
@@ -174,7 +173,8 @@ class AudioController:
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to set item length: {e}")
+            error_message = f"Failed to set item {item_id} length to {length}: {e}"
+            self.logger.error(error_message)
             return False
 
     def duplicate_item(self, track_index, item_id, new_position=None):
@@ -196,7 +196,8 @@ class AudioController:
             # Get the original item
             original_item = get_item_by_id_or_index(track, item_id)
             if original_item is None:
-                self.logger.error(f"Item {item_id} not found on track {track_index}")
+                error_message = f"Item {item_id} not found on track {track_index}"
+                self.logger.error(error_message)
                 return -1
             
             # Calculate new position if not provided
@@ -281,7 +282,8 @@ class AudioController:
             return delete_item(item)
             
         except Exception as e:
-            self.logger.error(f"Failed to delete item: {e}")
+            error_message = f"Failed to delete item {item_id}: {e}"
+            self.logger.error(error_message)
             return False
 
     def get_items_in_time_range(self, track_index, start_time, end_time):
@@ -311,7 +313,8 @@ class AudioController:
                     items_in_range.append(item.id)
             
             self.logger.info(
-                f"Found {len(items_in_range)} items in time range {start_time}-{end_time}"
+                f"Found {len(items_in_range)} items in time range "
+                f"{start_time}-{end_time}"
             )
             return items_in_range
             

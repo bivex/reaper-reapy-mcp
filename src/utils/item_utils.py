@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 def get_item_by_id_or_index(track: reapy.Track, 
                            item_id: Union[int, str]) -> Optional[reapy.Item]:
     """
-    Get an item from a track by its ID or index.
+    Get an item from a track by its ID or index. Returns the found item or None.
     
     Args:
         track (reapy.Track): The track to search in
@@ -75,7 +75,8 @@ def get_item_properties(item: reapy.Item) -> Dict[str, Any]:
             'selected': is_selected
         }
     except Exception as e:
-        logger.error(f"Failed to get item properties: {e}")
+        error_message = f"Failed to get item properties for item {item.id}: {e}"
+        logger.error(error_message)
         return {}
 
 def _get_source_filename(take: reapy.Take) -> str:

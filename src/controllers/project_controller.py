@@ -27,7 +27,8 @@ class ProjectController:
             return True
             
         except Exception as e:
-            self.logger.error(f"Failed to set tempo: {e}")
+            error_message = f"Failed to set tempo to {bpm}: {e}"
+            self.logger.error(error_message)
             return False
     
     def get_tempo(self) -> Optional[float]:
@@ -42,5 +43,6 @@ class ProjectController:
             return project.bpm
             
         except Exception as e:
-            self.logger.error(f"Failed to get tempo: {e}")
+            error_message = f"Failed to get tempo: {e}"
+            self.logger.error(error_message)
             return None

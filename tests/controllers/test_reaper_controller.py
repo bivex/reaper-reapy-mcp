@@ -286,7 +286,7 @@ class TestReaperController(unittest.TestCase):
         # Create MIDI item
         start_time = DEFAULT_MIDI_START_TIME
         length = DEFAULT_MIDI_LENGTH
-        midi_item_id = self.controller.create_midi_item(track_index, start_time, length)
+        midi_item_id = self.controller.create_midi_item(track_index, start_time, length=length)
         
         # Check if the MIDI item ID is valid - handle both string and integer IDs
         if isinstance(midi_item_id, str):
@@ -511,7 +511,7 @@ class TestReaperController(unittest.TestCase):
         
         self.logger.info("Skipping strict duplicated item deletion assertion in debug mode.")
 
-    def test_midi_item_creation_failure(self):
+    def test_midi_item_create_fail(self):
         """Test MIDI item creation failure handling."""
         # Create a track
         track_index = self.controller.create_track("MIDI Test Track")
