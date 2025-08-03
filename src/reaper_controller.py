@@ -17,6 +17,7 @@ from src.controllers.midi.midi_controller import MIDIController
 from src.controllers.audio.audio_controller import AudioController
 from src.controllers.master.master_controller import MasterController
 from src.controllers.project.project_controller import ProjectController
+from src.controllers.routing.routing_controller import RoutingController
 
 # Constants to replace magic numbers
 DEFAULT_MIDI_VELOCITY = 100
@@ -37,6 +38,7 @@ class ReaperController:
         self.audio = AudioController(debug=debug)
         self.master = MasterController(debug=debug)
         self.project = ProjectController(debug=debug)
+        self.routing = RoutingController(debug=debug)
         
         # Store debug setting for logging
         self.debug = debug
@@ -257,6 +259,52 @@ class ReaperController:
     def get_selected_items(self) -> List[Dict[str, Any]]:
         """Get all selected items."""
         return self.audio.get_selected_items()
+
+    # Routing operations
+    def add_send(self, source_track: int, destination_track: int, 
+                 volume: float = 0.0, pan: float = 0.0, 
+                 mute: bool = False, phase: bool = False, 
+                 channels: int = 2) -> Optional[int]:
+        """Add a send from source track to destination track."""
+        return self.routing.add_send(source_track, destination_track, volume, pan, mute, phase, channels)
+    
+    def remove_send(self, source_track: int, send_id: int) -> bool:
+        """Remove a send from a track."""
+        return self.routing.remove_send(source_track, send_id)
+    
+    def get_sends(self, track_index: int) -> List[Dict[str, Any]]:
+        """Get all sends from a track."""
+        sends = self.routing.get_sends(track_index)
+        return [vars(send) for send in sends]
+    
+    def get_receives(self, track_index: int) -> List[Dict[str, Any]]:
+        """Get all receives on a track."""
+        receives = self.routing.get_receives(track_index)
+        return [vars(receive) for receive in receives]
+    
+    def set_send_volume(self, source_track: int, send_id: int, volume: float) -> bool:
+        """Set the volume of a send."""
+        return self.routing.set_send_volume(source_track, send_id, volume)
+    
+    def set_send_pan(self, source_track: int, send_id: int, pan: float) -> bool:
+        """Set the pan of a send."""
+        return self.routing.set_send_pan(source_track, send_id, pan)
+    
+    def toggle_send_mute(self, source_track: int, send_id: int, mute: Optional[bool] = None) -> bool:
+        """Toggle or set the mute state of a send."""
+        return self.routing.toggle_send_mute(source_track, send_id, mute)
+    
+    def get_track_routing_info(self, track_index: int) -> Dict[str, Any]:
+        """Get comprehensive routing information for a track."""
+        return self.routing.get_track_routing_info(track_index)
+    
+    def clear_all_sends(self, track_index: int) -> bool:
+        """Remove all sends from a track."""
+        return self.routing.clear_all_sends(track_index)
+    
+    def clear_all_receives(self, track_index: int) -> bool:
+        """Remove all receives from a track."""
+        return self.routing.clear_all_receives(track_index)
 
 # Re-export the ReaperController class for backward compatibility
 __all__ = ['ReaperController']

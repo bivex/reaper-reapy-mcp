@@ -9,6 +9,7 @@ This package contains specialized controllers for different aspects of Reaper fu
 - AudioController: Audio file insertion and media operations
 - MasterController: Master track operations
 - ProjectController: Project-level operations
+- RoutingController: Track routing, sends, and receives
 
 The ReaperController class (defined in `reaper_controller.py`) combines all these controllers 
 into a single, easy-to-use class using composition.
@@ -22,3 +23,4 @@ from .midi.midi_controller import MIDIController
 from .audio.audio_controller import AudioController
 from .master.master_controller import MasterController
 from .project.project_controller import ProjectController
+from .routing.routing_controller import RoutingController

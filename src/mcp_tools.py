@@ -512,6 +512,109 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
             logger.error(f"Failed to get selected items: {str(e)}")
             return _create_error_response(f"Failed to get selected items: {str(e)}")
 
+
+def _setup_routing_tools(mcp: FastMCP, controller) -> None:
+    """Setup routing-related MCP tools."""
+    
+    @mcp.tool("add_send")
+    def add_send(ctx: Context, source_track: int, destination_track: int, 
+                 volume: float = 0.0, pan: float = 0.0, 
+                 mute: bool = False, phase: bool = False, 
+                 channels: int = 2) -> Dict[str, Any]:
+        """Add a send from source track to destination track."""
+        try:
+            send_id = controller.add_send(source_track, destination_track, volume, pan, mute, phase, channels)
+            if send_id is not None:
+                return _create_success_response(f"Added send from track {source_track} to track {destination_track} with ID {send_id}")
+            return _create_error_response(f"Failed to add send from track {source_track} to track {destination_track}")
+        except Exception as e:
+            logger.error(f"Failed to add send: {str(e)}")
+            return _create_error_response(f"Failed to add send: {str(e)}")
+
+    @mcp.tool("remove_send")
+    def remove_send(ctx: Context, source_track: int, send_id: int) -> Dict[str, Any]:
+        """Remove a send from a track."""
+        return _handle_controller_operation(
+            f"Remove send {send_id} from track {source_track}",
+            controller.remove_send, source_track, send_id
+        )
+
+    @mcp.tool("get_sends")
+    def get_sends(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get all sends from a track."""
+        try:
+            sends = controller.get_sends(track_index)
+            return _create_success_response(f"Sends for track {track_index}: {sends}")
+        except Exception as e:
+            logger.error(f"Failed to get sends: {str(e)}")
+            return _create_error_response(f"Failed to get sends: {str(e)}")
+
+    @mcp.tool("get_receives")
+    def get_receives(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get all receives on a track."""
+        try:
+            receives = controller.get_receives(track_index)
+            return _create_success_response(f"Receives for track {track_index}: {receives}")
+        except Exception as e:
+            logger.error(f"Failed to get receives: {str(e)}")
+            return _create_error_response(f"Failed to get receives: {str(e)}")
+
+    @mcp.tool("set_send_volume")
+    def set_send_volume(ctx: Context, source_track: int, send_id: int, volume: float) -> Dict[str, Any]:
+        """Set the volume of a send."""
+        return _handle_controller_operation(
+            f"Set send {send_id} volume to {volume} dB",
+            controller.set_send_volume, source_track, send_id, volume
+        )
+
+    @mcp.tool("set_send_pan")
+    def set_send_pan(ctx: Context, source_track: int, send_id: int, pan: float) -> Dict[str, Any]:
+        """Set the pan of a send."""
+        return _handle_controller_operation(
+            f"Set send {send_id} pan to {pan}",
+            controller.set_send_pan, source_track, send_id, pan
+        )
+
+    @mcp.tool("toggle_send_mute")
+    def toggle_send_mute(ctx: Context, source_track: int, send_id: int, mute: Optional[bool] = None) -> Dict[str, Any]:
+        """Toggle or set the mute state of a send."""
+        try:
+            success = controller.toggle_send_mute(source_track, send_id, mute)
+            if success:
+                action = "toggled" if mute is None else f"set to {mute}"
+                return _create_success_response(f"Send {send_id} mute {action}")
+            return _create_error_response(f"Failed to toggle send {send_id} mute")
+        except Exception as e:
+            logger.error(f"Failed to toggle send mute: {str(e)}")
+            return _create_error_response(f"Failed to toggle send mute: {str(e)}")
+
+    @mcp.tool("get_track_routing_info")
+    def get_track_routing_info(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get comprehensive routing information for a track."""
+        try:
+            routing_info = controller.get_track_routing_info(track_index)
+            return _create_success_response(f"Routing info for track {track_index}: {routing_info}")
+        except Exception as e:
+            logger.error(f"Failed to get track routing info: {str(e)}")
+            return _create_error_response(f"Failed to get track routing info: {str(e)}")
+
+    @mcp.tool("clear_all_sends")
+    def clear_all_sends(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Remove all sends from a track."""
+        return _handle_controller_operation(
+            f"Clear all sends from track {track_index}",
+            controller.clear_all_sends, track_index
+        )
+
+    @mcp.tool("clear_all_receives")
+    def clear_all_receives(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Remove all receives from a track."""
+        return _handle_controller_operation(
+            f"Clear all receives from track {track_index}",
+            controller.clear_all_receives, track_index
+        )
+
+
 def setup_mcp_tools(mcp: FastMCP, controller) -> None:
     """Setup MCP tools for Reaper control."""
     _setup_connection_tools(mcp, controller)
@@ -522,3 +625,4 @@ def setup_mcp_tools(mcp: FastMCP, controller) -> None:
     _setup_master_tools(mcp, controller)
     _setup_midi_tools(mcp, controller)
     _setup_audio_tools(mcp, controller)
+    _setup_routing_tools(mcp, controller)

@@ -1,0 +1,452 @@
+import reapy
+import logging
+from typing import Optional, List, Dict, Any, Union
+from dataclasses import dataclass
+
+
+@dataclass
+class SendInfo:
+    """Data class to hold send information."""
+    send_id: int
+    source_track: int
+    destination_track: int
+    volume: float
+    pan: float
+    mute: bool
+    phase: bool
+    channels: int
+
+
+@dataclass
+class ReceiveInfo:
+    """Data class to hold receive information."""
+    receive_id: int
+    source_track: int
+    destination_track: int
+    volume: float
+    pan: float
+    mute: bool
+    phase: bool
+    channels: int
+
+
+class RoutingController:
+    """Controller for routing-related operations in Reaper."""
+
+    def __init__(self, debug: bool = False):
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
+
+    def _validate_track_index(self, track_index: int) -> bool:
+        """Validate that a track index is within valid range."""
+        try:
+            track_index = int(track_index)
+            if track_index < 0:
+                return False
+                
+            project = reapy.Project()
+            num_tracks = len(project.tracks)
+            return track_index < num_tracks
+        except Exception as e:
+            self.logger.error(f"Failed to validate track index: {e}")
+            return False
+
+    def _get_track(self, track_index: int) -> Optional[reapy.Track]:
+        """Get a track by index with validation."""
+        if not self._validate_track_index(track_index):
+            return None
+            
+        try:
+            return reapy.Project().tracks[track_index]
+        except Exception as e:
+            self.logger.error(f"Failed to get track {track_index}: {e}")
+            return None
+
+    def add_send(self, source_track: int, destination_track: int, 
+                 volume: float = 0.0, pan: float = 0.0, 
+                 mute: bool = False, phase: bool = False, 
+                 channels: int = 2) -> Optional[int]:
+        """
+        Add a send from source track to destination track.
+        
+        Args:
+            source_track (int): Index of the source track
+            destination_track (int): Index of the destination track
+            volume (float): Send volume (dB)
+            pan (float): Send pan (-1.0 to 1.0)
+            mute (bool): Whether the send is muted
+            phase (bool): Whether to invert phase
+            channels (int): Number of channels (1=mono, 2=stereo)
+            
+        Returns:
+            Optional[int]: Send ID if successful, None if failed
+        """
+        try:
+            source = self._get_track(source_track)
+            destination = self._get_track(destination_track)
+            
+            if source is None or destination is None:
+                self.logger.error(f"Failed to get tracks: source={source_track}, destination={destination_track}")
+                return None
+
+            self.logger.info(f"Attempting to add send from track {source_track} to track {destination_track}")
+            self.logger.info(f"Source track: {source.name}, Destination track: {destination.name}")
+
+            # Try using ReaScript API directly
+            import reapy.reascript_api as RPR
+            
+            # Add send using ReaScript API
+            send_id = RPR.CreateTrackSend(source.id, destination.id)
+            if send_id < 0:
+                self.logger.error(f"Failed to create send using ReaScript API: {send_id}")
+                return None
+
+            # Configure send parameters using ReaScript API
+            RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_VOL", volume)
+            RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_PAN", pan)
+            RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "B_MUTE", 1 if mute else 0)
+            RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "B_PHASE", 1 if phase else 0)
+            RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "I_SRCCHAN", channels)
+
+            self.logger.info(f"Added send from track {source_track} to track {destination_track} with ID {send_id}")
+            return send_id
+
+        except Exception as e:
+            self.logger.error(f"Failed to add send: {e}")
+            return None
+
+    def remove_send(self, source_track: int, send_id: int) -> bool:
+        """
+        Remove a send from a track.
+        
+        Args:
+            source_track (int): Index of the source track
+            send_id (int): ID of the send to remove
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            source = self._get_track(source_track)
+            if source is None:
+                return False
+
+            # Use ReaScript API to remove send
+            import reapy.reascript_api as RPR
+            
+            # Remove send using ReaScript API
+            result = RPR.RemoveTrackSend(source.id, 0, send_id)  # 0 for sends, 1 for receives
+            
+            if result:
+                self.logger.info(f"Removed send {send_id} from track {source_track}")
+                return True
+            else:
+                self.logger.warning(f"Send {send_id} not found on track {source_track}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to remove send: {e}")
+            return False
+
+    def get_sends(self, track_index: int) -> List[SendInfo]:
+        """
+        Get all sends from a track.
+        
+        Args:
+            track_index (int): Index of the track
+            
+        Returns:
+            List[SendInfo]: List of send information
+        """
+        try:
+            track = self._get_track(track_index)
+            if track is None:
+                return []
+
+            # Use ReaScript API to get sends
+            import reapy.reascript_api as RPR
+            
+            sends = []
+            send_count = RPR.GetTrackNumSends(track.id, 0)  # 0 for sends, 1 for receives
+            
+            for i in range(send_count):
+                dest_track_id = RPR.GetTrackSendInfo_Value(track.id, 0, i, "P_DESTTRACK")
+                dest_track = RPR.TrackFromMediaItem(dest_track_id)
+                dest_track_index = RPR.GetMediaTrackInfo_Value(dest_track, "IP_TRACKNUMBER") - 1
+                
+                volume = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_VOL")
+                pan = RPR.GetTrackSendInfo_Value(track.id, 0, i, "D_PAN")
+                mute = bool(RPR.GetTrackSendInfo_Value(track.id, 0, i, "B_MUTE"))
+                phase = bool(RPR.GetTrackSendInfo_Value(track.id, 0, i, "B_PHASE"))
+                channels = int(RPR.GetTrackSendInfo_Value(track.id, 0, i, "I_SRCCHAN"))
+                
+                send_info = SendInfo(
+                    send_id=i,
+                    source_track=track_index,
+                    destination_track=dest_track_index,
+                    volume=volume,
+                    pan=pan,
+                    mute=mute,
+                    phase=phase,
+                    channels=channels
+                )
+                sends.append(send_info)
+
+            self.logger.info(f"Found {len(sends)} sends on track {track_index}")
+            return sends
+
+        except Exception as e:
+            self.logger.error(f"Failed to get sends: {e}")
+            return []
+
+    def get_receives(self, track_index: int) -> List[ReceiveInfo]:
+        """
+        Get all receives on a track.
+        
+        Args:
+            track_index (int): Index of the track
+            
+        Returns:
+            List[ReceiveInfo]: List of receive information
+        """
+        try:
+            track = self._get_track(track_index)
+            if track is None:
+                return []
+
+            # Use ReaScript API to get receives
+            import reapy.reascript_api as RPR
+            
+            receives = []
+            receive_count = RPR.GetTrackNumSends(track.id, 1)  # 1 for receives
+            
+            for i in range(receive_count):
+                source_track_id = RPR.GetTrackSendInfo_Value(track.id, 1, i, "P_SRCTRACK")
+                source_track = RPR.TrackFromMediaItem(source_track_id)
+                source_track_index = RPR.GetMediaTrackInfo_Value(source_track, "IP_TRACKNUMBER") - 1
+                
+                volume = RPR.GetTrackSendInfo_Value(track.id, 1, i, "D_VOL")
+                pan = RPR.GetTrackSendInfo_Value(track.id, 1, i, "D_PAN")
+                mute = bool(RPR.GetTrackSendInfo_Value(track.id, 1, i, "B_MUTE"))
+                phase = bool(RPR.GetTrackSendInfo_Value(track.id, 1, i, "B_PHASE"))
+                channels = int(RPR.GetTrackSendInfo_Value(track.id, 1, i, "I_SRCCHAN"))
+                
+                receive_info = ReceiveInfo(
+                    receive_id=i,
+                    source_track=source_track_index,
+                    destination_track=track_index,
+                    volume=volume,
+                    pan=pan,
+                    mute=mute,
+                    phase=phase,
+                    channels=channels
+                )
+                receives.append(receive_info)
+
+            self.logger.info(f"Found {len(receives)} receives on track {track_index}")
+            return receives
+
+        except Exception as e:
+            self.logger.error(f"Failed to get receives: {e}")
+            return []
+
+    def set_send_volume(self, source_track: int, send_id: int, volume: float) -> bool:
+        """
+        Set the volume of a send.
+        
+        Args:
+            source_track (int): Index of the source track
+            send_id (int): ID of the send
+            volume (float): Volume in dB
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            source = self._get_track(source_track)
+            if source is None:
+                return False
+
+            # Use ReaScript API to set send volume
+            import reapy.reascript_api as RPR
+            
+            result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_VOL", volume)
+            
+            if result:
+                self.logger.info(f"Set send {send_id} volume to {volume} dB")
+                return True
+            else:
+                self.logger.warning(f"Send {send_id} not found on track {source_track}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to set send volume: {e}")
+            return False
+
+    def set_send_pan(self, source_track: int, send_id: int, pan: float) -> bool:
+        """
+        Set the pan of a send.
+        
+        Args:
+            source_track (int): Index of the source track
+            send_id (int): ID of the send
+            pan (float): Pan value (-1.0 to 1.0)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            source = self._get_track(source_track)
+            if source is None:
+                return False
+
+            # Use ReaScript API to set send pan
+            import reapy.reascript_api as RPR
+            
+            result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_PAN", pan)
+            
+            if result:
+                self.logger.info(f"Set send {send_id} pan to {pan}")
+                return True
+            else:
+                self.logger.warning(f"Send {send_id} not found on track {source_track}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to set send pan: {e}")
+            return False
+
+    def toggle_send_mute(self, source_track: int, send_id: int, mute: Optional[bool] = None) -> bool:
+        """
+        Toggle or set the mute state of a send.
+        
+        Args:
+            source_track (int): Index of the source track
+            send_id (int): ID of the send
+            mute (bool, optional): Mute state to set. If None, toggles current state
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            source = self._get_track(source_track)
+            if source is None:
+                return False
+
+            # Use ReaScript API to toggle/set send mute
+            import reapy.reascript_api as RPR
+            
+            if mute is None:
+                # Toggle current state
+                current_mute = RPR.GetTrackSendInfo_Value(source.id, 0, send_id, "B_MUTE")
+                mute = not bool(current_mute)
+            
+            result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "B_MUTE", 1 if mute else 0)
+            
+            if result:
+                self.logger.info(f"Set send {send_id} mute to {mute}")
+                return True
+            else:
+                self.logger.warning(f"Send {send_id} not found on track {source_track}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"Failed to toggle send mute: {e}")
+            return False
+
+    def get_track_routing_info(self, track_index: int) -> Dict[str, Any]:
+        """
+        Get comprehensive routing information for a track.
+        
+        Args:
+            track_index (int): Index of the track
+            
+        Returns:
+            Dict[str, Any]: Routing information including sends, receives, and track properties
+        """
+        try:
+            track = self._get_track(track_index)
+            if track is None:
+                return {}
+
+            sends = self.get_sends(track_index)
+            receives = self.get_receives(track_index)
+
+            routing_info = {
+                "track_index": track_index,
+                "track_name": track.name,
+                "sends": [vars(send) for send in sends],
+                "receives": [vars(receive) for receive in receives],
+                "send_count": len(sends),
+                "receive_count": len(receives)
+            }
+
+            self.logger.info(f"Retrieved routing info for track {track_index}")
+            return routing_info
+
+        except Exception as e:
+            self.logger.error(f"Failed to get track routing info: {e}")
+            return {}
+
+    def clear_all_sends(self, track_index: int) -> bool:
+        """
+        Remove all sends from a track.
+        
+        Args:
+            track_index (int): Index of the track
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            track = self._get_track(track_index)
+            if track is None:
+                return False
+
+            # Use ReaScript API to clear all sends
+            import reapy.reascript_api as RPR
+            
+            send_count = RPR.GetTrackNumSends(track.id, 0)  # 0 for sends
+            
+            # Remove sends in reverse order to avoid index shifting
+            for i in range(send_count - 1, -1, -1):
+                RPR.RemoveTrackSend(track.id, 0, i)
+
+            self.logger.info(f"Cleared {send_count} sends from track {track_index}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to clear sends: {e}")
+            return False
+
+    def clear_all_receives(self, track_index: int) -> bool:
+        """
+        Remove all receives from a track.
+        
+        Args:
+            track_index (int): Index of the track
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            track = self._get_track(track_index)
+            if track is None:
+                return False
+
+            # Use ReaScript API to clear all receives
+            import reapy.reascript_api as RPR
+            
+            receive_count = RPR.GetTrackNumSends(track.id, 1)  # 1 for receives
+            
+            # Remove receives in reverse order to avoid index shifting
+            for i in range(receive_count - 1, -1, -1):
+                RPR.RemoveTrackSend(track.id, 1, i)
+
+            self.logger.info(f"Cleared {receive_count} receives from track {track_index}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to clear receives: {e}")
+            return False 
