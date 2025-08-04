@@ -162,7 +162,15 @@ def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
     @mcp.tool("set_fx_param")
     def set_fx_param(ctx: Context, track_index: int, fx_index: int, 
                     param_name: str, value: float) -> Dict[str, Any]:
-        """Set an FX parameter value."""
+        """
+        Set an FX parameter value.
+        
+        Args:
+            track_index (int): Index of the track containing the FX
+            fx_index (int): Index of the FX on the track
+            param_name (str): Name of the parameter to set
+            value (float): Parameter value (use number, not string)
+        """
         return _handle_controller_operation(
             f"Set FX parameter {param_name} to {value}",
             controller.set_fx_param, track_index, fx_index, param_name, value
@@ -230,7 +238,14 @@ def _setup_marker_tools(mcp: FastMCP, controller) -> None:
     @mcp.tool("create_region")
     def create_region(ctx: Context, start_time: float, end_time: float, 
                      name: str) -> Dict[str, Any]:
-        """Create a region in the project."""
+        """
+        Create a region in the project.
+        
+        Args:
+            start_time (float): Start time in seconds (use number, not string)
+            end_time (float): End time in seconds (use number, not string)
+            name (str): Name of the region
+        """
         operation_name = f"Create region '{name}' from {start_time} to {end_time}"
         return _handle_controller_operation(
             operation_name,
@@ -247,7 +262,13 @@ def _setup_marker_tools(mcp: FastMCP, controller) -> None:
 
     @mcp.tool("create_marker")
     def create_marker(ctx: Context, time: float, name: str) -> Dict[str, Any]:
-        """Create a marker at the specified time."""
+        """
+        Create a marker at the specified time.
+        
+        Args:
+            time (float): Time in seconds (use number, not string)
+            name (str): Name of the marker
+        """
         return _handle_controller_operation(
             f"Create marker '{name}' at {time}",
             controller.create_marker, time, name
@@ -276,7 +297,12 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
 
     @mcp.tool("set_master_volume")
     def set_master_volume(ctx: Context, volume: float) -> Dict[str, Any]:
-        """Set master track volume."""
+        """
+        Set master track volume.
+        
+        Args:
+            volume (float): Volume in dB (use number, not string, e.g., -6.0, 0.0, 3.0)
+        """
         return _handle_controller_operation(
             f"Set master volume to {volume}",
             controller.set_master_volume, volume
@@ -284,7 +310,12 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
 
     @mcp.tool("set_master_pan")
     def set_master_pan(ctx: Context, pan: float) -> Dict[str, Any]:
-        """Set master track pan."""
+        """
+        Set master track pan.
+        
+        Args:
+            pan (float): Pan position (-1.0 to 1.0, use number, not string)
+        """
         return _handle_controller_operation(
             f"Set master pan to {pan}",
             controller.set_master_pan, pan
@@ -316,7 +347,15 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
                         start_time: Optional[float] = None,
                         start_measure: Optional[str] = None, 
                         length: float = DEFAULT_MIDI_LENGTH) -> Dict[str, Any]:
-        """Create a MIDI item."""
+        """
+        Create a MIDI item.
+        
+        Args:
+            track_index (int): Index of the track to create MIDI item on
+            start_time (float, optional): Start time in seconds (use number, not string)
+            start_measure (str, optional): Start measure (e.g., "1.1.0")
+            length (float): Length of the MIDI item in seconds (use number, not string)
+        """
         try:
             # Handle time conversion if measure is provided
             if start_measure:
@@ -333,7 +372,17 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
     def add_midi_note(ctx: Context, track_index: int, item_id: int, pitch: int,
                      start_time: float, length: float, 
                      velocity: int = DEFAULT_MIDI_VELOCITY) -> Dict[str, Any]:
-        """Add a MIDI note to a MIDI item."""
+        """
+        Add a MIDI note to a MIDI item.
+        
+        Args:
+            track_index (int): Index of the track containing the MIDI item
+            item_id (int): ID of the MIDI item
+            pitch (int): MIDI pitch (0-127)
+            start_time (float): Start time in seconds (use number, not string)
+            length (float): Note length in seconds (use number, not string)
+            velocity (int): Note velocity (0-127)
+        """
         try:
             from src.controllers.midi.midi_controller import MIDIController
             note_params = MIDIController.MIDINoteParams(
@@ -422,7 +471,15 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
     def duplicate_item(ctx: Context, track_index: int, item_id: int,
                       new_time: Optional[float] = None, 
                       new_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Duplicate an existing item."""
+        """
+        Duplicate an existing item.
+        
+        Args:
+            track_index (int): Index of the track containing the item
+            item_id (int): ID of the item to duplicate
+            new_time (float, optional): New position in seconds (use number, not string)
+            new_measure (str, optional): New position as measure (e.g., "2.1.0")
+        """
         try:
             # Handle time conversion if measure is provided
             if new_measure:
@@ -463,7 +520,15 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
     def set_item_position(ctx: Context, track_index: int, item_id: int,
                          position_time: Optional[float] = None, 
                          position_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Set the position of an item."""
+        """
+        Set the position of an item.
+        
+        Args:
+            track_index (int): Index of the track containing the item
+            item_id (int): ID of the item to reposition
+            position_time (float, optional): New position in seconds (use number, not string)
+            position_measure (str, optional): New position as measure (e.g., "2.1.0")
+        """
         try:
             # Handle time conversion if measure is provided
             if position_measure:
@@ -480,7 +545,14 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
     @mcp.tool("set_item_length")
     def set_item_length(ctx: Context, track_index: int, item_id: int, 
                        length: float) -> Dict[str, Any]:
-        """Set the length of an item."""
+        """
+        Set the length of an item.
+        
+        Args:
+            track_index (int): Index of the track containing the item
+            item_id (int): ID of the item to resize
+            length (float): New length in seconds (use number, not string)
+        """
         return _handle_controller_operation(
             f"Set length of item {item_id} to {length}",
             controller.set_item_length, track_index, item_id, length
@@ -496,7 +568,16 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
                                end_time: Optional[float] = None,
                                start_measure: Optional[str] = None, 
                                end_measure: Optional[str] = None) -> Dict[str, Any]:
-        """Get items within a time range."""
+        """
+        Get items within a time range.
+        
+        Args:
+            track_index (int): Index of the track to search
+            start_time (float, optional): Start time in seconds (use number, not string)
+            end_time (float, optional): End time in seconds (use number, not string)
+            start_measure (str, optional): Start measure (e.g., "1.1.0")
+            end_measure (str, optional): End measure (e.g., "4.1.0")
+        """
         try:
             # Handle time conversion if measures are provided
             if start_measure:
@@ -529,7 +610,18 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
                  volume: float = 0.0, pan: float = 0.0, 
                  mute: bool = False, phase: bool = False, 
                  channels: int = 2) -> Dict[str, Any]:
-        """Add a send from source track to destination track."""
+        """
+        Add a send from source track to destination track.
+        
+        Args:
+            source_track (int): Index of the source track
+            destination_track (int): Index of the destination track
+            volume (float): Send volume in dB (use number, not string, e.g., -6.0, 0.0)
+            pan (float): Send pan position (-1.0 to 1.0, use number, not string)
+            mute (bool): Whether the send is muted
+            phase (bool): Whether phase is inverted
+            channels (int): Number of channels (1 or 2)
+        """
         try:
             send_id = controller.add_send(source_track, destination_track, volume, pan, mute, phase, channels)
             if send_id is not None:
