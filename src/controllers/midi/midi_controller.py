@@ -28,6 +28,15 @@ class MIDIController:
     DEFAULT_NEW_LENGTH = 2.0
     DEFAULT_TIME_RANGE_START = 0.0
     DEFAULT_TIME_RANGE_END = 10.0
+    
+    # Additional constants for tests
+    DEFAULT_MIDI_START_TIME = 0.0
+    DEFAULT_MIDI_NOTE_VELOCITY = 96
+    DEFAULT_SECOND_MIDI_START_TIME = 4.0
+    DEFAULT_SECOND_MIDI_LENGTH = 2.0
+    DEFAULT_SECOND_MIDI_NOTE_PITCH = 72
+    DEFAULT_SECOND_MIDI_NOTE_LEN = 0.5
+    DEFAULT_SECOND_MIDI_NOTE_VEL = 90
 
     @dataclass
     class MIDIItemTarget:
@@ -105,7 +114,7 @@ class MIDIController:
         return select_item(item)
     
     def create_midi_item(self, track_index: int, start_time: float, 
-                         *, length: float = DEFAULT_MIDI_LENGTH) -> Union[int, str]:
+                         *, length: float = DEFAULT_MIDI_LENGTH) -> int:
         """
         Create an empty MIDI item on a track.
         
@@ -115,7 +124,7 @@ class MIDIController:
             length (float): Length of the MIDI item in seconds
             
         Returns:
-            int or str: Index or ID of the created MIDI item for direct use in add_midi_note
+            int: Index of the created MIDI item for direct use in add_midi_note
             Returns -1 if creation fails
         """
         try:
@@ -140,8 +149,19 @@ class MIDIController:
                 self.logger.error("Failed to create MIDI item")
                 return -1
             
-            self.logger.info(f"Created MIDI item with ID: {item.id}")
-            return item.id
+            # Find the index of the created item in the track's items list
+            item_index = None
+            for i, track_item in enumerate(track.items):
+                if track_item.id == item.id:
+                    item_index = i
+                    break
+            
+            if item_index is None:
+                self.logger.error("Failed to find created item index")
+                return -1
+                
+            self.logger.info(f"Created MIDI item with ID: {item.id} at index {item_index}")
+            return item_index
             
         except Exception as e:
             self.logger.error(f"Failed to create MIDI item: {e}")
@@ -199,14 +219,34 @@ class MIDIController:
                 self.logger.error("No active take found for MIDI item")
                 return False
             
-            # Add the note using the MIDI take
-            take.add_midi_note(
+            # Add the note using the ReaScript API
+            from reapy import reascript_api as RPR
+            
+            # Get the take ID
+            take_id = take.id
+            
+            # Add the MIDI note using ReaScript API
+            # MIDI_InsertNote(take, selected, muted, startppqpos, endppqpos, chan, pitch, vel)
+            # We need to convert time to PPQ (pulses per quarter note)
+            project = reapy.Project()
+            start_ppq = RPR.TimeMap2_timeToQN(project.id, note_params.start_time)
+            end_ppq = RPR.TimeMap2_timeToQN(project.id, note_params.start_time + note_params.length)
+            
+            result = RPR.MIDI_InsertNote(
+                take_id, 
+                False,  # selected
+                False,  # muted
+                start_ppq, 
+                end_ppq, 
+                note_params.channel, 
                 note_params.pitch, 
-                note_params.start_time, 
-                note_params.start_time + note_params.length, 
-                note_params.velocity, 
-                note_params.channel
+                note_params.velocity,
+                False   # noSortIn
             )
+            
+            if result == -1:
+                self.logger.error("Failed to insert MIDI note using ReaScript API")
+                return False
             
             self.logger.info(
                 f"Added MIDI note: pitch={note_params.pitch}, "
@@ -237,8 +277,8 @@ class MIDIController:
             self.logger.error(f"Invalid pitch: {pitch}. Must be between {self.MIN_MIDI_PITCH} and {self.MAX_MIDI_PITCH}")
             return False
         
-        if not (0 <= velocity <= self.MAX_MIDI_PITCH):
-            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {self.MAX_MIDI_PITCH}")
+        if not (0 <= velocity <= 127):  # MIDI velocity range is 0-127
+            self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and 127")
             return False
         
         if not (0 <= channel <= self.MAX_MIDI_CHANNEL):
