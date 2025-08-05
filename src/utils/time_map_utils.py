@@ -95,7 +95,7 @@ def get_time_map_info(project=None) -> dict:
             project = reapy.Project()
         
         # Get time signature at current cursor
-        import reapy.reascript_api as RPR
+        RPR = reapy.reascript_api
         time_sig_num, time_sig_den = RPR.TimeMap_GetTimeSigAtTime(project.id, 0)
         
         return {

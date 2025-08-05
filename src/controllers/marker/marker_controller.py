@@ -93,6 +93,7 @@ class MarkerController:
             int: Index of the created region
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             region = project.add_region(start_time, end_time, name)
             return region.index
@@ -112,6 +113,7 @@ class MarkerController:
             bool: True if successful, False otherwise
         """
         try:                
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             # Log all region indices for debugging
@@ -137,7 +139,8 @@ class MarkerController:
             # If still not found, use ReaScript API directly
             try:
                 # Try to delete using ReaScript API
-                from reapy import reascript_api as RPR
+                reapy = self._get_reapy()
+                RPR = reapy.reascript_api
                 result = RPR.DeleteProjectMarker(0, region_index, True)  # isRegion=True
                 if result:
                     self.logger.info(
@@ -177,6 +180,7 @@ class MarkerController:
             int: Index of the created marker
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             marker = project.add_marker(time, name)
             return marker.index
@@ -196,6 +200,7 @@ class MarkerController:
             bool: True if successful, False otherwise
         """
         try: 
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             # Log all marker indices for debugging

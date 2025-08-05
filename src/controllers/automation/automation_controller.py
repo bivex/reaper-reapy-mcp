@@ -24,6 +24,7 @@ class AutomationController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -76,6 +77,7 @@ class AutomationController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -124,6 +126,7 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             
@@ -187,6 +190,7 @@ class AutomationController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -229,6 +233,7 @@ class AutomationController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -264,6 +269,7 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             

@@ -114,7 +114,8 @@ class RoutingController:
             self.logger.info(f"Source track: {source.name}, Destination track: {destination.name}")
 
             # Try using ReaScript API directly
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             # Add send using ReaScript API
             send_id = RPR.CreateTrackSend(source.id, destination.id)
@@ -165,7 +166,8 @@ class RoutingController:
                 return False
 
             # Use ReaScript API to remove send
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             # Remove send using ReaScript API
             result = RPR.RemoveTrackSend(source.id, 0, send_id)  # 0 for sends, 1 for receives
@@ -197,7 +199,8 @@ class RoutingController:
                 return []
 
             # Use ReaScript API to get sends
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             # Force REAPER to update
             RPR.UpdateArrange()
@@ -292,7 +295,8 @@ class RoutingController:
                 return []
 
             # Use ReaScript API
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             # Force REAPER to update
             RPR.UpdateArrange()
@@ -379,7 +383,8 @@ class RoutingController:
             if track is None:
                 return {"error": f"Track {track_index} not found"}
 
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             # Force update
             RPR.UpdateArrange()
@@ -439,7 +444,8 @@ class RoutingController:
                 return False
 
             # Use ReaScript API to set send volume
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_VOL", volume)
             
@@ -472,7 +478,8 @@ class RoutingController:
                 return False
 
             # Use ReaScript API to set send pan
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_PAN", pan)
             
@@ -505,7 +512,8 @@ class RoutingController:
                 return False
 
             # Use ReaScript API to toggle/set send mute
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             if mute is None:
                 # Toggle current state
@@ -575,7 +583,8 @@ class RoutingController:
                 return False
 
             # Use ReaScript API to clear all sends
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             send_count = RPR.GetTrackNumSends(track.id, 0)  # 0 for sends
             
@@ -606,7 +615,8 @@ class RoutingController:
                 return False
 
             # Use ReaScript API to clear all receives
-            import reapy.reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = self._RPR
             
             receive_count = RPR.GetTrackNumSends(track.id, 1)  # 1 for receives
             

@@ -25,6 +25,7 @@ class AdvancedItemController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -72,6 +73,7 @@ class AdvancedItemController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -115,6 +117,7 @@ class AdvancedItemController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             
@@ -160,6 +163,7 @@ class AdvancedItemController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -204,6 +208,7 @@ class AdvancedItemController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -247,6 +252,7 @@ class AdvancedItemController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -287,6 +293,7 @@ class AdvancedItemController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             

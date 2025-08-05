@@ -23,6 +23,7 @@ class AdvancedRoutingController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             # Create a new track using the correct API function
@@ -57,6 +58,7 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             
@@ -94,6 +96,7 @@ class AdvancedRoutingController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if child_track_index >= len(project.tracks) or parent_track_index >= len(project.tracks):
@@ -128,6 +131,7 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             
@@ -172,6 +176,7 @@ class AdvancedRoutingController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -200,6 +205,7 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             

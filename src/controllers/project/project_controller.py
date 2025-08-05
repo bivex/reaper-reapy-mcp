@@ -23,6 +23,7 @@ class ProjectController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             project.bpm = float(bpm)
             return True
@@ -42,6 +43,7 @@ class ProjectController:
         try:
             reapy = self._get_reapy()
 
+
             project = reapy.Project()
             return project.bpm
             
@@ -59,6 +61,7 @@ class ProjectController:
         """
         try:
             reapy = self._get_reapy()
+
 
             project = reapy.Project()
             

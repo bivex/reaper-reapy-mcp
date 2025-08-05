@@ -237,7 +237,8 @@ class MIDIController:
                 return False
             
             # Add the note using the ReaScript API
-            from reapy import reascript_api as RPR
+            reapy = self._get_reapy()
+            RPR = reapy.reascript_api
             
             # Get the take ID
             take_id = take.id
@@ -245,6 +246,7 @@ class MIDIController:
             # Add the MIDI note using ReaScript API
             # MIDI_InsertNote(take, selected, muted, startppqpos, endppqpos, chan, pitch, vel)
             # We need to convert time to PPQ (pulses per quarter note)
+            reapy = self._get_reapy()
             project = reapy.Project()
             start_ppq = RPR.TimeMap2_timeToQN(project.id, note_params.start_time)
             end_ppq = RPR.TimeMap2_timeToQN(project.id, note_params.start_time + note_params.length)

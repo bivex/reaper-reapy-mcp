@@ -109,7 +109,25 @@ class ReaperController:
             self.logger.error("reapy library not available")
             return False
         except Exception as e:
-            self.logger.warning(f"REAPER connection failed: {e}")
+            # Handle Unicode errors in exception messages
+            error_msg = str(e)
+            try:
+                # For Windows error messages, try to handle encoding issues
+                if 'WinError' in error_msg:
+                    # Extract just the error code and provide a generic message
+                    import re
+                    win_error_match = re.search(r'\[WinError (\d+)\]', error_msg)
+                    if win_error_match:
+                        error_code = win_error_match.group(1)
+                        error_msg = f"[WinError {error_code}] Connection refused"
+                    else:
+                        error_msg = "Connection refused"
+                else:
+                    # For other errors, try to encode/decode to handle Unicode issues
+                    error_msg = error_msg.encode('ascii', errors='replace').decode('ascii')
+            except:
+                error_msg = "Connection failed"
+            self.logger.warning(f"REAPER connection failed: {error_msg}")
             return False
     
     # Track operations
