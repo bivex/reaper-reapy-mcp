@@ -35,14 +35,23 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
    ```bash
    pip install -e .
    ```
-3. Enable reapy server:
-   - Make sure REAPER is running
-   - Run from command line (not from REAPER):
+3. Configure Python in REAPER:
+   - In REAPER: **Options → Preferences → Plug-ins → ReaScript**
+   - Check **"Enable Python for use with ReaScript"**
+   - Set **Custom path to Python dll directory** to: `C:\ProgramData\anaconda3`
+   - Set **Force ReaScript to use specific Python dll** to: `python312.dll`
+   
+   ![REAPER Python Configuration](docs/media/Screenshot_2.png)
+
+4. Enable reapy server:
+   - Make sure REAPER is running with the Python configuration above
+   - In REAPER: **Actions → Load ReaScript** → select `reaper_side_enable_server.py` and run it
+   - Alternatively, run from command line:
    ```bash
    python reaper_side_enable_server.py
    ```
-   **Note**: This must be run from system Python, not from REAPER's built-in Python, because REAPER uses Python 3.4 which doesn't have the reapy module.
-4. Test the MCP server connection
+
+5. Test the MCP server connection
 
 ## Quick Start
 
