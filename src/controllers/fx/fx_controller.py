@@ -57,6 +57,37 @@ class FXController:
             self.logger.error(error_message)
             return False
 
+    def add_fx(self, track_index: int, fx_name: str) -> int:
+        """
+        Add an FX to a track and return the FX index.
+        
+        Args:
+            track_index (int): Index of the track
+            fx_name (str): Name of the FX to add
+            
+        Returns:
+            int: FX index if successful, -1 otherwise
+        """
+        try:
+            reapy = self._get_reapy()
+            project = reapy.Project()
+            track = project.tracks[track_index]
+            
+            # Add FX using ReaScript API
+            fx_id = self._RPR.TrackFX_AddByName(track.id, fx_name, False, 1)
+            
+            if fx_id >= 0:
+                self.logger.info(f"Added FX {fx_name} to track {track_index} at index {fx_id}")
+            else:
+                self.logger.error(f"Failed to add FX {fx_name} to track {track_index}")
+            
+            return fx_id
+
+        except Exception as e:
+            error_message = f"Failed to add FX {fx_name} to track {track_index}: {e}"
+            self.logger.error(error_message)
+            return -1
+
     def remove_fx(self, track_index: int, fx_index: int) -> bool:
         """
         Remove an FX from a track.
