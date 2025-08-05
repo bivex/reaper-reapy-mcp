@@ -30,15 +30,19 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 
 ## Installation
 
-1. **Install REAPER** if you haven't already
-2. **Install dependencies**:
+1. Install REAPER if you haven't already
+2. Install the project dependencies in system Python:
    ```bash
-   uv sync
+   pip install -e .
    ```
-3. **Enable reapy server in REAPER**:
-   - In REAPER, go to Actions > Show action list
-   - Search for "reapy" and run "reapy: Enable remote API"
-   - Or run the `reaper_side_enable_server.py` script inside REAPER
+3. Enable reapy server:
+   - Make sure REAPER is running
+   - Run from command line (not from REAPER):
+   ```bash
+   python reaper_side_enable_server.py
+   ```
+   **Note**: This must be run from system Python, not from REAPER's built-in Python, because REAPER uses Python 3.4 which doesn't have the reapy module.
+4. Test the MCP server connection
 
 ## Quick Start
 
