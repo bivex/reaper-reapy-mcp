@@ -1,426 +1,105 @@
-# Reaper and MCP or AI integration
+# REAPER MCP Server
 
-A Python application for controlling REAPER Digital Audio Workstation (DAW) using the MCP(Model context protocol).
+> Control REAPER Digital Audio Workstation through AI assistants using the Model Context Protocol (MCP)
 
 ![REAPER MCP Demo](docs/media/reaper-reapy-mcp-demo-for-gif-002.gif)
 
-## Features
+## Overview
 
-- **Track Management**: Create, rename, and color tracks
-- **FX Management**: Add, remove, and control effect parameters
-- **Project Control**: Set tempo, manage regions and markers, clear all items
-- **Master Track Control**: Volume, pan, mute, and solo operations
-- **MIDI Operations**: Create items, add/get notes, clear items with musical positioning
-- **Audio Item Operations**: Insert, duplicate, modify with enhanced positioning support
-- **Routing Management**: Create, manage, and control track sends and receives
-- **Advanced Routing & Bussing**: Folder tracks, bus tracks, parent-child relationships
-- **Automation & Modulation**: Create envelopes, add points, manage automation modes
-- **Advanced Item Operations**: Split, glue, fade, crossfade, reverse items
-- **Dual Position Format**: Support both time (seconds) and measure:beat notation
-- **Reliable Duplication**: Uses REAPER's built-in commands for accurate item copying
-- **MCP Integration**: Model Context Protocol server for AI assistant control
+This Python-based MCP server provides comprehensive control over REAPER DAW through AI assistants. With 86 specialized tools, you can manage tracks, effects, MIDI, audio items, routing, automation, and advanced mixing operations—all through natural language commands.
 
-## Available MCP Tools (86 Total)
+## ✨ Key Features
 
-The following tools are available through the MCP server for AI assistant control:
+| Category | Capabilities |
+|----------|-------------|
+| 🎛️ **Track Management** | Create, rename, color, volume, pan, mute, solo, record arm |
+| 🎚️ **FX Control** | Add/remove effects, parameter automation, compressor/limiter presets |
+| 🎹 **MIDI Operations** | Create items, add/edit notes, pitch filtering, musical positioning |
+| 🎧 **Audio Processing** | Insert files, duplicate items, split, fade, crossfade, reverse |
+| 🔗 **Routing & Mixing** | Sends/receives, folder tracks, bus creation, comprehensive routing |
+| 🎛️ **Automation** | Envelope creation, point editing, automation modes |
+| 🎯 **Project Control** | Tempo, markers, regions, master track, project clearing |
+| 📊 **Monitoring** | Peak level metering for tracks and master |
+| 🎵 **Dual Positioning** | Time (seconds) and musical (measure:beat) notation support |
 
-### 🔌 Connection Tools (1)
-- **test_connection** - Test connection to Reaper
+## 🚀 Quick Start
 
-### 🎛️ Track Management Tools (17)
-- **create_track** - Create a new track in Reaper
-- **rename_track** - Rename an existing track
-- **set_track_color** - Set the color of a track
-- **get_track_color** - Get the color of a track
-- **get_track_count** - Get the number of tracks in the project
-- **set_track_volume** - Set the volume of a track in dB
-- **get_track_volume** - Get the volume of a track in dB
-- **set_track_pan** - Set the pan position of a track
-- **get_track_pan** - Get the pan position of a track
-- **set_track_mute** - Set the mute state of a track
-- **get_track_mute** - Get the mute state of a track
-- **set_track_solo** - Set the solo state of a track
-- **get_track_solo** - Get the solo state of a track
-- **toggle_track_mute** - Toggle the mute state of a track
-- **toggle_track_solo** - Toggle the solo state of a track
-- **set_track_arm** - Set the record arm state of a track
-- **get_track_arm** - Get the record arm state of a track
-
-### 🎵 Project Control Tools (3)
-- **set_tempo** - Set the project tempo
-- **get_tempo** - Get the current project tempo
-- **clear_project** - Clear all items from all tracks in the project
-
-### 🎚️ FX Management Tools (10)
-- **add_fx** - Add an FX to a track
-- **remove_fx** - Remove an FX from a track
-- **set_fx_param** - Set an FX parameter value
-- **get_fx_param** - Get an FX parameter value
-- **get_fx_param_list** - Get list of FX parameters
-- **get_fx_list** - Get list of FX on a track
-- **get_available_fx_list** - Get list of available FX
-- **toggle_fx** - Toggle FX on/off
-- **set_compressor_params** - Set common compressor parameters
-- **set_limiter_params** - Set common limiter parameters
-
-### 📊 Metering Tools (2)
-- **get_track_peak_level** - Get the current peak levels for a track
-- **get_master_peak_level** - Get the current peak levels for the master track
-
-### 🎯 Marker & Region Tools (4)
-- **create_region** - Create a region in the project
-- **delete_region** - Delete a region from the project
-- **create_marker** - Create a marker at the specified time
-- **delete_marker** - Delete a marker from the project
-
-### 🎚️ Master Track Tools (5)
-- **get_master_track** - Get master track information
-- **set_master_volume** - Set master track volume
-- **set_master_pan** - Set master track pan
-- **toggle_master_mute** - Toggle master track mute
-- **toggle_master_solo** - Toggle master track solo
-
-### 🎹 MIDI Tools (6)
-- **create_midi_item** - Create a MIDI item
-- **add_midi_note** - Add a MIDI note to a MIDI item
-- **clear_midi_item** - Clear all MIDI notes from a MIDI item
-- **get_midi_notes** - Get all MIDI notes from a MIDI item
-- **find_midi_notes_by_pitch** - Find MIDI notes within a pitch range
-- **get_selected_midi_item** - Get the currently selected MIDI item
-
-### 🎧 Audio Item Tools (3)
-- **insert_audio_item** - Insert an audio file as an item on a track
-- **duplicate_item** - Duplicate an existing item
-- **delete_item** - Delete an item from a track
-
-### 📋 Item Property Tools (3)
-- **get_item_properties** - Get properties of an item
-- **set_item_position** - Set the position of an item
-- **set_item_length** - Set the length of an item
-
-### 🔍 Item Selection Tools (2)
-- **get_items_in_time_range** - Get items within a time range
-- **get_selected_items** - Get all selected items
-
-### 🔗 Routing Tools (11)
-- **add_send** - Add a send from source track to destination track
-- **remove_send** - Remove a send from a track
-- **get_sends** - Get all sends from a track
-- **get_receives** - Get all receives on a track
-- **set_send_volume** - Set the volume of a send
-- **set_send_pan** - Set the pan of a send
-- **toggle_send_mute** - Toggle or set the mute state of a send
-- **get_track_routing_info** - Get comprehensive routing information for a track
-- **debug_track_routing** - Debug track routing information for troubleshooting
-- **clear_all_sends** - Remove all sends from a track
-- **clear_all_receives** - Remove all receives from a track
-
-### 📁 Advanced Routing Tools (6)
-- **create_folder_track** - Create a folder track that can contain other tracks
-- **create_bus_track** - Create a bus track for grouping and processing multiple tracks
-- **set_track_parent** - Set a track's parent folder track
-- **get_track_children** - Get all child tracks of a parent track
-- **set_track_folder_depth** - Set the folder depth of a track
-- **get_track_folder_depth** - Get the folder depth of a track
-
-### 🎛️ Automation Tools (6)
-- **create_automation_envelope** - Create an automation envelope on a track
-- **add_automation_point** - Add an automation point to an envelope
-- **get_automation_points** - Get all automation points from an envelope
-- **set_automation_mode** - Set the automation mode for a track
-- **get_automation_mode** - Get the current automation mode for a track
-- **delete_automation_point** - Delete an automation point from an envelope
-
-### ✂️ Advanced Item Operations (7)
-- **split_item** - Split an item at a specific time
-- **glue_items** - Glue multiple items together
-- **fade_in** - Apply fade-in to an item
-- **fade_out** - Apply fade-out to an item
-- **crossfade_items** - Create crossfade between two items
-- **reverse_item** - Reverse an item
-- **get_item_fade_info** - Get fade information for an item
-
-## Requirements
-
+### Prerequisites
 - Python 3.10+
-- REAPER DAW
-- `python-reapy` Python module
-- `mcp[cli]` package for MCP server
-- Internet connection (for downloading sample audio file)
+- REAPER DAW installed
+- Internet connection (for sample audio downloads)
 
-## Installation
-
-1. **Install REAPER** if you haven't already
-2. **Install the project dependencies** in system Python:
-   ```bash
-   pip install -e .
-   ```
-3. **Configure Python in REAPER**:
-   - In REAPER: **Options → Preferences → Plug-ins → ReaScript**
-   - Check **"Enable Python for use with ReaScript"**
-   - Set **Custom path to Python dll directory** to: `C:\ProgramData\anaconda3`
-   - Set **Force ReaScript to use specific Python dll** to: `python312.dll`
-   
-   ![REAPER Python Configuration](docs/media/Screenshot_2.png)
-
-4. **Enable reapy server**:
-   - Make sure REAPER is running with the Python configuration above
-   - In REAPER: **Actions → Load ReaScript** → select `reaper_side_enable_server.py` and run it
-   - Alternatively, run from command line:
-   ```bash
-   python reaper_side_enable_server.py
-   ```
-
-5. **Test the MCP server connection**
-
-## Quick Start
-
-### Option 1: Windows (Recommended)
-1. Make sure REAPER is running
-2. Double-click `start_mcp_server.bat`
-3. The server will start and show connection status
-
-### Option 2: Command Line
-1. Make sure REAPER is running
-2. Run the server:
-   ```bash
-   uv run -m src.run_mcp_server
-   ```
-
-### Option 3: Manual Python
-1. Make sure REAPER is running
-2. Run:
-   ```bash
-   python -m src.run_mcp_server
-   ```
-
-## Troubleshooting Connection Issues
-
-If you get connection errors like `ConnectionRefusedError`, follow these steps:
-
-### Step 1: Configure REAPER Port
-**Important**: First, check what port REAPER is actually listening on:
-1. Open Task Manager > Details tab
-2. Look for `reaper.exe` in the list
-3. Check the "Local Port" column - this shows the actual port REAPER is using
-
-**Configure the correct port**:
-1. Open `start_reapy_server_simple.py` in a text editor
-2. Change the port number in line 5 to match what you see in Task Manager:
-   ```python
-   RPR_SetExtState("reapy", "server_port", "2307", 1)  # Change 2307 to your actual port
-   ```
-3. Save the file
-
-### Step 2: Enable REAPER Remote API
-In REAPER:
-1. Go to Actions > Show action list
-2. Search for "reapy"
-3. Run "reapy: Enable remote API"
-4. **Restart REAPER** for changes to take effect
-
-### Step 3: Alternative - Manual Configuration
-If the above doesn't work:
-1. In REAPER, go to Preferences > Plug-ins > ReaScript
-2. Enable "Allow TCP connections"
-3. Set port to match what you see in Task Manager
-4. Restart REAPER
-
-### Step 4: Test Connection
-Run the test script:
+### 1. Install Dependencies
 ```bash
-python start_reapy_server_simple.py
+pip install -e .
 ```
 
-You should see: "✅ Connection established successfully!"
+### 2. Configure REAPER
+1. In REAPER: **Options → Preferences → Plug-ins → ReaScript**
+2. Check **"Enable Python for use with ReaScript"**
+3. Set **Custom path to Python dll directory** to: `C:\ProgramData\anaconda3`
+4. Set **Force ReaScript to use specific Python dll** to: `python312.dll`
 
-### Common Port Issues
-- **Default port**: 2306
-- **Common alternative**: 2307
-- **Check actual port**: Use Task Manager to see what port REAPER is actually using
-- **Port mismatch**: If the port in your script doesn't match REAPER's actual port, connection will fail
+![REAPER Python Configuration](docs/media/Screenshot_2.png)
 
-## Running the Server
+### 3. Enable reapy Server
+- In REAPER: **Actions → Load ReaScript** → select `reaper_side_enable_server.py` and run it
+- Or run from command line: `python reaper_side_enable_server.py`
 
-You can run the server using uv directly:
+### 4. Start the MCP Server
+
+**Windows (Recommended):**
 ```bash
-uv --directory <project_path> run -m src.run_mcp_server
+# Double-click this file
+start_mcp_server.bat
 ```
 
-For example, on Windows:
+**Command Line:**
 ```bash
-uv --directory C:\path\to\reaper-reapy-mcp run -m src.run_mcp_server
-```
-
-Or using the Python module directly after installation:
-```bash
+uv run -m src.run_mcp_server
+# or
 python -m src.run_mcp_server
 ```
 
-### Use the MCP inspector to test the tools:
+### 5. Test Connection
 ```bash
+# Run MCP inspector
 test_mcp.bat
 ```
 
-### Item ID System
-All item operations use a sequential index system (0..n) for item identification. This makes it easier to work with items in scripts and automation:
-- Item IDs are zero-based indices
-- Each track maintains its own sequence of item indices
-- Indices are stable until items are deleted or reordered
-- All item operations (MIDI, audio, properties) use the same indexing system
+## 🔧 Troubleshooting
 
-### Position Format Support
-Many MCP tools now support dual position formats for enhanced musical workflow:
+### Connection Issues (`ConnectionRefusedError`)
 
-#### Time Format (seconds)
-```json
-{
-  "start_time": 15.5,
-  "new_time": 30.0
-}
+**1. Check REAPER Port**
+- Open Task Manager > Details tab
+- Find `reaper.exe` and check "Local Port" column
+- Common ports: 2306 (default), 2307
+
+**2. Enable REAPER Remote API**
 ```
-
-#### Measure:Beat Format
-```json
-{
-  "start_measure": "3:2.5",
-  "new_measure": "5:1"
-}
+REAPER → Actions → Show action list → Search "reapy" → Run "reapy: Enable remote API"
 ```
+**Restart REAPER** after enabling.
 
-**Format**: `"measure:beat"` where:
-- `measure`: 1-based measure number
-- `beat`: 1-based beat number (supports decimals)
-- Example: `"4:2.5"` = measure 4, beat 2.5
-
-#### Tools Supporting Both Formats:
-- `create_midi_item` - position via `start_time` OR `start_measure`
-- `insert_audio_item` - position via `start_time` OR `start_measure`  
-- `duplicate_item` - position via `new_time` OR `new_measure`
-- `set_item_position` - position via `new_time` OR `new_measure`
-- `get_items_in_time_range` - range via time OR measure parameters
-
-### Routing Examples
-
-Here are some common routing scenarios using the new routing tools:
-
-#### Basic Send Creation
-```python
-# Create a send from track 0 to track 1 with -6dB volume
-add_send(source_track=0, destination_track=1, volume=-6.0, pan=0.0)
-
-# Create a send with pan and mute
-add_send(source_track=1, destination_track=2, volume=-3.0, pan=0.5, mute=False)
+**3. Test Connection**
+```bash
+python start_reapy_server_simple.py
 ```
+Should show: "✅ Connection established successfully!"
 
-#### Managing Send Parameters
-```python
-# Set send volume
-set_send_volume(source_track=0, send_id=0, volume=-12.0)
+### Common Issues
+| Problem | Solution |
+|---------|----------|
+| Port mismatch | Update `start_reapy_server_simple.py` with correct port |
+| Python not configured | Check REAPER ReaScript Python settings |
+| reapy not enabled | Run enable script in REAPER Actions |
 
-# Set send pan
-set_send_pan(source_track=0, send_id=0, pan=0.25)
+## 🔗 MCP Client Integration
 
-# Toggle send mute
-toggle_send_mute(source_track=0, send_id=0)
-```
+### Claude Desktop
+Add to your Claude configuration file:
 
-#### Getting Routing Information
-```python
-# Get all sends from a track
-get_sends(track_index=0)
-
-# Get all receives on a track
-get_receives(track_index=1)
-
-# Get comprehensive routing info
-get_track_routing_info(track_index=0)
-```
-
-#### Debugging Routing Issues
-```python
-# Debug routing information for troubleshooting
-debug_track_routing(track_index=0)
-```
-
-#### Cleaning Up Routing
-```python
-# Remove all sends from a track
-clear_all_sends(track_index=0)
-
-# Remove all receives from a track
-clear_all_receives(track_index=1)
-```
-
-**Note**: All routing tools are fully functional and tested. The `destination_track` field now correctly shows track indices instead of -1.0, and all send/receive operations work reliably with proper MediaTrack pointer handling.
-
-### Advanced Routing Examples
-
-#### Folder and Bus Track Creation
-```python
-# Create a folder track for drums
-create_folder_track("Drums")
-
-# Create a bus track for effects
-create_bus_track("FX Bus")
-
-# Set track 1 as child of the drums folder
-set_track_parent(child_track_index=1, parent_track_index=0)
-
-# Get all children of the drums folder
-get_track_children(parent_track_index=0)
-```
-
-### Automation Examples
-
-#### Creating and Managing Automation
-```python
-# Create a volume automation envelope
-create_automation_envelope(track_index=0, envelope_name="volume")
-
-# Add automation points
-add_automation_point(track_index=0, envelope_name="volume", time=0.0, value=0.0)
-add_automation_point(track_index=0, envelope_name="volume", time=2.0, value=1.0)
-add_automation_point(track_index=0, envelope_name="volume", time=4.0, value=0.5)
-
-# Set automation mode to write
-set_automation_mode(track_index=0, mode="write")
-
-# Get all automation points
-get_automation_points(track_index=0, envelope_name="volume")
-```
-
-### Advanced Item Operations Examples
-
-#### Item Editing and Processing
-```python
-# Split an item at 2 seconds
-split_item(track_index=0, item_index=0, split_time=2.0)
-
-# Add fade-in to an item
-fade_in(track_index=0, item_index=0, fade_length=0.5, fade_curve=0)
-
-# Add fade-out to an item
-fade_out(track_index=0, item_index=1, fade_length=1.0, fade_curve=2)
-
-# Create crossfade between two items
-crossfade_items(track_index=0, item1_index=0, item2_index=1, crossfade_length=0.5)
-
-# Reverse an item
-reverse_item(track_index=0, item_index=0)
-
-# Glue multiple items together
-glue_items(track_index=0, item_indices=[0, 1, 2])
-
-# Clear all items from the entire project
-clear_project()
-```
-
-### MCP Client Configuration
-
-The following configurations are for different MCP clients to connect to this REAPER MCP server:
-
-### Claude configuration (with uv run):
 ```json
 {
     "mcpServers": {
@@ -429,7 +108,7 @@ The following configurations are for different MCP clients to connect to this RE
             "command": "uv",
             "args": [
                 "--directory",
-                "<path to folder>",
+                "C:\\path\\to\\reaper-reapy-mcp",
                 "run",
                 "-m",
                 "src.run_mcp_server"
@@ -439,26 +118,9 @@ The following configurations are for different MCP clients to connect to this RE
 }
 ```
 
-### Claude configuration direct:
-```json
-{
-    "mcpServers": {
-        "reaper-reapy-mcp": {
-            "type": "stdio",
-            "command": "python",
-            "args": [
-                "<path to folder>\\src\\run_mcp_server.py"
-            ]
-        }
-    }
-}
-```
+### Cursor IDE
+Add to `~/.cursor/mcp.json`:
 
-### Cursor MCP Configuration
-
-To connect this MCP server to Cursor, add the following configuration to your `~/.cursor/mcp.json` file:
-
-#### Using uv (Recommended)
 ```json
 {
   "mcpServers": {
@@ -466,7 +128,7 @@ To connect this MCP server to Cursor, add the following configuration to your `~
       "command": "uv",
       "args": [
         "--directory",
-        "C:\\Users\\Admin\\Desktop\\Dev\\reaper-reapy-mcp",
+        "C:\\path\\to\\reaper-reapy-mcp",
         "run",
         "-m",
         "src.run_mcp_server"
@@ -476,31 +138,153 @@ To connect this MCP server to Cursor, add the following configuration to your `~
 }
 ```
 
-#### Using Python directly
-```json
-{
-  "mcpServers": {
-    "reaper-reapy-mcp": {
-      "command": "python",
-      "args": [
-        "C:\\Users\\Admin\\Desktop\\Dev\\reaper-reapy-mcp\\src\\run_mcp_server.py"
-      ]
-    }
-  }
-}
+> **Note**: Replace `C:\\path\\to\\reaper-reapy-mcp` with your actual project path.
+
+## 📚 Key Concepts
+
+### Dual Position Format
+Tools support both time and musical positioning:
+
+| Format | Example | Use Case |
+|--------|---------|----------|
+| **Time** | `{"start_time": 15.5}` | Precise timing |
+| **Musical** | `{"start_measure": "3:2.5"}` | Musical positioning |
+
+**Musical Format**: `"measure:beat"` (1-based, decimals supported)
+
+### Item ID System
+- Zero-based indices per track (0, 1, 2...)
+- Stable until items are deleted/reordered
+- Consistent across MIDI, audio, and property operations
+
+## 💡 Usage Examples
+
+### Basic Operations
+```python
+# Create and configure tracks
+create_track("Lead Vocal")
+set_track_volume(track_index=0, volume_db=-6.0)
+add_fx(track_index=0, fx_name="ReaComp")
+
+# MIDI workflow
+create_midi_item(track_index=0, start_measure="1:1", length=4.0)
+add_midi_note(track_index=0, item_id=0, pitch=60, start_time=0.0, length=1.0)
+
+# Audio processing
+insert_audio_item(track_index=1, file_path="vocals.wav", start_time=0.0)
+fade_in(track_index=1, item_index=0, fade_length=0.5)
 ```
 
-**Note**: Replace `C:\\Users\\Admin\\Desktop\\Dev\\reaper-reapy-mcp` with the actual path to your project folder.
+### Advanced Routing
+```python
+# Create folder structure
+create_folder_track("Drums")
+create_bus_track("Drum Bus") 
+set_track_parent(child_track_index=1, parent_track_index=0)
 
-After adding the configuration:
-1. Restart Cursor
-2. The MCP server will be available in your Cursor environment
-3. You can use all the routing, track management, and other tools directly in Cursor
+# Sends and routing
+add_send(source_track=0, destination_track=2, volume=-6.0)
+get_track_routing_info(track_index=0)
+```
 
-## Contributing
+### Automation
+```python
+# Volume automation
+create_automation_envelope(track_index=0, envelope_name="volume")
+add_automation_point(track_index=0, envelope_name="volume", time=0.0, value=0.5)
+set_automation_mode(track_index=0, mode="write")
+```
+
+## 🛠️ Available Tools (86 Total)
+
+<details>
+<summary><strong>🔌 Connection (1)</strong></summary>
+
+- `test_connection` - Test connection to REAPER
+</details>
+
+<details>
+<summary><strong>🎛️ Track Management (17)</strong></summary>
+
+- `create_track`, `rename_track`, `set_track_color`, `get_track_color`
+- `get_track_count`, `set_track_volume`, `get_track_volume`
+- `set_track_pan`, `get_track_pan`, `set_track_mute`, `get_track_mute`
+- `set_track_solo`, `get_track_solo`, `toggle_track_mute`, `toggle_track_solo`
+- `set_track_arm`, `get_track_arm`
+</details>
+
+<details>
+<summary><strong>🎚️ FX Management (10)</strong></summary>
+
+- `add_fx`, `remove_fx`, `set_fx_param`, `get_fx_param`
+- `get_fx_param_list`, `get_fx_list`, `get_available_fx_list`, `toggle_fx`
+- `set_compressor_params`, `set_limiter_params`
+</details>
+
+<details>
+<summary><strong>🎹 MIDI Operations (6)</strong></summary>
+
+- `create_midi_item`, `add_midi_note`, `clear_midi_item`
+- `get_midi_notes`, `find_midi_notes_by_pitch`, `get_selected_midi_item`
+</details>
+
+<details>
+<summary><strong>🎧 Audio & Items (15)</strong></summary>
+
+- `insert_audio_item`, `duplicate_item`, `delete_item`
+- `get_item_properties`, `set_item_position`, `set_item_length`
+- `get_items_in_time_range`, `get_selected_items`
+- `split_item`, `glue_items`, `fade_in`, `fade_out`
+- `crossfade_items`, `reverse_item`, `get_item_fade_info`
+</details>
+
+<details>
+<summary><strong>🔗 Routing & Mixing (17)</strong></summary>
+
+- `add_send`, `remove_send`, `get_sends`, `get_receives`
+- `set_send_volume`, `set_send_pan`, `toggle_send_mute`
+- `get_track_routing_info`, `debug_track_routing`
+- `clear_all_sends`, `clear_all_receives`
+- `create_folder_track`, `create_bus_track`, `set_track_parent`
+- `get_track_children`, `set_track_folder_depth`, `get_track_folder_depth`
+</details>
+
+<details>
+<summary><strong>🎛️ Automation (6)</strong></summary>
+
+- `create_automation_envelope`, `add_automation_point`
+- `get_automation_points`, `set_automation_mode`
+- `get_automation_mode`, `delete_automation_point`
+</details>
+
+<details>
+<summary><strong>🎯 Project & Master (14)</strong></summary>
+
+- **Project**: `set_tempo`, `get_tempo`, `clear_project`
+- **Markers**: `create_region`, `delete_region`, `create_marker`, `delete_marker`
+- **Master**: `get_master_track`, `set_master_volume`, `set_master_pan`, `toggle_master_mute`, `toggle_master_solo`
+- **Metering**: `get_track_peak_level`, `get_master_peak_level`
+</details>
+
+## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+### Development Setup
+```bash
+# Clone and install
+git clone <repository-url>
+cd reaper-reapy-mcp
+pip install -e .
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+# Run tests
+pytest
+```
+
+## 📄 License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Ready to control REAPER with AI?** Follow the Quick Start guide above and start creating music with natural language commands! 🎵
