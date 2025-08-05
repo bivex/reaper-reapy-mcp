@@ -98,7 +98,7 @@ class ReaperController:
     def verify_connection(self) -> bool:
         """Verify connection to REAPER."""
         try:
-            import reapy
+            import reapy  # Lazy import to avoid connection errors during module loading
             # Try to access REAPER project to verify connection
             project = reapy.Project()
             # Simple test to see if we can access project properties

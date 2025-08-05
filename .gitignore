@@ -68,3 +68,6 @@ reapy-api/
 CLAUDE.md
 
 .claude/settings.local.json
+
+.cursorindexingignore
+.specstory/

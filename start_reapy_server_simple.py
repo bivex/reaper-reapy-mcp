@@ -6,4 +6,4 @@ RPR_SetExtState("reapy", "server_port", "2306", 1)
 RPR_SetExtState("reapy", "distant_api_enabled", "1", 1)
 
 # Show message
-RPR_ShowMessageBox("Reapy server configuration set!\n\nPort: 2306\nRestart REAPER for changes to take effect.", "Reapy Server", 0)
+RPR_ShowMessageBox("Reapy server configuration set!\n\nPort: 2306\n", "Reapy Server", 0)
