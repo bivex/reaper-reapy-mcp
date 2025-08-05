@@ -9,6 +9,22 @@ class AdvancedItemController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
 
     def split_item(self, track_index: int, item_index: int, split_time: float) -> List[int]:
         """
@@ -24,8 +40,6 @@ class AdvancedItemController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -72,8 +86,6 @@ class AdvancedItemController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -326,19 +338,3 @@ class AdvancedItemController:
             self.logger.error(f"Failed to get item fade info: {e}")
             return {} 
         
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                reapy = self._get_reapy()
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-

@@ -9,6 +9,22 @@ class AdvancedRoutingController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
 
     def create_folder_track(self, name: str = "Folder Track") -> int:
         """
@@ -22,8 +38,6 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             # Create a new track using the correct API function
@@ -58,8 +72,6 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             # Create a new track using the correct API function
@@ -95,8 +107,6 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if child_track_index >= len(project.tracks) or parent_track_index >= len(project.tracks):
@@ -131,8 +141,6 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if parent_track_index >= len(project.tracks):
@@ -175,8 +183,6 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -205,8 +211,6 @@ class AdvancedRoutingController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -222,19 +226,3 @@ class AdvancedRoutingController:
             self.logger.error(f"Failed to get track folder depth: {e}")
             return 0 
         
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                reapy = self._get_reapy()
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-

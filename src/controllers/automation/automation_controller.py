@@ -9,6 +9,22 @@ class AutomationController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
 
     def create_automation_envelope(self, track_index: int, envelope_name: str) -> int:
         """
@@ -23,8 +39,6 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -76,8 +90,6 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -126,8 +138,6 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -189,8 +199,6 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -232,8 +240,6 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -269,8 +275,6 @@ class AutomationController:
         """
         try:
             reapy = self._get_reapy()
-
-
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -308,19 +312,3 @@ class AutomationController:
             self.logger.error(f"Failed to delete automation point: {e}")
             return False 
         
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                reapy = self._get_reapy()
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-

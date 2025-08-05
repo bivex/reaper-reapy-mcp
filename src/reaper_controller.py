@@ -98,36 +98,31 @@ class ReaperController:
     def verify_connection(self) -> bool:
         """Verify connection to REAPER."""
         try:
-            import reapy  # Lazy import to avoid connection errors during module loading
-            # Try to access REAPER project to verify connection
-            project = reapy.Project()
-            # Simple test to see if we can access project properties
-            _ = len(project.tracks)
-            self.logger.info("REAPER connection verified successfully")
-            return True
-        except ImportError:
-            self.logger.error("reapy library not available")
+            # Simple TCP connection test to check if REAPER is listening
+            import socket
+            
+            # Try common reapy ports
+            ports_to_try = [2306, 2307, 2308, 2309]
+            
+            for port in ports_to_try:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(1.0)  # 1 second timeout
+                    result = sock.connect_ex(('localhost', port))
+                    sock.close()
+                    
+                    if result == 0:
+                        self.logger.info(f"REAPER server found and listening on port {port}")
+                        return True
+                        
+                except Exception as e:
+                    continue
+            
+            self.logger.warning("REAPER connection failed: No server found on common ports (2306-2309)")
             return False
+                    
         except Exception as e:
-            # Handle Unicode errors in exception messages
-            error_msg = str(e)
-            try:
-                # For Windows error messages, try to handle encoding issues
-                if 'WinError' in error_msg:
-                    # Extract just the error code and provide a generic message
-                    import re
-                    win_error_match = re.search(r'\[WinError (\d+)\]', error_msg)
-                    if win_error_match:
-                        error_code = win_error_match.group(1)
-                        error_msg = f"[WinError {error_code}] Connection refused"
-                    else:
-                        error_msg = "Connection refused"
-                else:
-                    # For other errors, try to encode/decode to handle Unicode issues
-                    error_msg = error_msg.encode('ascii', errors='replace').decode('ascii')
-            except:
-                error_msg = "Connection failed"
-            self.logger.warning(f"REAPER connection failed: {error_msg}")
+            self.logger.warning(f"REAPER connection test failed: {e}")
             return False
     
     # Track operations
