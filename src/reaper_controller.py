@@ -401,5 +401,80 @@ class ReaperController:
         """Get fade information for an item."""
         return self.advanced_items.get_item_fade_info(track_index, item_index)
 
+    # Track Mixing Controls
+    def set_track_volume(self, track_index: int, volume_db: float) -> bool:
+        """Set the volume of a track in dB."""
+        return self.track.set_track_volume(track_index, volume_db)
+
+    def get_track_volume(self, track_index: int) -> float:
+        """Get the volume of a track in dB."""
+        return self.track.get_track_volume(track_index)
+
+    def set_track_pan(self, track_index: int, pan: float) -> bool:
+        """Set the pan position of a track."""
+        return self.track.set_track_pan(track_index, pan)
+
+    def get_track_pan(self, track_index: int) -> float:
+        """Get the pan position of a track."""
+        return self.track.get_track_pan(track_index)
+
+    def set_track_mute(self, track_index: int, mute: bool) -> bool:
+        """Set the mute state of a track."""
+        return self.track.set_track_mute(track_index, mute)
+
+    def get_track_mute(self, track_index: int) -> bool:
+        """Get the mute state of a track."""
+        return self.track.get_track_mute(track_index)
+
+    def set_track_solo(self, track_index: int, solo: bool) -> bool:
+        """Set the solo state of a track."""
+        return self.track.set_track_solo(track_index, solo)
+
+    def get_track_solo(self, track_index: int) -> bool:
+        """Get the solo state of a track."""
+        return self.track.get_track_solo(track_index)
+
+    def toggle_track_mute(self, track_index: int) -> bool:
+        """Toggle the mute state of a track."""
+        return self.track.toggle_track_mute(track_index)
+
+    def toggle_track_solo(self, track_index: int) -> bool:
+        """Toggle the solo state of a track."""
+        return self.track.toggle_track_solo(track_index)
+
+    def set_track_arm(self, track_index: int, arm: bool) -> bool:
+        """Set the record arm state of a track."""
+        return self.track.set_track_arm(track_index, arm)
+
+    def get_track_arm(self, track_index: int) -> bool:
+        """Get the record arm state of a track."""
+        return self.track.get_track_arm(track_index)
+
+    # Dynamics Processing Controls
+    def set_compressor_params(self, track_index: int, fx_index: int, 
+                             threshold: Optional[float] = None,
+                             ratio: Optional[float] = None,
+                             attack: Optional[float] = None,
+                             release: Optional[float] = None,
+                             makeup_gain: Optional[float] = None) -> bool:
+        """Set common compressor parameters."""
+        return self.fx.set_compressor_params(track_index, fx_index, threshold, ratio, attack, release, makeup_gain)
+
+    def set_limiter_params(self, track_index: int, fx_index: int,
+                          threshold: Optional[float] = None,
+                          ceiling: Optional[float] = None,
+                          release: Optional[float] = None) -> bool:
+        """Set common limiter parameters."""
+        return self.fx.set_limiter_params(track_index, fx_index, threshold, ceiling, release)
+
+    # Meter Reading
+    def get_track_peak_level(self, track_index: int) -> Dict[str, float]:
+        """Get the current peak levels for a track."""
+        return self.fx.get_track_peak_level(track_index)
+
+    def get_master_peak_level(self) -> Dict[str, float]:
+        """Get the current peak levels for the master track."""
+        return self.fx.get_master_peak_level()
+
 # Re-export the ReaperController class for backward compatibility
 __all__ = ['ReaperController']

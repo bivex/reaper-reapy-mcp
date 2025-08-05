@@ -445,3 +445,267 @@ class FXController:
             error_message = f"Failed to toggle FX: {e}"
             self.logger.error(error_message)
             return False
+
+    def set_compressor_params(self, track_index: int, fx_index: int, 
+                             threshold: Optional[float] = None,
+                             ratio: Optional[float] = None,
+                             attack: Optional[float] = None,
+                             release: Optional[float] = None,
+                             makeup_gain: Optional[float] = None) -> bool:
+        """
+        Set common compressor parameters. Works with most compressor plugins.
+        
+        Args:
+            track_index (int): Index of the track
+            fx_index (int): Index of the FX
+            threshold (float, optional): Threshold in dB (typical range: -60 to 0)
+            ratio (float, optional): Compression ratio (typical range: 1.0 to 20.0)
+            attack (float, optional): Attack time in ms (typical range: 0.1 to 100)
+            release (float, optional): Release time in ms (typical range: 10 to 1000)
+            makeup_gain (float, optional): Makeup gain in dB (typical range: 0 to 20)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            project = reapy.Project()
+            track = project.tracks[track_index]
+            
+            # Common parameter names across different compressor plugins
+            param_mappings = {
+                'threshold': ['Threshold', 'Thresh', 'threshold', 'thresh'],
+                'ratio': ['Ratio', 'ratio'],
+                'attack': ['Attack', 'attack', 'Attack Time', 'Att'],
+                'release': ['Release', 'release', 'Release Time', 'Rel'],
+                'makeup_gain': ['Makeup', 'Make-up', 'Gain', 'Output', 'makeup', 'make-up']
+            }
+            
+            success = True
+            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            
+            # Get all parameter names
+            param_names = []
+            for i in range(param_count):
+                param_name = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_names.append((i, param_name))
+            
+            # Set parameters based on input values
+            params_to_set = [
+                ('threshold', threshold),
+                ('ratio', ratio), 
+                ('attack', attack),
+                ('release', release),
+                ('makeup_gain', makeup_gain)
+            ]
+            
+            for param_type, value in params_to_set:
+                if value is not None:
+                    param_found = False
+                    for param_idx, param_name in param_names:
+                        for mapping in param_mappings[param_type]:
+                            if mapping.lower() in param_name.lower():
+                                # Convert value to appropriate range (0.0 to 1.0 for most plugins)
+                                normalized_value = self._normalize_compressor_param(param_type, value)
+                                RPR.TrackFX_SetParam(track.id, fx_index, param_idx, normalized_value)
+                                self.logger.info(f"Set {param_type} to {value} (normalized: {normalized_value})")
+                                param_found = True
+                                break
+                        if param_found:
+                            break
+                    
+                    if not param_found:
+                        self.logger.warning(f"Parameter '{param_type}' not found in compressor")
+                        success = False
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Failed to set compressor parameters: {e}")
+            return False
+
+    def _normalize_compressor_param(self, param_type: str, value: float) -> float:
+        """
+        Normalize compressor parameter values to 0.0-1.0 range.
+        
+        Args:
+            param_type (str): Type of parameter
+            value (float): Raw parameter value
+            
+        Returns:
+            float: Normalized value (0.0 to 1.0)
+        """
+        if param_type == 'threshold':
+            # Threshold: -60dB to 0dB -> 0.0 to 1.0
+            return max(0.0, min(1.0, (value + 60.0) / 60.0))
+        elif param_type == 'ratio':
+            # Ratio: 1.0 to 20.0 -> 0.0 to 1.0
+            return max(0.0, min(1.0, (value - 1.0) / 19.0))
+        elif param_type == 'attack':
+            # Attack: 0.1ms to 100ms -> 0.0 to 1.0 (log scale)
+            import math
+            return max(0.0, min(1.0, math.log10(max(0.1, value) / 0.1) / math.log10(1000)))
+        elif param_type == 'release':
+            # Release: 10ms to 1000ms -> 0.0 to 1.0 (log scale)
+            import math
+            return max(0.0, min(1.0, math.log10(max(10, value) / 10) / math.log10(100)))
+        elif param_type == 'makeup_gain':
+            # Makeup gain: 0dB to 20dB -> 0.0 to 1.0
+            return max(0.0, min(1.0, value / 20.0))
+        else:
+            return max(0.0, min(1.0, value))
+
+    def set_limiter_params(self, track_index: int, fx_index: int,
+                          threshold: Optional[float] = None,
+                          ceiling: Optional[float] = None,
+                          release: Optional[float] = None) -> bool:
+        """
+        Set common limiter parameters. Works with most limiter plugins.
+        
+        Args:
+            track_index (int): Index of the track
+            fx_index (int): Index of the FX
+            threshold (float, optional): Threshold in dB (typical range: -20 to 0)
+            ceiling (float, optional): Output ceiling in dB (typical range: -10 to 0)
+            release (float, optional): Release time in ms (typical range: 1 to 100)
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            project = reapy.Project()
+            track = project.tracks[track_index]
+            
+            # Common parameter names across different limiter plugins
+            param_mappings = {
+                'threshold': ['Threshold', 'Thresh', 'threshold', 'thresh', 'Input'],
+                'ceiling': ['Ceiling', 'Output', 'Limit', 'ceiling', 'output', 'limit'],
+                'release': ['Release', 'release', 'Release Time', 'Rel']
+            }
+            
+            success = True
+            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            
+            # Get all parameter names
+            param_names = []
+            for i in range(param_count):
+                param_name = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_names.append((i, param_name))
+            
+            # Set parameters based on input values
+            params_to_set = [
+                ('threshold', threshold),
+                ('ceiling', ceiling),
+                ('release', release)
+            ]
+            
+            for param_type, value in params_to_set:
+                if value is not None:
+                    param_found = False
+                    for param_idx, param_name in param_names:
+                        for mapping in param_mappings[param_type]:
+                            if mapping.lower() in param_name.lower():
+                                # Convert value to appropriate range
+                                normalized_value = self._normalize_limiter_param(param_type, value)
+                                RPR.TrackFX_SetParam(track.id, fx_index, param_idx, normalized_value)
+                                self.logger.info(f"Set limiter {param_type} to {value} (normalized: {normalized_value})")
+                                param_found = True
+                                break
+                        if param_found:
+                            break
+                    
+                    if not param_found:
+                        self.logger.warning(f"Parameter '{param_type}' not found in limiter")
+                        success = False
+            
+            return success
+            
+        except Exception as e:
+            self.logger.error(f"Failed to set limiter parameters: {e}")
+            return False
+
+    def _normalize_limiter_param(self, param_type: str, value: float) -> float:
+        """
+        Normalize limiter parameter values to 0.0-1.0 range.
+        
+        Args:
+            param_type (str): Type of parameter
+            value (float): Raw parameter value
+            
+        Returns:
+            float: Normalized value (0.0 to 1.0)
+        """
+        if param_type == 'threshold':
+            # Threshold: -20dB to 0dB -> 0.0 to 1.0
+            return max(0.0, min(1.0, (value + 20.0) / 20.0))
+        elif param_type == 'ceiling':
+            # Ceiling: -10dB to 0dB -> 0.0 to 1.0
+            return max(0.0, min(1.0, (value + 10.0) / 10.0))
+        elif param_type == 'release':
+            # Release: 1ms to 100ms -> 0.0 to 1.0 (log scale)
+            import math
+            return max(0.0, min(1.0, math.log10(max(1, value)) / math.log10(100)))
+        else:
+            return max(0.0, min(1.0, value))
+
+    def get_track_peak_level(self, track_index: int) -> Dict[str, float]:
+        """
+        Get the current peak levels for a track.
+        
+        Args:
+            track_index (int): Index of the track
+            
+        Returns:
+            Dict[str, float]: Peak levels in dB for left and right channels
+        """
+        try:
+            project = reapy.Project()
+            track = project.tracks[track_index]
+            
+            # Get peak levels using ReaScript API
+            left_peak = RPR.Track_GetPeakInfo(track.id, 0)  # Left channel
+            right_peak = RPR.Track_GetPeakInfo(track.id, 1)  # Right channel
+            
+            # Convert linear to dB
+            import math
+            left_db = 20.0 * math.log10(max(1e-30, left_peak)) if left_peak > 0 else -150.0
+            right_db = 20.0 * math.log10(max(1e-30, right_peak)) if right_peak > 0 else -150.0
+            
+            return {
+                "left_peak_db": left_db,
+                "right_peak_db": right_db,
+                "max_peak_db": max(left_db, right_db)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get track peak level: {e}")
+            return {"left_peak_db": -150.0, "right_peak_db": -150.0, "max_peak_db": -150.0}
+
+    def get_master_peak_level(self) -> Dict[str, float]:
+        """
+        Get the current peak levels for the master track.
+        
+        Returns:
+            Dict[str, float]: Peak levels in dB for left and right channels
+        """
+        try:
+            project = reapy.Project()
+            master_track = project.master_track
+            
+            # Get peak levels using ReaScript API
+            left_peak = RPR.Track_GetPeakInfo(master_track.id, 0)  # Left channel
+            right_peak = RPR.Track_GetPeakInfo(master_track.id, 1)  # Right channel
+            
+            # Convert linear to dB
+            import math
+            left_db = 20.0 * math.log10(max(1e-30, left_peak)) if left_peak > 0 else -150.0
+            right_db = 20.0 * math.log10(max(1e-30, right_peak)) if right_peak > 0 else -150.0
+            
+            return {
+                "left_peak_db": left_db,
+                "right_peak_db": right_db, 
+                "max_peak_db": max(left_db, right_db)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get master peak level: {e}")
+            return {"left_peak_db": -150.0, "right_peak_db": -150.0, "max_peak_db": -150.0}
