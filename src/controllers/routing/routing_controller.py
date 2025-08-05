@@ -51,6 +51,14 @@ class RoutingController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Initialize RPR reference
+        try:
+            reapy = get_reapy()
+            self._RPR = reapy.RPR
+        except Exception as e:
+            self.logger.error(f"Failed to initialize RPR: {e}")
+            self._RPR = None
     def _validate_track_index(self, track_index: int) -> bool:
         """Validate that a track index is within valid range."""
         try:
@@ -110,7 +118,7 @@ class RoutingController:
 
             # Try using ReaScript API directly
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             # Add send using ReaScript API
             send_id = RPR.CreateTrackSend(source.id, destination.id)
@@ -162,7 +170,7 @@ class RoutingController:
 
             # Use ReaScript API to remove send
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             # Remove send using ReaScript API
             result = RPR.RemoveTrackSend(source.id, 0, send_id)  # 0 for sends, 1 for receives
@@ -195,7 +203,7 @@ class RoutingController:
 
             # Use ReaScript API to get sends
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             # Force REAPER to update
             RPR.UpdateArrange()
@@ -291,7 +299,7 @@ class RoutingController:
 
             # Use ReaScript API
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             # Force REAPER to update
             RPR.UpdateArrange()
@@ -379,7 +387,7 @@ class RoutingController:
                 return {"error": f"Track {track_index} not found"}
 
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             # Force update
             RPR.UpdateArrange()
@@ -440,7 +448,7 @@ class RoutingController:
 
             # Use ReaScript API to set send volume
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_VOL", volume)
             
@@ -474,7 +482,7 @@ class RoutingController:
 
             # Use ReaScript API to set send pan
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             result = RPR.SetTrackSendInfo_Value(source.id, 0, send_id, "D_PAN", pan)
             
@@ -508,7 +516,7 @@ class RoutingController:
 
             # Use ReaScript API to toggle/set send mute
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             if mute is None:
                 # Toggle current state
@@ -579,7 +587,7 @@ class RoutingController:
 
             # Use ReaScript API to clear all sends
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             send_count = RPR.GetTrackNumSends(track.id, 0)  # 0 for sends
             
@@ -611,7 +619,7 @@ class RoutingController:
 
             # Use ReaScript API to clear all receives
             reapy = get_reapy()
-            RPR = self._RPR
+            RPR = reapy.RPR
             
             receive_count = RPR.GetTrackNumSends(track.id, 1)  # 1 for receives
             
