@@ -2,6 +2,7 @@
 
 import os
 import sys
+import logging
 from typing import Optional, List, Dict, Any, Union
 
 # Add necessary paths for imports
@@ -33,32 +34,95 @@ class ReaperController:
     Acts as a facade that delegates operations to appropriate specialized controllers.
     """
     def __init__(self, debug=False):
-        # Initialize other controllers as attributes
-        self.track = TrackController(debug=debug)
-        self.fx = FXController(debug=debug)
-        self.marker = MarkerController(debug=debug)
-        self.midi = MIDIController(debug=debug)
-        self.audio = AudioController(debug=debug)
-        self.master = MasterController(debug=debug)
-        self.project = ProjectController(debug=debug)
-        self.routing = RoutingController(debug=debug)
-        self.advanced_routing = AdvancedRoutingController(debug=debug)
-        self.automation = AutomationController(debug=debug)
-        self.advanced_items = AdvancedItemController(debug=debug)
+        # Setup logging
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
         
         # Store debug setting for logging
         self.debug = debug
+        
+        # Initialize controllers with lazy reapy import
+        self._initialize_controllers()
+        
+        # Test connection
+        if not self.verify_connection():
+            self.logger.warning("REAPER connection not available. Some operations may fail.")
+    
+    def _initialize_controllers(self):
+        """Initialize all controllers with proper error handling."""
+        try:
+            self.track = TrackController(debug=self.debug)
+            self.fx = FXController(debug=self.debug)
+            self.marker = MarkerController(debug=self.debug)
+            self.midi = MIDIController(debug=self.debug)
+            self.audio = AudioController(debug=self.debug)
+            self.master = MasterController(debug=self.debug)
+            self.project = ProjectController(debug=self.debug)
+            self.routing = RoutingController(debug=self.debug)
+            self.advanced_routing = AdvancedRoutingController(debug=self.debug)
+            self.automation = AutomationController(debug=self.debug)
+            self.advanced_items = AdvancedItemController(debug=self.debug)
+        except Exception as e:
+            self.logger.error(f"Failed to initialize controllers: {e}")
+            # Create placeholder controllers that will fail gracefully
+            self._create_placeholder_controllers()
+    
+    def _create_placeholder_controllers(self):
+        """Create placeholder controllers when reapy is not available."""
+        class PlaceholderController:
+            def __init__(self, name, debug=False):
+                self.name = name
+                self.logger = logging.getLogger(f"Placeholder{name}")
+                if debug:
+                    self.logger.setLevel(logging.INFO)
+            
+            def __getattr__(self, name):
+                def method(*args, **kwargs):
+                    self.logger.warning(f"REAPER not connected. {self.name}.{name}() unavailable.")
+                    return None
+                return method
+        
+        self.track = PlaceholderController("TrackController", self.debug)
+        self.fx = PlaceholderController("FXController", self.debug)
+        self.marker = PlaceholderController("MarkerController", self.debug)
+        self.midi = PlaceholderController("MIDIController", self.debug)
+        self.audio = PlaceholderController("AudioController", self.debug)
+        self.master = PlaceholderController("MasterController", self.debug)
+        self.project = PlaceholderController("ProjectController", self.debug)
+        self.routing = PlaceholderController("RoutingController", self.debug)
+        self.advanced_routing = PlaceholderController("AdvancedRoutingController", self.debug)
+        self.automation = PlaceholderController("AutomationController", self.debug)
+        self.advanced_items = PlaceholderController("AdvancedItemController", self.debug)
     
     def verify_connection(self) -> bool:
         """Verify connection to REAPER."""
         try:
-            import reapy
-            # Try to access REAPER project to verify connection
-            project = reapy.Project()
-            # Simple test to see if we can access project properties
-            _ = len(project.tracks)
-            return True
-        except Exception:
+            # Simple TCP connection test to check if REAPER is listening
+            import socket
+            
+            # Try common reapy ports
+            ports_to_try = [2306, 2307, 2308, 2309]
+            
+            for port in ports_to_try:
+                try:
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(1.0)  # 1 second timeout
+                    result = sock.connect_ex(('localhost', port))
+                    sock.close()
+                    
+                    if result == 0:
+                        self.logger.info(f"REAPER server found and listening on port {port}")
+                        return True
+                        
+                except Exception as e:
+                    continue
+            
+            self.logger.warning("REAPER connection failed: No server found on common ports (2306-2309)")
+            return False
+                    
+        except Exception as e:
+            self.logger.warning(f"REAPER connection test failed: {e}")
             return False
     
     # Track operations
@@ -400,6 +464,81 @@ class ReaperController:
     def get_item_fade_info(self, track_index: int, item_index: int) -> Dict[str, Any]:
         """Get fade information for an item."""
         return self.advanced_items.get_item_fade_info(track_index, item_index)
+
+    # Track Mixing Controls
+    def set_track_volume(self, track_index: int, volume_db: float) -> bool:
+        """Set the volume of a track in dB."""
+        return self.track.set_track_volume(track_index, volume_db)
+
+    def get_track_volume(self, track_index: int) -> float:
+        """Get the volume of a track in dB."""
+        return self.track.get_track_volume(track_index)
+
+    def set_track_pan(self, track_index: int, pan: float) -> bool:
+        """Set the pan position of a track."""
+        return self.track.set_track_pan(track_index, pan)
+
+    def get_track_pan(self, track_index: int) -> float:
+        """Get the pan position of a track."""
+        return self.track.get_track_pan(track_index)
+
+    def set_track_mute(self, track_index: int, mute: bool) -> bool:
+        """Set the mute state of a track."""
+        return self.track.set_track_mute(track_index, mute)
+
+    def get_track_mute(self, track_index: int) -> bool:
+        """Get the mute state of a track."""
+        return self.track.get_track_mute(track_index)
+
+    def set_track_solo(self, track_index: int, solo: bool) -> bool:
+        """Set the solo state of a track."""
+        return self.track.set_track_solo(track_index, solo)
+
+    def get_track_solo(self, track_index: int) -> bool:
+        """Get the solo state of a track."""
+        return self.track.get_track_solo(track_index)
+
+    def toggle_track_mute(self, track_index: int) -> bool:
+        """Toggle the mute state of a track."""
+        return self.track.toggle_track_mute(track_index)
+
+    def toggle_track_solo(self, track_index: int) -> bool:
+        """Toggle the solo state of a track."""
+        return self.track.toggle_track_solo(track_index)
+
+    def set_track_arm(self, track_index: int, arm: bool) -> bool:
+        """Set the record arm state of a track."""
+        return self.track.set_track_arm(track_index, arm)
+
+    def get_track_arm(self, track_index: int) -> bool:
+        """Get the record arm state of a track."""
+        return self.track.get_track_arm(track_index)
+
+    # Dynamics Processing Controls
+    def set_compressor_params(self, track_index: int, fx_index: int, 
+                             threshold: Optional[float] = None,
+                             ratio: Optional[float] = None,
+                             attack: Optional[float] = None,
+                             release: Optional[float] = None,
+                             makeup_gain: Optional[float] = None) -> bool:
+        """Set common compressor parameters."""
+        return self.fx.set_compressor_params(track_index, fx_index, threshold, ratio, attack, release, makeup_gain)
+
+    def set_limiter_params(self, track_index: int, fx_index: int,
+                          threshold: Optional[float] = None,
+                          ceiling: Optional[float] = None,
+                          release: Optional[float] = None) -> bool:
+        """Set common limiter parameters."""
+        return self.fx.set_limiter_params(track_index, fx_index, threshold, ceiling, release)
+
+    # Meter Reading
+    def get_track_peak_level(self, track_index: int) -> Dict[str, float]:
+        """Get the current peak levels for a track."""
+        return self.fx.get_track_peak_level(track_index)
+
+    def get_master_peak_level(self) -> Dict[str, float]:
+        """Get the current peak levels for the master track."""
+        return self.fx.get_master_peak_level()
 
 # Re-export the ReaperController class for backward compatibility
 __all__ = ['ReaperController']

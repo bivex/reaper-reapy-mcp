@@ -1,72 +1,177 @@
-import reapy
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any, Union
 
-logger = logging.getLogger(__name__)
 
-def select_item(item: reapy.Item) -> bool:
-    """
-    Select a media item.
-    """
+def get_reapy():
+    """Lazy import of reapy."""
     try:
-        # Always use the ReaScript API directly
-        from reapy import reascript_api as RPR
-        
-        # First clear all selections
-        RPR.SelectAllMediaItems(0, False)
-        
-        # Then select this item
-        RPR.SetMediaItemSelected(item.id, True)
-        return True
-    except Exception as e:
-        error_message = f"Failed to select item {item.id}: {e}"
-        logger.error(error_message)
-        return False
+        import reapy
+        return reapy
+    except ImportError as e:
+        logging.error(f"Failed to import reapy: {e}")
+        raise
 
-def delete_item(item: reapy.Item) -> bool:
+
+def duplicate_item(track_index: int, item_id: int, new_position: Optional[float] = None) -> Optional[int]:
     """
-    Delete a media item.
+    Duplicate an item on a track.
     
     Args:
-        item (reapy.Item): The item to delete
+        track_index (int): Index of the track
+        item_id (int): ID of the item to duplicate
+        new_position (Optional[float]): New position for the duplicated item
+        
+    Returns:
+        Optional[int]: ID of the new item if successful, None otherwise
+    """
+    try:
+        reapy = get_reapy()
+        project = reapy.Project()
+        track = project.tracks[track_index]
+        
+        # Find the original item
+        original_item = None
+        for item in track.items:
+            if item.id == item_id:
+                original_item = item
+                break
+        
+        if original_item is None:
+            logging.error(f"Item {item_id} not found on track {track_index}")
+            return None
+        
+        # Duplicate the item
+        new_item = original_item.copy()
+        
+        # Set new position if provided
+        if new_position is not None:
+            new_item.position = new_position
+        
+        return new_item.id
+        
+    except Exception as e:
+        logging.error(f"Failed to duplicate item {item_id}: {e}")
+        return None
+
+
+def delete_item(track_index: int, item_id: int) -> bool:
+    """
+    Delete an item from a track.
+    
+    Args:
+        track_index (int): Index of the track
+        item_id (int): ID of the item to delete
         
     Returns:
         bool: True if successful, False otherwise
     """
     try:
-        # Use reapy's native API to delete the item
-        item.delete()
+        reapy = get_reapy()
+        project = reapy.Project()
+        track = project.tracks[track_index]
         
-        # Verify the item was deleted
-        if not _verify_item_deletion(item):
-            logger.error(f"Item {item.id} still exists after deletion")
-            return False
+        # Find and delete the item
+        for item in track.items:
+            if item.id == item_id:
+                item.delete()
+                return True
         
-        logger.info(f"Deleted item with ID: {item.id}")
-        return True
+        logging.error(f"Item {item_id} not found on track {track_index}")
+        return False
         
     except Exception as e:
-        error_message = f"Failed to delete item {item.id}: {e}"
-        logger.error(error_message)
+        logging.error(f"Failed to delete item {item_id}: {e}")
         return False
 
-def _verify_item_deletion(item: reapy.Item) -> bool:
+
+def verify_item_deletion(item: Any) -> bool:
     """
     Verify that an item was successfully deleted.
     
     Args:
-        item (reapy.Item): The item that should have been deleted
+        item: The item to verify deletion for
         
     Returns:
-        bool: True if item is confirmed deleted, False if it still exists
+        bool: True if item was deleted, False otherwise
     """
     try:
-        # Try to find the item again - it should be gone
-        for i in item.track.items:
-            if str(i.id) == str(item.id):
-                return False
-        return True
+        # Try to access the item - if it's deleted, this should fail
+        _ = item.id
+        return False
     except Exception as e:
         # If we get an error trying to access the item, it probably means it was deleted
-        logger.debug(f"Error during deletion verification (likely item {item.id} was deleted): {e}")
-        return True 
+        logging.debug(f"Error during deletion verification (likely item was deleted): {e}")
+        return True
+
+
+def get_items_in_time_range(track_index: int, start_time: float, end_time: float) -> List[Dict[str, Any]]:
+    """
+    Get all items in a time range on a track.
+    
+    Args:
+        track_index (int): Index of the track
+        start_time (float): Start time in seconds
+        end_time (float): End time in seconds
+        
+    Returns:
+        List[Dict[str, Any]]: List of item information
+    """
+    try:
+        reapy = get_reapy()
+        project = reapy.Project()
+        track = project.tracks[track_index]
+        
+        items_in_range = []
+        for item in track.items:
+            # Check if item overlaps with the time range
+            item_start = item.position
+            item_end = item.position + item.length
+            
+            if (item_start < end_time and item_end > start_time):
+                items_in_range.append({
+                    'id': item.id,
+                    'position': item.position,
+                    'length': item.length,
+                    'start': item.start,
+                    'end': item.end,
+                    'selected': item.selected,
+                    'muted': item.muted
+                })
+        
+        return items_in_range
+        
+    except Exception as e:
+        logging.error(f"Failed to get items in time range: {e}")
+        return []
+
+
+def get_selected_items() -> List[Dict[str, Any]]:
+    """
+    Get all selected items across all tracks.
+    
+    Returns:
+        List[Dict[str, Any]]: List of selected item information
+    """
+    try:
+        reapy = get_reapy()
+        project = reapy.Project()
+        
+        selected_items = []
+        for track in project.tracks:
+            for item in track.items:
+                if item.selected:
+                    selected_items.append({
+                        'track_index': track.index,
+                        'id': item.id,
+                        'position': item.position,
+                        'length': item.length,
+                        'start': item.start,
+                        'end': item.end,
+                        'muted': item.muted
+                    })
+        
+        return selected_items
+        
+    except Exception as e:
+        logging.error(f"Failed to get selected items: {e}")
+        return [] 

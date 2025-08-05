@@ -22,7 +22,7 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.10+
 - REAPER DAW
 - `python-reapy` Python module
 - `mcp[cli]` package for MCP server
@@ -30,25 +30,84 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 
 ## Installation
 
-1. Install REAPER if you haven't already
-2. Enable reapy server via REAPER scripting
-    add reaper_side_enable_server.py to reaper actions and run it inside reaper studio
-3. Install current package:
-4. Enable python in REAPER
+1. **Install REAPER** if you haven't already
+2. **Install dependencies**:
+   ```bash
+   uv sync
+   ```
+3. **Enable reapy server in REAPER**:
+   - In REAPER, go to Actions > Show action list
+   - Search for "reapy" and run "reapy: Enable remote API"
+   - Or run the `reaper_side_enable_server.py` script inside REAPER
 
+## Quick Start
 
+### Option 1: Windows (Recommended)
+1. Make sure REAPER is running
+2. Double-click `start_mcp_server.bat`
+3. The server will start and show connection status
 
-The wheel package includes all necessary dependencies and can be used in other Python projects that need REAPER integration. The project uses `pyproject.toml` for modern Python packaging configuration, which provides better dependency management and build system configuration.
+### Option 2: Command Line
+1. Make sure REAPER is running
+2. Run the server:
+   ```bash
+   uv run -m src.run_mcp_server
+   ```
 
-### Sample Audio File
-The application uses a sample MP3 file for testing audio operations. The file will be automatically downloaded when needed from:
+### Option 3: Manual Python
+1. Make sure REAPER is running
+2. Run:
+   ```bash
+   python -m src.run_mcp_server
+   ```
+
+## Troubleshooting Connection Issues
+
+If you get connection errors like `ConnectionRefusedError`, follow these steps:
+
+### Step 1: Configure REAPER Port
+**Important**: First, check what port REAPER is actually listening on:
+1. Open Task Manager > Details tab
+2. Look for `reaper.exe` in the list
+3. Check the "Local Port" column - this shows the actual port REAPER is using
+
+**Configure the correct port**:
+1. Open `start_reapy_server_simple.py` in a text editor
+2. Change the port number in line 5 to match what you see in Task Manager:
+   ```python
+   RPR_SetExtState("reapy", "server_port", "2307", 1)  # Change 2307 to your actual port
+   ```
+3. Save the file
+
+### Step 2: Enable REAPER Remote API
+In REAPER:
+1. Go to Actions > Show action list
+2. Search for "reapy"
+3. Run "reapy: Enable remote API"
+4. **Restart REAPER** for changes to take effect
+
+### Step 3: Alternative - Manual Configuration
+If the above doesn't work:
+1. In REAPER, go to Preferences > Plug-ins > ReaScript
+2. Enable "Allow TCP connections"
+3. Set port to match what you see in Task Manager
+4. Restart REAPER
+
+### Step 4: Test Connection
+Run the test script:
+```bash
+python start_reapy_server_simple.py
 ```
-https://www2.cs.uic.edu/~i101/SoundFiles/StarWars3.mp3
-```
 
-This is a short Star Wars theme clip that's commonly used for testing audio applications.
+You should see: "✅ Connection established successfully!"
 
-### Running the Server
+### Common Port Issues
+- **Default port**: 2306
+- **Common alternative**: 2307
+- **Check actual port**: Use Task Manager to see what port REAPER is actually using
+- **Port mismatch**: If the port in your script doesn't match REAPER's actual port, connection will fail
+
+## Running the Server
 
 You can run the server using uv directly:
 ```bash
@@ -57,7 +116,7 @@ uv --directory <project_path> run -m src.run_mcp_server
 
 For example, on Windows:
 ```bash
-uv --directory C:\path\to\guitar_pro_mcp2 run -m src.run_mcp_server
+uv --directory C:\path\to\reaper-reapy-mcp run -m src.run_mcp_server
 ```
 
 Or using the Python module directly after installation:

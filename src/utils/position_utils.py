@@ -1,115 +1,129 @@
-import reapy
-from reapy import reascript_api as RPR
-from typing import Union
 import logging
+from typing import Optional, Union, Tuple
 
-# Set up logging
-logger = logging.getLogger(__name__)
 
-# Constants to replace magic numbers
-DEFAULT_BEATS_PER_MEASURE = 4
-DEFAULT_BPM = 120.0
-SECONDS_PER_MINUTE = 60.0
-DEFAULT_SECONDS_PER_BEAT = SECONDS_PER_MINUTE / DEFAULT_BPM
-DEFAULT_SECONDS_PER_MEASURE = DEFAULT_SECONDS_PER_BEAT * DEFAULT_BEATS_PER_MEASURE
+def get_reapy():
+    """Lazy import of reapy."""
+    try:
+        import reapy
+        return reapy
+    except ImportError as e:
+        logging.error(f"Failed to import reapy: {e}")
+        raise
 
-def position_to_time(position: Union[float, str], project=None) -> float:
+
+def parse_position(position_input: Union[str, float]) -> Optional[float]:
     """
-    Convert a position (time in seconds or measure:beat string)
-    to time in seconds.
+    Parse position input that can be either time in seconds or measure:beat format.
+    
+    Args:
+        position_input (Union[str, float]): Position as time (float) or measure:beat (str)
+        
+    Returns:
+        Optional[float]: Time in seconds, or None if parsing fails
     """
-    if isinstance(position, (int, float)):
-        return float(position)
+    try:
+        if isinstance(position_input, (int, float)):
+            return float(position_input)
         
-    if isinstance(position, str) and ':' in position:
-        try:
-            measure, beat = map(float, position.split(':'))
-            return _convert_measure_beat_to_time(measure, beat, project)
-        except ValueError as e:
-            raise ValueError(
-                f"Invalid measure:beat format: {position}"
-            ) from e
+        if isinstance(position_input, str):
+            # Check if it's in measure:beat format
+            if ':' in position_input:
+                parts = position_input.split(':')
+                if len(parts) == 2:
+                    try:
+                        measure = int(parts[0])
+                        beat = float(parts[1])
+                        return measure_beat_to_time(measure, beat)
+                    except ValueError:
+                        logging.error(f"Invalid measure:beat format: {position_input}")
+                        return None
+            
+            # Try to parse as float
+            try:
+                return float(position_input)
+            except ValueError:
+                logging.error(f"Invalid position format: {position_input}")
+                return None
         
-    return float(position)  # Try direct conversion
+        return None
+        
+    except Exception as e:
+        logging.error(f"Failed to parse position {position_input}: {e}")
+        return None
 
-def _convert_measure_beat_to_time(measure: float, beat: float, project=None) -> float:
-    """Convert measure and beat to time in seconds."""
-    if project is None:
+
+def format_position(time_seconds: float, format_type: str = "time") -> str:
+    """
+    Format time in seconds to different formats.
+    
+    Args:
+        time_seconds (float): Time in seconds
+        format_type (str): Format type ("time", "measure:beat", "both")
+        
+    Returns:
+        str: Formatted position string
+    """
+    try:
+        if format_type == "time":
+            return f"{time_seconds:.3f}s"
+        elif format_type == "measure:beat":
+            measure, beat, _ = time_to_measure_beat(time_seconds)
+            return f"{measure}:{beat:.2f}"
+        elif format_type == "both":
+            measure, beat, _ = time_to_measure_beat(time_seconds)
+            return f"{time_seconds:.3f}s ({measure}:{beat:.2f})"
+        else:
+            return f"{time_seconds:.3f}s"
+            
+    except Exception as e:
+        logging.error(f"Failed to format position {time_seconds}: {e}")
+        return f"{time_seconds:.3f}s"
+
+
+def time_to_measure_beat(time_seconds: float) -> Tuple[int, float, float]:
+    """Convert time to measure:beat format."""
+    try:
+        reapy = get_reapy()
         project = reapy.Project()
-    
-    try:
-        # Get project tempo and time signature
-        bpm = project.bpm
-        beats_per_measure = _get_beats_per_measure(project)
         
-        # Calculate time conversion factors
-        seconds_per_beat = SECONDS_PER_MINUTE / bpm
-        seconds_per_measure = seconds_per_beat * beats_per_measure
+        # Get time signature info
+        time_signature = project.time_signature
+        beats_per_measure = time_signature[0] / time_signature[1]
         
-        # Convert measure:beat to time (measures are 1-based in our interface)
-        time = ((measure - 1) * seconds_per_measure + 
-                (beat - 1) * seconds_per_beat)
-        return time
+        # Convert time to beats
+        beats = time_seconds * project.tempo / 60.0
+        
+        # Calculate measure and beat
+        measure = int(beats / beats_per_measure) + 1
+        beat = (beats % beats_per_measure) + 1
+        beat_fraction = beat - int(beat)
+        
+        return measure, int(beat), beat_fraction
         
     except Exception as e:
-        # Log the error and use fallback values
-        logger.warning(f"Failed to convert measure:beat to time using project settings: {e}. Using fallback values.")
-        return _convert_mb_to_time_fallback(measure, beat)
+        logging.error(f"Failed to convert time to measure:beat: {e}")
+        return 1, 1, 0.0
 
-def _convert_mb_to_time_fallback(measure: float, beat: float) -> float:
-    """Convert measure and beat to time using default values as fallback."""
-    seconds_per_beat = DEFAULT_SECONDS_PER_BEAT
-    seconds_per_measure = DEFAULT_SECONDS_PER_MEASURE
-    
-    # Convert measure:beat to time (measures are 1-based in our interface)
-    time = ((measure - 1) * seconds_per_measure + 
-            (beat - 1) * seconds_per_beat)
-    return time
 
-def _get_beats_per_measure(project) -> int:
-    """Get the number of beats per measure from the project."""
+def measure_beat_to_time(measure: int, beat: float) -> float:
+    """Convert measure:beat format to time in seconds."""
     try:
-        time_sig_num, time_sig_den = RPR.TimeMap_GetTimeSigAtTime(project.id, 0)
-        if time_sig_num > 0:
-            return time_sig_num
-    except Exception as e:
-        # Log the error and use default value
-        logger.warning(f"Failed to get time signature from project: {e}. Using default beats per measure.")
-    
-    return DEFAULT_BEATS_PER_MEASURE
-
-def time_to_measure(time: float, project=None) -> str:
-    """
-    Convert time in seconds to measure:beat string.
-    """
-    if project is None:
+        reapy = get_reapy()
         project = reapy.Project()
-    
-    try:
-        # Get project tempo and time signature
-        bpm = project.bpm
-        beats_per_measure = _get_beats_per_measure(project)
         
-        # Calculate time conversion factors
-        seconds_per_beat = SECONDS_PER_MINUTE / bpm
-        seconds_per_measure = seconds_per_beat * beats_per_measure
+        # Get time signature info
+        time_signature = project.time_signature
+        beats_per_measure = time_signature[0] / time_signature[1]
         
-        # Convert time to measure:beat
-        measure = int(time // seconds_per_measure) + 1  # 1-based measure
-        beat_time = time % seconds_per_measure
-        beat = (beat_time / seconds_per_beat) + 1  # 1-based beat
+        # Calculate total beats
+        total_beats = (measure - 1) * beats_per_measure + (beat - 1)
         
-        return f"{measure}:{beat:.3f}"
+        # Convert beats to time
+        time_seconds = total_beats * 60.0 / project.tempo
+        
+        return time_seconds
         
     except Exception as e:
-        # Log the error and use fallback values
-        logger.warning(f"Failed to convert time to measure:beat using project settings: {e}. Using fallback values.")
-        return _time_to_measure_fallback(time)
-
-def _time_to_measure_fallback(time: float) -> str:
-    """Convert time to measure:beat using default values as fallback."""
-    measure = int(time // DEFAULT_SECONDS_PER_MEASURE) + 1
-    beat_time = time % DEFAULT_SECONDS_PER_MEASURE
-    beat = (beat_time / DEFAULT_SECONDS_PER_BEAT) + 1
-    
-    return f"{measure}:{beat:.3f}"
+        logging.error(f"Failed to convert measure:beat to time: {e}")
+        return 0.0

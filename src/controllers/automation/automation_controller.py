@@ -1,7 +1,5 @@
-import reapy
 import logging
 from typing import Dict, Any, List, Optional, Tuple
-from reapy import reascript_api as RPR
 
 
 class AutomationController:
@@ -11,6 +9,22 @@ class AutomationController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
 
     def create_automation_envelope(self, track_index: int, envelope_name: str) -> int:
         """
@@ -24,6 +38,7 @@ class AutomationController:
             int: Envelope index, or -1 if failed
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -46,11 +61,11 @@ class AutomationController:
             
             # Create the envelope using the correct API function
             # First try to get existing envelope
-            envelope_index = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+            envelope_index = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope_index == -1:
                 # Create new envelope if it doesn't exist
-                envelope_index = RPR.InsertEnvelope(track.id, envelope_type, True, True, 0, 0, 0)
+                envelope_index = self._RPR.InsertEnvelope(track.id, envelope_type, True, True, 0, 0, 0)
             
             self.logger.info(f"Created automation envelope '{envelope_name}' on track {track_index}")
             return envelope_index
@@ -74,6 +89,7 @@ class AutomationController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -93,14 +109,14 @@ class AutomationController:
             }
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+            envelope = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope == -1:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
                 return False
             
             # Add automation point using the correct API function
-            point_index = RPR.InsertEnvelopePoint(envelope, time, value, shape, 0, False, True)
+            point_index = self._RPR.InsertEnvelopePoint(envelope, time, value, shape, 0, False, True)
             
             self.logger.info(f"Added automation point at {time}s with value {value} on track {track_index}")
             return True
@@ -121,6 +137,7 @@ class AutomationController:
             List[Dict[str, Any]]: List of automation points with time, value, and shape
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -140,17 +157,17 @@ class AutomationController:
             }
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+            envelope = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope == -1:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
                 return []
             
             points = []
-            point_count = RPR.CountEnvelopePoints(envelope)
+            point_count = self._RPR.CountEnvelopePoints(envelope)
             
             for i in range(point_count):
-                retval, time, value, shape, tension, selected = RPR.GetEnvelopePoint(envelope, i)
+                retval, time, value, shape, tension, selected = self._RPR.GetEnvelopePoint(envelope, i)
                 
                 if retval:
                     points.append({
@@ -181,6 +198,7 @@ class AutomationController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -201,7 +219,7 @@ class AutomationController:
             automation_mode = mode_map.get(mode.lower(), 0)
             
             # Set automation mode
-            RPR.SetTrackAutomationMode(track.id, automation_mode)
+            self._RPR.SetTrackAutomationMode(track.id, automation_mode)
             
             self.logger.info(f"Set automation mode to '{mode}' on track {track_index}")
             return True
@@ -221,6 +239,7 @@ class AutomationController:
             str: Current automation mode
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -230,7 +249,7 @@ class AutomationController:
             track = project.tracks[track_index]
             
             # Get automation mode
-            mode = RPR.GetTrackAutomationMode(track.id)
+            mode = self._RPR.GetTrackAutomationMode(track.id)
             
             # Map mode numbers to names
             mode_names = ["read", "write", "touch", "latch", "trim"]
@@ -255,6 +274,7 @@ class AutomationController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -274,14 +294,14 @@ class AutomationController:
             }
             
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+            envelope = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
             
             if envelope == -1:
                 self.logger.error(f"Envelope '{envelope_name}' not found on track {track_index}")
                 return False
             
             # Delete the point using the correct API function
-            success = RPR.DeleteEnvelopePointEx(envelope, 0, point_index)  # Use DeleteEnvelopePointEx instead of DeleteEnvelopePoint
+            success = self._RPR.DeleteEnvelopePointEx(envelope, 0, point_index)  # Use DeleteEnvelopePointEx instead of DeleteEnvelopePoint
             
             if success:
                 self.logger.info(f"Deleted automation point {point_index} from track {track_index}")
@@ -291,3 +311,4 @@ class AutomationController:
         except Exception as e:
             self.logger.error(f"Failed to delete automation point: {e}")
             return False 
+        

@@ -1,9 +1,20 @@
 from mcp import types
 from mcp.server.fastmcp import FastMCP, Context
 from typing import Optional, Dict, Any, List, Union
-import reapy
 import logging
-from src.utils.position_utils import position_to_time, time_to_measure
+from src.utils.position_utils import parse_position, measure_beat_to_time, time_to_measure_beat
+
+# Lazy import of reapy to avoid connection issues at module load time
+def _get_reapy():
+    try:
+        import reapy
+        return reapy
+    except ImportError:
+        logger.error("reapy library not available")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to import reapy: {e}")
+        return None
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -96,6 +107,142 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
             logger.error(f"Failed to get track count: {str(e)}")
             return _create_error_response(f"Failed to get track count: {str(e)}")
 
+    @mcp.tool("set_track_volume")
+    def set_track_volume(ctx: Context, track_index: int, volume_db: float) -> Dict[str, Any]:
+        """
+        Set the volume of a track in dB.
+        
+        Args:
+            track_index (int): Index of the track
+            volume_db (float): Volume in dB (typical range: -inf to +12dB)
+        """
+        return _handle_controller_operation(
+            f"Set track {track_index} volume to {volume_db} dB",
+            controller.set_track_volume, track_index, volume_db
+        )
+
+    @mcp.tool("get_track_volume")
+    def get_track_volume(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the volume of a track in dB."""
+        try:
+            volume = controller.get_track_volume(track_index)
+            return _create_success_response(f"Track {track_index} volume: {volume:.2f} dB")
+        except Exception as e:
+            logger.error(f"Failed to get track volume: {str(e)}")
+            return _create_error_response(f"Failed to get track volume: {str(e)}")
+
+    @mcp.tool("set_track_pan")
+    def set_track_pan(ctx: Context, track_index: int, pan: float) -> Dict[str, Any]:
+        """
+        Set the pan position of a track.
+        
+        Args:
+            track_index (int): Index of the track
+            pan (float): Pan position (-1.0 = hard left, 0.0 = center, 1.0 = hard right)
+        """
+        return _handle_controller_operation(
+            f"Set track {track_index} pan to {pan}",
+            controller.set_track_pan, track_index, pan
+        )
+
+    @mcp.tool("get_track_pan")
+    def get_track_pan(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the pan position of a track."""
+        try:
+            pan = controller.get_track_pan(track_index)
+            return _create_success_response(f"Track {track_index} pan: {pan}")
+        except Exception as e:
+            logger.error(f"Failed to get track pan: {str(e)}")
+            return _create_error_response(f"Failed to get track pan: {str(e)}")
+
+    @mcp.tool("set_track_mute")
+    def set_track_mute(ctx: Context, track_index: int, mute: bool) -> Dict[str, Any]:
+        """
+        Set the mute state of a track.
+        
+        Args:
+            track_index (int): Index of the track
+            mute (bool): True to mute, False to unmute
+        """
+        return _handle_controller_operation(
+            f"Set track {track_index} mute to {mute}",
+            controller.set_track_mute, track_index, mute
+        )
+
+    @mcp.tool("get_track_mute")
+    def get_track_mute(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the mute state of a track."""
+        try:
+            mute = controller.get_track_mute(track_index)
+            return _create_success_response(f"Track {track_index} mute: {mute}")
+        except Exception as e:
+            logger.error(f"Failed to get track mute: {str(e)}")
+            return _create_error_response(f"Failed to get track mute: {str(e)}")
+
+    @mcp.tool("set_track_solo")
+    def set_track_solo(ctx: Context, track_index: int, solo: bool) -> Dict[str, Any]:
+        """
+        Set the solo state of a track.
+        
+        Args:
+            track_index (int): Index of the track
+            solo (bool): True to solo, False to unsolo
+        """
+        return _handle_controller_operation(
+            f"Set track {track_index} solo to {solo}",
+            controller.set_track_solo, track_index, solo
+        )
+
+    @mcp.tool("get_track_solo")
+    def get_track_solo(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the solo state of a track."""
+        try:
+            solo = controller.get_track_solo(track_index)
+            return _create_success_response(f"Track {track_index} solo: {solo}")
+        except Exception as e:
+            logger.error(f"Failed to get track solo: {str(e)}")
+            return _create_error_response(f"Failed to get track solo: {str(e)}")
+
+    @mcp.tool("toggle_track_mute")
+    def toggle_track_mute(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Toggle the mute state of a track."""
+        return _handle_controller_operation(
+            f"Toggle track {track_index} mute",
+            controller.toggle_track_mute, track_index
+        )
+
+    @mcp.tool("toggle_track_solo")
+    def toggle_track_solo(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Toggle the solo state of a track."""
+        return _handle_controller_operation(
+            f"Toggle track {track_index} solo",
+            controller.toggle_track_solo, track_index
+        )
+
+    @mcp.tool("set_track_arm")
+    def set_track_arm(ctx: Context, track_index: int, arm: bool) -> Dict[str, Any]:
+        """
+        Set the record arm state of a track.
+        
+        Args:
+            track_index (int): Index of the track
+            arm (bool): True to arm for recording, False to disarm
+        """
+        return _handle_controller_operation(
+            f"Set track {track_index} record arm to {arm}",
+            controller.set_track_arm, track_index, arm
+        )
+
+    @mcp.tool("get_track_arm")
+    def get_track_arm(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """Get the record arm state of a track."""
+        try:
+            arm = controller.get_track_arm(track_index)
+            return _create_success_response(f"Track {track_index} record arm: {arm}")
+        except Exception as e:
+            logger.error(f"Failed to get track record arm: {str(e)}")
+            return _create_error_response(f"Failed to get track record arm: {str(e)}")
+
 def _setup_project_tools(mcp: FastMCP, controller) -> None:
     """Setup project-related MCP tools."""
     
@@ -131,6 +278,8 @@ def _setup_fx_tools(mcp: FastMCP, controller) -> None:
     _setup_fx_param_tools(mcp, controller)
     _setup_fx_list_tools(mcp, controller)
     _setup_fx_toggle_tool(mcp, controller)
+    _setup_dynamics_tools(mcp, controller)
+    _setup_meter_tools(mcp, controller)
 
 def _setup_fx_add_remove_tools(mcp: FastMCP, controller) -> None:
     """Setup FX add and remove MCP tools."""
@@ -231,6 +380,81 @@ def _setup_fx_toggle_tool(mcp: FastMCP, controller) -> None:
             operation_name,
             controller.toggle_fx, track_index, fx_index, enable
         )
+
+def _setup_dynamics_tools(mcp: FastMCP, controller) -> None:
+    """Setup dynamics processing MCP tools."""
+    
+    @mcp.tool("set_compressor_params")
+    def set_compressor_params(ctx: Context, track_index: int, fx_index: int,
+                             threshold: Optional[float] = None,
+                             ratio: Optional[float] = None,
+                             attack: Optional[float] = None,
+                             release: Optional[float] = None,
+                             makeup_gain: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Set common compressor parameters.
+        
+        Args:
+            track_index (int): Index of the track containing the compressor
+            fx_index (int): Index of the compressor FX on the track
+            threshold (float, optional): Threshold in dB (typical range: -60 to 0)
+            ratio (float, optional): Compression ratio (typical range: 1.0 to 20.0)
+            attack (float, optional): Attack time in ms (typical range: 0.1 to 100)
+            release (float, optional): Release time in ms (typical range: 10 to 1000)
+            makeup_gain (float, optional): Makeup gain in dB (typical range: 0 to 20)
+        """
+        return _handle_controller_operation(
+            f"Set compressor parameters on track {track_index} FX {fx_index}",
+            controller.set_compressor_params, track_index, fx_index, threshold, ratio, attack, release, makeup_gain
+        )
+
+    @mcp.tool("set_limiter_params")
+    def set_limiter_params(ctx: Context, track_index: int, fx_index: int,
+                          threshold: Optional[float] = None,
+                          ceiling: Optional[float] = None,
+                          release: Optional[float] = None) -> Dict[str, Any]:
+        """
+        Set common limiter parameters.
+        
+        Args:
+            track_index (int): Index of the track containing the limiter
+            fx_index (int): Index of the limiter FX on the track
+            threshold (float, optional): Threshold in dB (typical range: -20 to 0)
+            ceiling (float, optional): Output ceiling in dB (typical range: -10 to 0)
+            release (float, optional): Release time in ms (typical range: 1 to 100)
+        """
+        return _handle_controller_operation(
+            f"Set limiter parameters on track {track_index} FX {fx_index}",
+            controller.set_limiter_params, track_index, fx_index, threshold, ceiling, release
+        )
+
+def _setup_meter_tools(mcp: FastMCP, controller) -> None:
+    """Setup meter reading MCP tools."""
+    
+    @mcp.tool("get_track_peak_level")
+    def get_track_peak_level(ctx: Context, track_index: int) -> Dict[str, Any]:
+        """
+        Get the current peak levels for a track.
+        
+        Args:
+            track_index (int): Index of the track to get peak levels from
+        """
+        try:
+            peak_levels = controller.get_track_peak_level(track_index)
+            return _create_success_response(f"Track {track_index} peak levels: {peak_levels}")
+        except Exception as e:
+            logger.error(f"Failed to get track peak level: {str(e)}")
+            return _create_error_response(f"Failed to get track peak level: {str(e)}")
+
+    @mcp.tool("get_master_peak_level")
+    def get_master_peak_level(ctx: Context) -> Dict[str, Any]:
+        """Get the current peak levels for the master track."""
+        try:
+            peak_levels = controller.get_master_peak_level()
+            return _create_success_response(f"Master peak levels: {peak_levels}")
+        except Exception as e:
+            logger.error(f"Failed to get master peak level: {str(e)}")
+            return _create_error_response(f"Failed to get master peak level: {str(e)}")
 
 def _setup_marker_tools(mcp: FastMCP, controller) -> None:
     """Setup marker and region-related MCP tools."""
@@ -359,7 +583,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if start_measure:
-                start_time = time_to_measure(start_measure)
+                start_time = parse_position(start_measure)
             
             item_id = controller.create_midi_item(track_index, start_time, length)
             return _create_success_response(f"Created MIDI item {item_id} on track {track_index}")
@@ -464,7 +688,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if start_measure:
-                start_time = time_to_measure(start_measure)
+                start_time = parse_position(start_measure)
             
             item_id = controller.insert_audio_item(track_index, file_path, start_time, start_measure)
             return _create_success_response(
@@ -491,7 +715,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if new_measure:
-                new_time = time_to_measure(new_measure)
+                new_time = parse_position(new_measure)
             
             new_item_id = controller.duplicate_item(track_index, item_id, new_time)
             return _create_success_response(
@@ -552,7 +776,7 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if position_measure:
-                position_time = time_to_measure(position_measure)
+                position_time = parse_position(position_measure)
             
             success = controller.set_item_position(track_index, item_id, position_time)
             if success:
@@ -601,9 +825,9 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measures are provided
             if start_measure:
-                start_time = time_to_measure(start_measure)
+                start_time = parse_position(start_measure)
             if end_measure:
-                end_time = time_to_measure(end_measure)
+                end_time = parse_position(end_measure)
             
             items = controller.get_items_in_time_range(track_index, start_time, end_time)
             return _create_success_response(f"Items in time range: {items}")

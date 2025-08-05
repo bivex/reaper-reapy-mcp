@@ -24,9 +24,20 @@ def main():
     print("Starting MCP server for Reaper...")
     
     try:
-        # Create Reaper controller
+        # Create Reaper controller with connection check
         print("Initializing ReaperController...")
         controller = ReaperController(debug=True)
+        
+        # Check if REAPER connection is available
+        if not controller.verify_connection():
+            print("\n[WARNING] REAPER connection not available!")
+            print("The MCP server will start, but REAPER operations will fail.")
+            print("\nTo fix this:")
+            print("1. Make sure REAPER is running")
+            print("2. Run: python start_reapy_server_simple.py")
+            print("3. Or enable the reapy remote API in REAPER")
+            print()
+        
         print("ReaperController initialized successfully.")
         
         # Create MCP server
@@ -37,10 +48,17 @@ def main():
         
         # Run MCP server
         logger.info("Starting MCP server...")
+        print("[SUCCESS] MCP server started successfully!")
+        print("You can now use REAPER control tools through MCP.")
         mcp.run()
         
     except Exception as e:
         logger.error(f"Error running MCP server: {e}")
+        print(f"\n[ERROR] Failed to start MCP server: {e}")
+        print("\nTroubleshooting:")
+        print("1. Make sure all dependencies are installed: uv sync")
+        print("2. Check if REAPER is running and accessible")
+        print("3. Try running: python start_reapy_server_simple.py")
         raise
 
 if __name__ == "__main__":

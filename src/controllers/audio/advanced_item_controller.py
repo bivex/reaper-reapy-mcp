@@ -1,7 +1,5 @@
-import reapy
 import logging
 from typing import Dict, Any, List, Optional, Tuple
-from reapy import reascript_api as RPR
 
 
 class AdvancedItemController:
@@ -11,6 +9,22 @@ class AdvancedItemController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
 
     def split_item(self, track_index: int, item_index: int, split_time: float) -> List[int]:
         """
@@ -25,6 +39,7 @@ class AdvancedItemController:
             List[int]: List of resulting item indices
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -40,10 +55,10 @@ class AdvancedItemController:
             item = track.items[item_index]
             
             # Select the item
-            RPR.SetMediaItemSelected(item.id, True)
+            self._RPR.SetMediaItemSelected(item.id, True)
             
             # Split at the specified time
-            RPR.SplitMediaItem(item.id, split_time)
+            self._RPR.SplitMediaItem(item.id, split_time)
             
             # Get the resulting items
             new_items = []
@@ -70,6 +85,7 @@ class AdvancedItemController:
             int: Index of the resulting glued item, or -1 if failed
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -81,14 +97,14 @@ class AdvancedItemController:
             # Select the items to glue
             for item_idx in item_indices:
                 if item_idx < len(track.items):
-                    RPR.SetMediaItemSelected(track.items[item_idx].id, True)
+                    self._RPR.SetMediaItemSelected(track.items[item_idx].id, True)
             
             # Glue the selected items
-            RPR.Main_OnCommand(40362, 0)  # Glue items action
+            self._RPR.Main_OnCommand(40362, 0)  # Glue items action
             
             # Find the resulting item
             for i, item in enumerate(track.items):
-                if RPR.IsMediaItemSelected(item.id):
+                if self._RPR.IsMediaItemSelected(item.id):
                     self.logger.info(f"Glued {len(item_indices)} items into item {i}")
                     return i
             
@@ -112,6 +128,9 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
+
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -127,11 +146,11 @@ class AdvancedItemController:
             item = track.items[item_index]
             
             # Set fade-in length
-            RPR.SetMediaItemInfo_Value(item.id, "D_FADEOUTLEN", 0)  # Clear fade-out first
-            RPR.SetMediaItemInfo_Value(item.id, "D_FADEINLEN", fade_length)
+            self._RPR.SetMediaItemInfo_Value(item.id, "D_FADEOUTLEN", 0)  # Clear fade-out first
+            self._RPR.SetMediaItemInfo_Value(item.id, "D_FADEINLEN", fade_length)
             
             # Set fade-in curve
-            RPR.SetMediaItemInfo_Value(item.id, "C_FADEINLEN", fade_curve)
+            self._RPR.SetMediaItemInfo_Value(item.id, "C_FADEINLEN", fade_curve)
             
             self.logger.info(f"Added {fade_length}s fade-in to item {item_index} on track {track_index}")
             return True
@@ -154,6 +173,9 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
+
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -169,11 +191,11 @@ class AdvancedItemController:
             item = track.items[item_index]
             
             # Set fade-out length
-            RPR.SetMediaItemInfo_Value(item.id, "D_FADEINLEN", 0)  # Clear fade-in first
-            RPR.SetMediaItemInfo_Value(item.id, "D_FADEOUTLEN", fade_length)
+            self._RPR.SetMediaItemInfo_Value(item.id, "D_FADEINLEN", 0)  # Clear fade-in first
+            self._RPR.SetMediaItemInfo_Value(item.id, "D_FADEOUTLEN", fade_length)
             
             # Set fade-out curve
-            RPR.SetMediaItemInfo_Value(item.id, "C_FADEOUTLEN", fade_curve)
+            self._RPR.SetMediaItemInfo_Value(item.id, "C_FADEOUTLEN", fade_curve)
             
             self.logger.info(f"Added {fade_length}s fade-out to item {item_index} on track {track_index}")
             return True
@@ -196,6 +218,9 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
+
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -212,11 +237,11 @@ class AdvancedItemController:
             item2 = track.items[item2_index]
             
             # Select both items
-            RPR.SetMediaItemSelected(item1.id, True)
-            RPR.SetMediaItemSelected(item2.id, True)
+            self._RPR.SetMediaItemSelected(item1.id, True)
+            self._RPR.SetMediaItemSelected(item2.id, True)
             
             # Create crossfade
-            RPR.Main_OnCommand(40312, 0)  # Crossfade items action
+            self._RPR.Main_OnCommand(40312, 0)  # Crossfade items action
             
             self.logger.info(f"Created crossfade between items {item1_index} and {item2_index}")
             return True
@@ -237,6 +262,9 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
+
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -252,10 +280,10 @@ class AdvancedItemController:
             item = track.items[item_index]
             
             # Select the item
-            RPR.SetMediaItemSelected(item.id, True)
+            self._RPR.SetMediaItemSelected(item.id, True)
             
             # Reverse the item
-            RPR.Main_OnCommand(41051, 0)  # Reverse items action
+            self._RPR.Main_OnCommand(41051, 0)  # Reverse items action
             
             self.logger.info(f"Reversed item {item_index} on track {track_index}")
             return True
@@ -276,6 +304,9 @@ class AdvancedItemController:
             Dict[str, Any]: Fade information including lengths and curves
         """
         try:
+            reapy = self._get_reapy()
+
+
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -291,10 +322,10 @@ class AdvancedItemController:
             item = track.items[item_index]
             
             # Get fade information
-            fade_in_len = RPR.GetMediaItemInfo_Value(item.id, "D_FADEINLEN")
-            fade_out_len = RPR.GetMediaItemInfo_Value(item.id, "D_FADEOUTLEN")
-            fade_in_curve = RPR.GetMediaItemInfo_Value(item.id, "C_FADEINLEN")
-            fade_out_curve = RPR.GetMediaItemInfo_Value(item.id, "C_FADEOUTLEN")
+            fade_in_len = self._RPR.GetMediaItemInfo_Value(item.id, "D_FADEINLEN")
+            fade_out_len = self._RPR.GetMediaItemInfo_Value(item.id, "D_FADEOUTLEN")
+            fade_in_curve = self._RPR.GetMediaItemInfo_Value(item.id, "C_FADEINLEN")
+            fade_out_curve = self._RPR.GetMediaItemInfo_Value(item.id, "C_FADEOUTLEN")
             
             return {
                 "fade_in_length": fade_in_len,
@@ -306,3 +337,4 @@ class AdvancedItemController:
         except Exception as e:
             self.logger.error(f"Failed to get item fade info: {e}")
             return {} 
+        
