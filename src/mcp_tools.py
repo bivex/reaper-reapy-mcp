@@ -1,9 +1,20 @@
 from mcp import types
 from mcp.server.fastmcp import FastMCP, Context
 from typing import Optional, Dict, Any, List, Union
-import reapy
 import logging
-from src.utils.position_utils import position_to_time, time_to_measure
+from src.utils.position_utils import parse_position, measure_beat_to_time, time_to_measure_beat
+
+# Lazy import of reapy to avoid connection issues at module load time
+def _get_reapy():
+    try:
+        import reapy
+        return reapy
+    except ImportError:
+        logger.error("reapy library not available")
+        return None
+    except Exception as e:
+        logger.error(f"Failed to import reapy: {e}")
+        return None
 
 # Setup logger
 logger = logging.getLogger(__name__)
@@ -572,7 +583,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if start_measure:
-                start_time = time_to_measure(start_measure)
+                start_time = parse_position(start_measure)
             
             item_id = controller.create_midi_item(track_index, start_time, length)
             return _create_success_response(f"Created MIDI item {item_id} on track {track_index}")
@@ -677,7 +688,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if start_measure:
-                start_time = time_to_measure(start_measure)
+                start_time = parse_position(start_measure)
             
             item_id = controller.insert_audio_item(track_index, file_path, start_time, start_measure)
             return _create_success_response(
@@ -704,7 +715,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if new_measure:
-                new_time = time_to_measure(new_measure)
+                new_time = parse_position(new_measure)
             
             new_item_id = controller.duplicate_item(track_index, item_id, new_time)
             return _create_success_response(
@@ -765,7 +776,7 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measure is provided
             if position_measure:
-                position_time = time_to_measure(position_measure)
+                position_time = parse_position(position_measure)
             
             success = controller.set_item_position(track_index, item_id, position_time)
             if success:
@@ -814,9 +825,9 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
         try:
             # Handle time conversion if measures are provided
             if start_measure:
-                start_time = time_to_measure(start_measure)
+                start_time = parse_position(start_measure)
             if end_measure:
-                end_time = time_to_measure(end_measure)
+                end_time = parse_position(end_measure)
             
             items = controller.get_items_in_time_range(track_index, start_time, end_time)
             return _create_success_response(f"Items in time range: {items}")

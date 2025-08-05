@@ -1,6 +1,8 @@
-import reapy
 import logging
-from typing import Optional, List, Dict, Any, Union
+from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import reapy
 from dataclasses import dataclass
 
 
@@ -37,6 +39,22 @@ class RoutingController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
 
     def _validate_track_index(self, track_index: int) -> bool:
         """Validate that a track index is within valid range."""
@@ -45,6 +63,7 @@ class RoutingController:
             if track_index < 0:
                 return False
                 
+            reapy = self._get_reapy()
             project = reapy.Project()
             num_tracks = len(project.tracks)
             return track_index < num_tracks
@@ -52,12 +71,13 @@ class RoutingController:
             self.logger.error(f"Failed to validate track index: {e}")
             return False
 
-    def _get_track(self, track_index: int) -> Optional[reapy.Track]:
+    def _get_track(self, track_index: int) -> Optional['reapy.Track']:
         """Get a track by index with validation."""
         if not self._validate_track_index(track_index):
             return None
             
         try:
+            reapy = self._get_reapy()
             return reapy.Project().tracks[track_index]
         except Exception as e:
             self.logger.error(f"Failed to get track {track_index}: {e}")
@@ -207,6 +227,7 @@ class RoutingController:
                     
                     if dest_track_ptr_int != 0:
                         # Scan all tracks to find the matching one
+                        reapy = self._get_reapy()
                         project = reapy.Project()
                         for idx, project_track in enumerate(project.tracks):
                             # Convert project track ID to int for comparison
@@ -277,6 +298,7 @@ class RoutingController:
             RPR.UpdateArrange()
             
             receives = []
+            reapy = self._get_reapy()
             project = reapy.Project()
             
             self.logger.info(f"Scanning all tracks for sends to track {track_index} (target track ID: {target_track.id})")

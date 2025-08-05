@@ -1,13 +1,12 @@
-import reapy
 import logging
 import os
 import re
 from typing import List, Dict, Any, Optional
-from reapy import reascript_api as RPR
 
 # Constants to replace magic numbers
 PLUGIN_NAME_INDEX = 2  # Index of plugin name in comma-separated format
 MIN_PLUGIN_NAME_PARTS = 3  # Minimum parts needed for plugin name extraction
+
 
 class FXController:
     """Controller for FX-related operations in Reaper."""
@@ -16,8 +15,24 @@ class FXController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
 
-    def add_fx(self, track_index: int, fx_name: str) -> int:
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
+
+    def add_fx_to_track(self, track_index: int, fx_name: str) -> bool:
         """
         Add an FX to a track.
         
@@ -26,46 +41,21 @@ class FXController:
             fx_name (str): Name of the FX to add
             
         Returns:
-            int: Index of the added FX, or -1 if failed
+            bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
-            # Try using reapy's built-in method first
-            try:
-                fx = track.add_fx(fx_name)
-                if fx:
-                    self.logger.info(
-                        f"Added FX '{fx_name}' to track {track_index} using reapy method"
-                    )
-                    return 0  # Return 0 as the first FX index
-            except Exception as reapy_error:
-                self.logger.warning(f"Reapy method failed: {reapy_error}")
-            
-            # Fallback to ReaScript API method
-            # First, try to select the track
-            RPR.SetOnlyTrackSelected(track.id)
-            
-            # Add the FX using ReaScript API
-            fx_index = RPR.TrackFX_AddByName(
-                track.id, fx_name, False, 0
-            )
-            
-            if fx_index >= 0:
-                self.logger.info(
-                    f"Added FX '{fx_name}' to track {track_index} at index {fx_index}"
-                )
-                return fx_index
-            else:
-                self.logger.error(
-                    f"Failed to add FX '{fx_name}' to track {track_index}"
-                )
-                return -1
-            
+            # Add FX using ReaScript API
+            fx_id = self._RPR.TrackFX_AddByName(track.id, fx_name, False, 1)
+            return fx_id >= 0
+
         except Exception as e:
-            self.logger.error(f"Failed to add FX: {e}")
-            return -1
+            error_message = f"Failed to add FX {fx_name} to track {track_index}: {e}"
+            self.logger.error(error_message)
+            return False
 
     def remove_fx(self, track_index: int, fx_index: int) -> bool:
         """
@@ -79,11 +69,11 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Remove the FX using ReaScript API
-            success = RPR.TrackFX_Delete(
+            success = self._RPR.TrackFX_Delete(
                 track.id, fx_index
             )
             
@@ -117,19 +107,19 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Get the parameter index by name
-            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             for i in range(param_count):
-                param_name_retrieved = RPR.TrackFX_GetParamName(
+                param_name_retrieved = self._RPR.TrackFX_GetParamName(
                     track.id, fx_index, i, ""
                 )
                 if param_name_retrieved == param_name:
                     # Set the parameter value
-                    success = RPR.TrackFX_SetParam(track.id, fx_index, i, value)
+                    success = self._RPR.TrackFX_SetParam(track.id, fx_index, i, value)
                     if success:
                         self.logger.info(f"Set FX parameter '{param_name}' to {value}")
                     return success
@@ -156,19 +146,19 @@ class FXController:
             float: Parameter value, or 0.0 if failed
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Get the parameter index by name
-            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             for i in range(param_count):
-                param_name_retrieved = RPR.TrackFX_GetParamName(
+                param_name_retrieved = self._RPR.TrackFX_GetParamName(
                     track.id, fx_index, i, ""
                 )
                 if param_name_retrieved == param_name:
                     # Get the parameter value
-                    value = RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
                     self.logger.info(f"Got FX parameter '{param_name}': {value}")
                     return value
             
@@ -194,17 +184,17 @@ class FXController:
             List[Dict[str, Any]]: List of parameter dictionaries
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             param_list = []
-            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             for i in range(param_count):
-                param_name = RPR.TrackFX_GetParamName(
+                param_name = self._RPR.TrackFX_GetParamName(
                     track.id, fx_index, i, ""
                 )
-                param_value = RPR.TrackFX_GetParam(track.id, fx_index, i)
+                param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
                 
                 param_info = {
                     "index": i,
@@ -232,6 +222,7 @@ class FXController:
             List[Dict[str, Any]]: List of FX dictionaries
         """
         try:
+            reapy = self._get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -256,13 +247,13 @@ class FXController:
                 self.logger.warning(f"Reapy method failed: {reapy_error}")
             
             # Fallback to ReaScript API method
-            fx_count = RPR.TrackFX_GetCount(track.id)
+            fx_count = self._RPR.TrackFX_GetCount(track.id)
             
             for i in range(fx_count):
-                fx_name = RPR.TrackFX_GetFXName(
+                fx_name = self._RPR.TrackFX_GetFXName(
                     track.id, i, ""
                 )
-                enabled = RPR.TrackFX_GetEnabled(track.id, i)
+                enabled = self._RPR.TrackFX_GetEnabled(track.id, i)
                 
                 fx_info = {
                     "index": i,
@@ -336,7 +327,7 @@ class FXController:
         
         # Check if ReaperResourcePath is available through reapy
         try:
-            resource_path = reapy.reascript_api.GetResourcePath()
+            resource_path = self._RPR.GetResourcePath()
             if resource_path:
                 resource_paths.append(resource_path)
         except Exception as e:
@@ -418,16 +409,16 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             if enable is None:
                 # Toggle the current state
-                current_state = RPR.TrackFX_GetEnabled(track.id, fx_index)
+                current_state = self._RPR.TrackFX_GetEnabled(track.id, fx_index)
                 enable = not current_state
             
             # Set the enabled state
-            success = RPR.TrackFX_SetEnabled(track.id, fx_index, enable)
+            success = self._RPR.TrackFX_SetEnabled(track.id, fx_index, enable)
             
             if success:
                 state_str = "enabled" if enable else "disabled"
@@ -468,7 +459,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Common parameter names across different compressor plugins
@@ -481,12 +472,12 @@ class FXController:
             }
             
             success = True
-            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             # Get all parameter names
             param_names = []
             for i in range(param_count):
-                param_name = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_name = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
                 param_names.append((i, param_name))
             
             # Set parameters based on input values
@@ -506,7 +497,7 @@ class FXController:
                             if mapping.lower() in param_name.lower():
                                 # Convert value to appropriate range (0.0 to 1.0 for most plugins)
                                 normalized_value = self._normalize_compressor_param(param_type, value)
-                                RPR.TrackFX_SetParam(track.id, fx_index, param_idx, normalized_value)
+                                self._RPR.TrackFX_SetParam(track.id, fx_index, param_idx, normalized_value)
                                 self.logger.info(f"Set {param_type} to {value} (normalized: {normalized_value})")
                                 param_found = True
                                 break
@@ -572,7 +563,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Common parameter names across different limiter plugins
@@ -583,12 +574,12 @@ class FXController:
             }
             
             success = True
-            param_count = RPR.TrackFX_GetNumParams(track.id, fx_index)
+            param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
             
             # Get all parameter names
             param_names = []
             for i in range(param_count):
-                param_name = RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                param_name = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
                 param_names.append((i, param_name))
             
             # Set parameters based on input values
@@ -606,7 +597,7 @@ class FXController:
                             if mapping.lower() in param_name.lower():
                                 # Convert value to appropriate range
                                 normalized_value = self._normalize_limiter_param(param_type, value)
-                                RPR.TrackFX_SetParam(track.id, fx_index, param_idx, normalized_value)
+                                self._RPR.TrackFX_SetParam(track.id, fx_index, param_idx, normalized_value)
                                 self.logger.info(f"Set limiter {param_type} to {value} (normalized: {normalized_value})")
                                 param_found = True
                                 break
@@ -658,12 +649,12 @@ class FXController:
             Dict[str, float]: Peak levels in dB for left and right channels
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Get peak levels using ReaScript API
-            left_peak = RPR.Track_GetPeakInfo(track.id, 0)  # Left channel
-            right_peak = RPR.Track_GetPeakInfo(track.id, 1)  # Right channel
+            left_peak = self._RPR.Track_GetPeakInfo(track.id, 0)  # Left channel
+            right_peak = self._RPR.Track_GetPeakInfo(track.id, 1)  # Right channel
             
             # Convert linear to dB
             import math
@@ -688,12 +679,12 @@ class FXController:
             Dict[str, float]: Peak levels in dB for left and right channels
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             master_track = project.master_track
             
             # Get peak levels using ReaScript API
-            left_peak = RPR.Track_GetPeakInfo(master_track.id, 0)  # Left channel
-            right_peak = RPR.Track_GetPeakInfo(master_track.id, 1)  # Right channel
+            left_peak = self._RPR.Track_GetPeakInfo(master_track.id, 0)  # Left channel
+            right_peak = self._RPR.Track_GetPeakInfo(master_track.id, 1)  # Right channel
             
             # Convert linear to dB
             import math

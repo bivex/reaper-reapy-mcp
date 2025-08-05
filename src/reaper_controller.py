@@ -2,6 +2,7 @@
 
 import os
 import sys
+import logging
 from typing import Optional, List, Dict, Any, Union
 
 # Add necessary paths for imports
@@ -33,21 +34,66 @@ class ReaperController:
     Acts as a facade that delegates operations to appropriate specialized controllers.
     """
     def __init__(self, debug=False):
-        # Initialize other controllers as attributes
-        self.track = TrackController(debug=debug)
-        self.fx = FXController(debug=debug)
-        self.marker = MarkerController(debug=debug)
-        self.midi = MIDIController(debug=debug)
-        self.audio = AudioController(debug=debug)
-        self.master = MasterController(debug=debug)
-        self.project = ProjectController(debug=debug)
-        self.routing = RoutingController(debug=debug)
-        self.advanced_routing = AdvancedRoutingController(debug=debug)
-        self.automation = AutomationController(debug=debug)
-        self.advanced_items = AdvancedItemController(debug=debug)
+        # Setup logging
+        self.logger = logging.getLogger(__name__)
+        if debug:
+            self.logger.setLevel(logging.INFO)
         
         # Store debug setting for logging
         self.debug = debug
+        
+        # Initialize controllers with lazy reapy import
+        self._initialize_controllers()
+        
+        # Test connection
+        if not self.verify_connection():
+            self.logger.warning("REAPER connection not available. Some operations may fail.")
+    
+    def _initialize_controllers(self):
+        """Initialize all controllers with proper error handling."""
+        try:
+            self.track = TrackController(debug=self.debug)
+            self.fx = FXController(debug=self.debug)
+            self.marker = MarkerController(debug=self.debug)
+            self.midi = MIDIController(debug=self.debug)
+            self.audio = AudioController(debug=self.debug)
+            self.master = MasterController(debug=self.debug)
+            self.project = ProjectController(debug=self.debug)
+            self.routing = RoutingController(debug=self.debug)
+            self.advanced_routing = AdvancedRoutingController(debug=self.debug)
+            self.automation = AutomationController(debug=self.debug)
+            self.advanced_items = AdvancedItemController(debug=self.debug)
+        except Exception as e:
+            self.logger.error(f"Failed to initialize controllers: {e}")
+            # Create placeholder controllers that will fail gracefully
+            self._create_placeholder_controllers()
+    
+    def _create_placeholder_controllers(self):
+        """Create placeholder controllers when reapy is not available."""
+        class PlaceholderController:
+            def __init__(self, name, debug=False):
+                self.name = name
+                self.logger = logging.getLogger(f"Placeholder{name}")
+                if debug:
+                    self.logger.setLevel(logging.INFO)
+            
+            def __getattr__(self, name):
+                def method(*args, **kwargs):
+                    self.logger.warning(f"REAPER not connected. {self.name}.{name}() unavailable.")
+                    return None
+                return method
+        
+        self.track = PlaceholderController("TrackController", self.debug)
+        self.fx = PlaceholderController("FXController", self.debug)
+        self.marker = PlaceholderController("MarkerController", self.debug)
+        self.midi = PlaceholderController("MIDIController", self.debug)
+        self.audio = PlaceholderController("AudioController", self.debug)
+        self.master = PlaceholderController("MasterController", self.debug)
+        self.project = PlaceholderController("ProjectController", self.debug)
+        self.routing = PlaceholderController("RoutingController", self.debug)
+        self.advanced_routing = PlaceholderController("AdvancedRoutingController", self.debug)
+        self.automation = PlaceholderController("AutomationController", self.debug)
+        self.advanced_items = PlaceholderController("AdvancedItemController", self.debug)
     
     def verify_connection(self) -> bool:
         """Verify connection to REAPER."""
@@ -57,8 +103,13 @@ class ReaperController:
             project = reapy.Project()
             # Simple test to see if we can access project properties
             _ = len(project.tracks)
+            self.logger.info("REAPER connection verified successfully")
             return True
-        except Exception:
+        except ImportError:
+            self.logger.error("reapy library not available")
+            return False
+        except Exception as e:
+            self.logger.warning(f"REAPER connection failed: {e}")
             return False
     
     # Track operations

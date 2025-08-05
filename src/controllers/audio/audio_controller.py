@@ -1,17 +1,14 @@
-import reapy
 import logging
 import os
-from typing import Union
+from typing import Optional, List, Dict, Any
 import time
-from reapy import reascript_api as RPR
 
 from src.utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
-from src.utils.item_operations import select_item, delete_item
+from src.utils.item_operations import delete_item, verify_item_deletion
 
-# Constants to replace magic numbers
-POSITION_TOLERANCE = 0.01
-INSERTION_WAIT_TIME = 0.1
-DEFAULT_DUPLICATE_OFFSET = 0.001
+# Constants
+INSERTION_WAIT_TIME = 0.1  # Time to wait after media insertion
+POSITION_TOLERANCE = 0.001  # Tolerance for position matching
 
 class AudioController:
     """Controller for audio-related operations in Reaper."""
@@ -20,97 +17,103 @@ class AudioController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
 
-    def insert_audio_item(self, track_index: int, file_path: str, 
-                         start_time: float = None, start_measure: str = None) -> Union[int, str]:
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                import reapy
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
+
+    def add_audio_item(self, track_index: int, file_path: str, position: float = 0.0) -> Optional[int]:
         """
-        Insert an audio file as a media item on a track.
+        Add an audio file to a track.
         
         Args:
-            track_index (int): Index of the track to add the audio item to
+            track_index (int): Index of the track
             file_path (str): Path to the audio file
-            start_time (float): Start time in seconds (default: 0.0)
-            start_measure (str): Start measure (optional, not used)
+            position (float): Position in seconds where to place the item
             
         Returns:
-            int or str: ID of the created item
+            Optional[int]: Item ID if successful, None otherwise
         """
         try:
-            if not os.path.exists(file_path):
-                self.logger.error(f"Audio file does not exist: {file_path}")
-                return -1
-                
+            reapy = self._get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
-            # Use 0.0 as default start time if None is provided
-            if start_time is None:
-                start_time = 0.0
+            # Add audio item using ReaScript API
+            item_id = self._RPR.AddMediaItem(track.id)
+            if item_id >= 0:
+                # Set item position
+                self._RPR.SetMediaItemInfo_Value(item_id, "D_POSITION", position)
+                
+                # Create take and set source
+                take_id = self._RPR.AddTakeToMediaItem(item_id)
+                if take_id >= 0:
+                    # Set the source file
+                    self._RPR.SetMediaItemTake_Source(take_id, file_path)
+                    return item_id
             
-            # Select the track and set cursor position
-            self._prepare_track_for_insertion(track, start_time)
-            
-            # Store the number of items before insertion
-            num_items_before = len(track.items)
-            
-            # Insert the media file (0 means "add media to selected tracks")
-            RPR.InsertMedia(file_path, 0)
-            
-            # Wait for insertion to complete
-            time.sleep(INSERTION_WAIT_TIME)
-            
-            # Find and return the newly inserted item
-            return self._find_inserted_item(track, start_time, num_items_before)
+            return None
 
         except Exception as e:
-            error_message = f"Failed to insert audio item: {e}"
+            error_message = f"Failed to add audio item {file_path} to track {track_index}: {e}"
             self.logger.error(error_message)
-            return -1
+            return None
 
-    def _prepare_track_for_insertion(self, track, start_time):
-        """Prepare track for media insertion."""
-        # Clear all track selections and select only this track
-        RPR.SetOnlyTrackSelected(track.id)
+    def get_audio_items(self, track_index: int) -> List[Dict[str, Any]]:
+        """
+        Get all audio items on a track.
         
-        # Set the cursor to the start position (default to 0 if None)
-        if start_time is not None:
-            project = reapy.Project()
-            project.cursor_position = start_time
-        else:
-            # Set cursor to beginning if no start time specified
-            project = reapy.Project()
-            project.cursor_position = 0.0
-
-    def _find_inserted_item(self, track, start_time, num_items_before):
-        """Find the newly inserted item after media insertion."""
-        # Check if any new items were added
-        if len(track.items) <= num_items_before:
-            self.logger.error("No new items were added after media insertion")
-            return -1
-        
-        # Find the newly inserted item (should be the last one)
-        for i in range(len(track.items) - 1, -1, -1):
-            item = track.items[i]
-            if abs(item.position - start_time) < POSITION_TOLERANCE:
-                self.logger.info(f"Found inserted audio item at position {item.position}, ID: {item.id}")
-                return item.id
-        
-        # If we couldn't find the item at the exact position, return the last item
-        if len(track.items) > num_items_before:
-            last_item = track.items[-1]
-            self.logger.info(f"Using last inserted item at position {last_item.position}, ID: {last_item.id}")
-            return last_item.id
-        
-        self.logger.warning(f"Couldn't find the inserted audio item at position {start_time}")
-        return -1
+        Args:
+            track_index (int): Index of the track
             
+        Returns:
+            List[Dict[str, Any]]: List of audio item information
+        """
+        try:
+            reapy = self._get_reapy()
+            project = reapy.Project()
+            track = project.tracks[track_index]
+            
+            audio_items = []
+            for item in track.items:
+                # Check if item has audio takes
+                for take in item.takes:
+                    if not take.is_midi:
+                        audio_items.append({
+                            'id': item.id,
+                            'position': item.position,
+                            'length': item.length,
+                            'file_path': take.source.filename if hasattr(take.source, 'filename') else '',
+                            'muted': item.muted,
+                            'selected': item.selected
+                        })
+                        break  # Only count each item once
+            
+            return audio_items
+
+        except Exception as e:
+            self.logger.error(f"Failed to get audio items for track {track_index}: {e}")
+            return []
+
     def get_item_properties(self, track_index, item_id):
         """
         Get properties of a media item.
         """
         try:                
             # Find the item in the actual project
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Use shared utility to find the item
@@ -140,7 +143,7 @@ class AudioController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             item = get_item_by_id_or_index(track, item_id)
@@ -170,7 +173,7 @@ class AudioController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             item = get_item_by_id_or_index(track, item_id)
@@ -200,7 +203,7 @@ class AudioController:
             int or str: ID of the duplicated item, or -1 if failed
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Get the original item
@@ -234,14 +237,14 @@ class AudioController:
             select_item(original_item)
             
             # Copy the item
-            RPR.CopySelectedMediaItems()
+            self._RPR.CopySelectedMediaItems()
             
             # Set cursor to new position
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             project.cursor_position = new_position
             
             # Paste the item
-            RPR.PasteSelectedMediaItems()
+            self._RPR.PasteSelectedMediaItems()
             
             # Find the newly created item
             return self._find_duplicated_item(track, new_position)
@@ -281,7 +284,7 @@ class AudioController:
             bool: True if successful, False otherwise
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             item = get_item_by_id_or_index(track, item_id)
@@ -311,7 +314,7 @@ class AudioController:
             list: List of item IDs within the time range
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             track = project.tracks[track_index]
             
             # Set default time range if not provided
@@ -348,7 +351,7 @@ class AudioController:
             list: List of dictionaries containing item information
         """
         try:
-            project = reapy.Project()
+            project = self._get_reapy().Project()
             selected_items = []
             
             for track in project.tracks:

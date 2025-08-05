@@ -1,4 +1,3 @@
-import reapy
 import logging
 from typing import Optional, Union
 
@@ -22,6 +21,8 @@ class ProjectController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
+
             project = reapy.Project()
             project.bpm = float(bpm)
             return True
@@ -39,6 +40,8 @@ class ProjectController:
             float: Current tempo in beats per minute, or None if not available
         """
         try:
+            reapy = self._get_reapy()
+
             project = reapy.Project()
             return project.bpm
             
@@ -55,6 +58,8 @@ class ProjectController:
             bool: True if successful, False otherwise
         """
         try:
+            reapy = self._get_reapy()
+
             project = reapy.Project()
             
             # Clear all items from all tracks
@@ -72,3 +77,20 @@ class ProjectController:
         except Exception as e:
             self.logger.error(f"Failed to clear project: {e}")
             return False
+        
+        # Lazy import of reapy to avoid connection errors on import
+        self._reapy = None
+        self._RPR = None
+
+    def _get_reapy(self):
+        """Lazy import of reapy."""
+        if self._reapy is None:
+            try:
+                reapy = self._get_reapy()
+                self._reapy = reapy
+                self._RPR = reapy.reascript_api
+            except ImportError as e:
+                self.logger.error(f"Failed to import reapy: {e}")
+                raise
+        return self._reapy
+
