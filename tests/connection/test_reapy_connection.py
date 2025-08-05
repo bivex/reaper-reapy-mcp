@@ -24,9 +24,13 @@ try:
         project = reapy.Project()
         print("Connected to project:", project.name)
         
-        # Check connection status
-        is_connected = reapy.is_connected()
-        print(f"Connection status: {is_connected}")
+        # Check if we can access project properties
+        try:
+            track_count = len(project.tracks)
+            print(f"Project has {track_count} tracks")
+            print("✅ Connection test PASSED - REAPER is accessible!")
+        except Exception as e:
+            print(f"Could not access project properties: {e}")
         
     except Exception as e:
         print(f"Connection failed: {e}")
