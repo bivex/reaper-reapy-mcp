@@ -2,6 +2,18 @@ import logging
 from typing import Dict, Any, List, Optional, Tuple
 
 
+import logging
+from typing import Optional, List, Dict, Any
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
+
+
 class AutomationController:
     """Controller for automation and modulation operations in Reaper."""
     
@@ -9,23 +21,6 @@ class AutomationController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-
     def create_automation_envelope(self, track_index: int, envelope_name: str) -> int:
         """
         Create an automation envelope on a track.
@@ -38,7 +33,7 @@ class AutomationController:
             int: Envelope index, or -1 if failed
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -89,7 +84,7 @@ class AutomationController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -137,7 +132,7 @@ class AutomationController:
             List[Dict[str, Any]]: List of automation points with time, value, and shape
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -198,7 +193,7 @@ class AutomationController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -239,7 +234,7 @@ class AutomationController:
             str: Current automation mode
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -274,7 +269,7 @@ class AutomationController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):

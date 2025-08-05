@@ -10,6 +10,18 @@ DEFAULT_MIDI_LENGTH = 4.0  # Default length for MIDI items in seconds
 DEFAULT_MIDI_VELOCITY = 100  # Default velocity for MIDI notes
 DEFAULT_MIDI_CHANNEL = 0  # Default MIDI channel
 
+import logging
+from typing import Optional, List, Dict, Any
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
+
+
 class MIDIController:
     """Controller for MIDI-related operations in Reaper."""
 
@@ -61,23 +73,6 @@ class MIDIController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-
     def _validate_track_index(self, track_index: int) -> bool:
         """
         Validate that a track index is within valid range.
@@ -89,7 +84,7 @@ class MIDIController:
             bool: True if valid, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track_count = len(project.tracks)
             
@@ -118,7 +113,7 @@ class MIDIController:
             return None
             
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             return reapy.Project().tracks[track_index]
         except Exception as e:
             error_message = f"Failed to get track {track_index}: {e}"
@@ -136,7 +131,7 @@ class MIDIController:
             bool: True if the selection was successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             # Clear all selections first
             self._RPR.SelectAllMediaItems(0, False)
             # Select this item
@@ -159,7 +154,7 @@ class MIDIController:
             Optional[int]: Item ID if successful, None otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -237,7 +232,7 @@ class MIDIController:
                 return False
             
             # Add the note using the ReaScript API
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             RPR = reapy.reascript_api
             
             # Get the take ID
@@ -246,7 +241,7 @@ class MIDIController:
             # Add the MIDI note using ReaScript API
             # MIDI_InsertNote(take, selected, muted, startppqpos, endppqpos, chan, pitch, vel)
             # We need to convert time to PPQ (pulses per quarter note)
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             start_ppq = RPR.TimeMap2_timeToQN(project.id, note_params.start_time)
             end_ppq = RPR.TimeMap2_timeToQN(project.id, note_params.start_time + note_params.length)
@@ -484,7 +479,7 @@ class MIDIController:
             List[Dict[str, Union[int, str, float]]]: List of MIDI item information
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             midi_items = []
             
             for track_index, track in enumerate(reapy.Project().tracks):
@@ -516,7 +511,7 @@ class MIDIController:
             Optional[Dict[str, int]]: Information about the selected MIDI item, or None if none found
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             
             for track_index, track in enumerate(reapy.Project().tracks):
                 for item in track.items:

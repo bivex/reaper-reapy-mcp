@@ -2,9 +2,15 @@ import logging
 import os
 from typing import Optional, List, Dict, Any
 import time
+import sys
 
-from src.utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
-from src.utils.item_operations import delete_item, verify_item_deletion
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
+from utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
+from utils.item_operations import delete_item, verify_item_deletion
 
 # Constants
 INSERTION_WAIT_TIME = 0.1  # Time to wait after media insertion
@@ -17,22 +23,6 @@ class AudioController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
 
     def add_audio_item(self, track_index: int, file_path: str, position: float = 0.0) -> Optional[int]:
         """
@@ -47,7 +37,7 @@ class AudioController:
             Optional[int]: Item ID if successful, None otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -82,7 +72,7 @@ class AudioController:
             List[Dict[str, Any]]: List of audio item information
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             

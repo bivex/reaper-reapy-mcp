@@ -10,18 +10,18 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 repo_root = os.path.dirname(script_dir)
 sys.path.insert(0, script_dir)  # Add script directory to path
 
-# Import controllers using absolute imports from src package
-from src.controllers.track.track_controller import TrackController
-from src.controllers.fx.fx_controller import FXController
-from src.controllers.marker.marker_controller import MarkerController
-from src.controllers.midi.midi_controller import MIDIController
-from src.controllers.audio.audio_controller import AudioController
-from src.controllers.master.master_controller import MasterController
-from src.controllers.project.project_controller import ProjectController
-from src.controllers.routing.routing_controller import RoutingController
-from src.controllers.routing.advanced_routing_controller import AdvancedRoutingController
-from src.controllers.automation.automation_controller import AutomationController
-from src.controllers.audio.advanced_item_controller import AdvancedItemController
+# Import controllers using relative imports to avoid circular imports
+from controllers.track.track_controller import TrackController
+from controllers.fx.fx_controller import FXController
+from controllers.marker.marker_controller import MarkerController
+from controllers.midi.midi_controller import MIDIController
+from controllers.audio.audio_controller import AudioController
+from controllers.master.master_controller import MasterController
+from controllers.project.project_controller import ProjectController
+from controllers.routing.routing_controller import RoutingController
+from controllers.routing.advanced_routing_controller import AdvancedRoutingController
+from controllers.automation.automation_controller import AutomationController
+from controllers.audio.advanced_item_controller import AdvancedItemController
 
 # Constants to replace magic numbers
 DEFAULT_MIDI_VELOCITY = 100

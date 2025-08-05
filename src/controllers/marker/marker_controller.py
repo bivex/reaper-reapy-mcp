@@ -2,6 +2,18 @@ import logging
 from typing import List, Dict, Any, Optional
 
 
+import logging
+from typing import Optional, List, Dict, Any
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
+
+
 class MarkerController:
     """Controller for marker and region operations in Reaper."""
     
@@ -9,23 +21,6 @@ class MarkerController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-
     def add_marker(self, position: float, name: str = "") -> bool:
         """
         Add a marker at the specified position.
@@ -38,7 +33,7 @@ class MarkerController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             # Add marker using ReaScript API
@@ -58,7 +53,7 @@ class MarkerController:
             List[Dict[str, Any]]: List of marker information
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             markers = []
@@ -93,7 +88,7 @@ class MarkerController:
             int: Index of the created region
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             region = project.add_region(start_time, end_time, name)
             return region.index
@@ -113,7 +108,7 @@ class MarkerController:
             bool: True if successful, False otherwise
         """
         try:                
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             # Log all region indices for debugging
@@ -139,7 +134,7 @@ class MarkerController:
             # If still not found, use ReaScript API directly
             try:
                 # Try to delete using ReaScript API
-                reapy = self._get_reapy()
+                reapy = get_reapy()
                 RPR = reapy.reascript_api
                 result = RPR.DeleteProjectMarker(0, region_index, True)  # isRegion=True
                 if result:
@@ -180,7 +175,7 @@ class MarkerController:
             int: Index of the created marker
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             marker = project.add_marker(time, name)
             return marker.index
@@ -200,7 +195,7 @@ class MarkerController:
             bool: True if successful, False otherwise
         """
         try: 
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             # Log all marker indices for debugging

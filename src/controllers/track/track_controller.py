@@ -1,5 +1,13 @@
 import logging
 from typing import Optional
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
 
 
 class TrackController:
@@ -9,22 +17,6 @@ class TrackController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
 
     def create_track(self, name: Optional[str] = None) -> int:
         """
@@ -37,7 +29,7 @@ class TrackController:
             int: Index of the created track
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.add_track()
             if name:
@@ -61,7 +53,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             track.name = new_name
@@ -75,7 +67,7 @@ class TrackController:
     def get_track_count(self) -> int:
         """Get the number of tracks in the project."""
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             return len(project.tracks)
 
@@ -95,7 +87,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             # Convert hex color to RGB
@@ -113,7 +105,7 @@ class TrackController:
     def get_track_color(self, track_index: int) -> str:
         """Get the color of a track."""
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             r, g, b = track.color
@@ -136,7 +128,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -169,7 +161,7 @@ class TrackController:
         """
         try:
             import math
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -200,7 +192,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -229,7 +221,7 @@ class TrackController:
             float: Pan position (-1.0 to 1.0)
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -253,7 +245,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -281,7 +273,7 @@ class TrackController:
             bool: True if muted, False if not muted
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -305,7 +297,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -333,7 +325,7 @@ class TrackController:
             bool: True if soloed, False if not soloed
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -395,7 +387,7 @@ class TrackController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -423,7 +415,7 @@ class TrackController:
             bool: True if armed for recording, False if disarmed
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             

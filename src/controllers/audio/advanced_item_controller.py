@@ -2,6 +2,18 @@ import logging
 from typing import Dict, Any, List, Optional, Tuple
 
 
+import logging
+from typing import Optional, List, Dict, Any
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
+
+
 class AdvancedItemController:
     """Controller for advanced item operations in Reaper."""
     
@@ -9,23 +21,6 @@ class AdvancedItemController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-
     def split_item(self, track_index: int, item_index: int, split_time: float) -> List[int]:
         """
         Split an item at a specific time.
@@ -39,7 +34,7 @@ class AdvancedItemController:
             List[int]: List of resulting item indices
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -85,7 +80,7 @@ class AdvancedItemController:
             int: Index of the resulting glued item, or -1 if failed
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -128,7 +123,7 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
 
 
             project = reapy.Project()
@@ -173,7 +168,7 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
 
 
             project = reapy.Project()
@@ -218,7 +213,7 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
 
 
             project = reapy.Project()
@@ -262,7 +257,7 @@ class AdvancedItemController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
 
 
             project = reapy.Project()
@@ -304,7 +299,7 @@ class AdvancedItemController:
             Dict[str, Any]: Fade information including lengths and curves
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
 
 
             project = reapy.Project()

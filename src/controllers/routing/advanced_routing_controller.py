@@ -2,6 +2,18 @@ import logging
 from typing import Dict, Any, List, Optional
 
 
+import logging
+from typing import Optional, List, Dict, Any
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
+
+
 class AdvancedRoutingController:
     """Controller for advanced routing and bussing operations in Reaper."""
     
@@ -9,23 +21,6 @@ class AdvancedRoutingController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
-
     def create_folder_track(self, name: str = "Folder Track") -> int:
         """
         Create a folder track that can contain other tracks.
@@ -37,7 +32,7 @@ class AdvancedRoutingController:
             int: Track index of the created folder track
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             # Create a new track using the correct API function
@@ -71,7 +66,7 @@ class AdvancedRoutingController:
             int: Track index of the created bus track
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             # Create a new track using the correct API function
@@ -106,7 +101,7 @@ class AdvancedRoutingController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if child_track_index >= len(project.tracks) or parent_track_index >= len(project.tracks):
@@ -140,7 +135,7 @@ class AdvancedRoutingController:
             List[int]: List of child track indices
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if parent_track_index >= len(project.tracks):
@@ -182,7 +177,7 @@ class AdvancedRoutingController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):
@@ -210,7 +205,7 @@ class AdvancedRoutingController:
             int: Folder depth of the track
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             if track_index >= len(project.tracks):

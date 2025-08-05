@@ -1,5 +1,13 @@
 import logging
 from typing import Optional, Union
+import sys
+import os
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
 
 
 class ProjectController:
@@ -9,22 +17,6 @@ class ProjectController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
     
     def set_tempo(self, bpm: float) -> bool:
         """
@@ -37,13 +29,45 @@ class ProjectController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
-            project = reapy.Project()
-            project.bpm = float(bpm)
-            return True
+            reapy = get_reapy()
             
+            # Try to connect to REAPER first with connection retry
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    project = reapy.Project()
+                    
+                    # Log the current state for debugging
+                    self.logger.info(f"Setting tempo to {bpm} BPM (attempt {attempt + 1})")
+                    
+                    # Try to set the tempo
+                    project.bpm = float(bpm)
+                    
+                    # Verify the tempo was set correctly
+                    new_tempo = project.bpm
+                    self.logger.info(f"Tempo set successfully. New tempo: {new_tempo}")
+                    
+                    return True
+                    
+                except (ConnectionAbortedError, ConnectionError) as ce:
+                    self.logger.warning(f"Connection error on attempt {attempt + 1}: {ce}")
+                    if attempt == max_retries - 1:
+                        raise ce
+                    # Wait a bit before retrying
+                    import time
+                    time.sleep(0.1)
+                    continue
+                    
+        except AttributeError as e:
+            error_message = f"Failed to set tempo to {bpm}: Attribute error - {e}"
+            self.logger.error(error_message)
+            return False
+        except (ConnectionAbortedError, ConnectionError) as ce:
+            error_message = f"Failed to set tempo to {bpm}: Connection error - {ce}"
+            self.logger.error(error_message)
+            return False
         except Exception as e:
-            error_message = f"Failed to set tempo to {bpm}: {e}"
+            error_message = f"Failed to set tempo to {bpm}: {type(e).__name__}: {e}"
             self.logger.error(error_message)
             return False
     
@@ -55,12 +79,32 @@ class ProjectController:
             float: Current tempo in beats per minute, or None if not available
         """
         try:
-            reapy = self._get_reapy()
-            project = reapy.Project()
-            return project.bpm
+            reapy = get_reapy()
             
+            # Try to connect to REAPER first with connection retry
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    project = reapy.Project()
+                    tempo = project.bpm
+                    self.logger.info(f"Current tempo: {tempo} BPM")
+                    return tempo
+                    
+                except (ConnectionAbortedError, ConnectionError) as ce:
+                    self.logger.warning(f"Connection error on attempt {attempt + 1}: {ce}")
+                    if attempt == max_retries - 1:
+                        raise ce
+                    # Wait a bit before retrying
+                    import time
+                    time.sleep(0.1)
+                    continue
+                    
+        except (ConnectionAbortedError, ConnectionError) as ce:
+            error_message = f"Failed to get tempo: Connection error - {ce}"
+            self.logger.error(error_message)
+            return None
         except Exception as e:
-            error_message = f"Failed to get tempo: {e}"
+            error_message = f"Failed to get tempo: {type(e).__name__}: {e}"
             self.logger.error(error_message)
             return None
 
@@ -72,7 +116,7 @@ class ProjectController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             
             # Clear all items from all tracks

@@ -2,6 +2,13 @@ import logging
 import os
 import re
 from typing import List, Dict, Any, Optional
+import sys
+
+# Add utils path for imports
+script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, script_dir)
+
+from utils.reapy_utils import get_reapy
 
 # Constants to replace magic numbers
 PLUGIN_NAME_INDEX = 2  # Index of plugin name in comma-separated format
@@ -15,22 +22,6 @@ class FXController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
-        # Lazy import of reapy to avoid connection errors on import
-        self._reapy = None
-        self._RPR = None
-
-    def _get_reapy(self):
-        """Lazy import of reapy."""
-        if self._reapy is None:
-            try:
-                import reapy
-                self._reapy = reapy
-                self._RPR = reapy.reascript_api
-            except ImportError as e:
-                self.logger.error(f"Failed to import reapy: {e}")
-                raise
-        return self._reapy
 
     def add_fx_to_track(self, track_index: int, fx_name: str) -> bool:
         """
@@ -44,7 +35,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
@@ -253,7 +244,7 @@ class FXController:
             List[Dict[str, Any]]: List of FX dictionaries
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
             
