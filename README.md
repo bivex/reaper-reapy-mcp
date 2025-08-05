@@ -65,24 +65,32 @@ A Python application for controlling REAPER Digital Audio Workstation (DAW) usin
 
 If you get connection errors like `ConnectionRefusedError`, follow these steps:
 
-### Step 1: Start REAPER Server
-Run the helper script to establish connection:
-```bash
-python start_reapy_server_simple.py
-```
+### Step 1: Configure REAPER Port
+**Important**: First, check what port REAPER is actually listening on:
+1. Open Task Manager > Details tab
+2. Look for `reaper.exe` in the list
+3. Check the "Local Port" column - this shows the actual port REAPER is using
+
+**Configure the correct port**:
+1. Open `start_reapy_server_simple.py` in a text editor
+2. Change the port number in line 5 to match what you see in Task Manager:
+   ```python
+   RPR_SetExtState("reapy", "server_port", "2307", 1)  # Change 2307 to your actual port
+   ```
+3. Save the file
 
 ### Step 2: Enable REAPER Remote API
 In REAPER:
 1. Go to Actions > Show action list
 2. Search for "reapy"
 3. Run "reapy: Enable remote API"
-4. Restart REAPER
+4. **Restart REAPER** for changes to take effect
 
 ### Step 3: Alternative - Manual Configuration
 If the above doesn't work:
 1. In REAPER, go to Preferences > Plug-ins > ReaScript
 2. Enable "Allow TCP connections"
-3. Set port to 2306 (default)
+3. Set port to match what you see in Task Manager
 4. Restart REAPER
 
 ### Step 4: Test Connection
@@ -92,6 +100,12 @@ python start_reapy_server_simple.py
 ```
 
 You should see: "✅ Connection established successfully!"
+
+### Common Port Issues
+- **Default port**: 2306
+- **Common alternative**: 2307
+- **Check actual port**: Use Task Manager to see what port REAPER is actually using
+- **Port mismatch**: If the port in your script doesn't match REAPER's actual port, connection will fail
 
 ## Running the Server
 
