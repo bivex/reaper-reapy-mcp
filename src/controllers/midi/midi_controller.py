@@ -75,6 +75,14 @@ class MIDIController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Initialize RPR reference
+        try:
+            reapy = get_reapy()
+            self._RPR = reapy.reascript_api
+        except Exception as e:
+            self.logger.error(f"Failed to initialize RPR: {e}")
+            self._RPR = None
 
     def _validate_track_index(self, track_index: int) -> bool:
         """
@@ -158,30 +166,56 @@ class MIDIController:
             length (float): Length of the item in seconds
 
         Returns:
-            Optional[int]: Item ID if successful, None otherwise
+            Optional[int]: Item index if successful, None otherwise
         """
         try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return None
+
             reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
-
-            # Create MIDI item using ReaScript API
-            item_id = self._RPR.AddMediaItem(track.id)
-            if item_id >= 0:
-                # Set item position and length
-                self._RPR.SetMediaItemInfo_Value(item_id, "D_POSITION", position)
-                self._RPR.SetMediaItemInfo_Value(item_id, "D_LENGTH", length)
-
-                # Create empty MIDI take
-                take_id = self._RPR.AddTakeToMediaItem(item_id)
-                if take_id >= 0:
-                    # Set take as MIDI
-                    self._RPR.SetMediaItemTakeInfo_Value(
-                        take_id, "P_SOURCE", 0
-                    )  # Empty MIDI source
-                    return item_id
-
-            return None
+            
+            # Count items before creation
+            item_count_before = len(track.items)
+            self.logger.info(f"Track {track_index} has {item_count_before} items before creation")
+            
+            # Simple approach: Use reapy's built-in MIDI item creation
+            try:
+                # Create MIDI item directly
+                item = track.add_item(position, length)
+                if item:
+                    # Add a take and make it MIDI
+                    take = item.add_take()
+                    if take:
+                        # MIDI takes in reapy are automatically MIDI-ready
+                        # No need for complex source creation
+                        self._RPR.UpdateArrange()
+                        
+                        # Verify creation by checking item count
+                        item_count_after = len(track.items)
+                        if item_count_after > item_count_before:
+                            new_index = item_count_before  # New item is at this index
+                            self.logger.info(f"Successfully created MIDI item at index {new_index}")
+                            return new_index
+                        else:
+                            self.logger.error("Item count didn't increase after creation")
+                            return None
+                    else:
+                        self.logger.error("Failed to add take to item")
+                        # Clean up the item if take creation failed
+                        try:
+                            item.delete()
+                        except:
+                            pass
+                        return None
+                else:
+                    self.logger.error("Failed to create item using reapy")
+                    return None
+            except Exception as creation_error:
+                self.logger.error(f"MIDI item creation failed: {creation_error}")
+                return None
 
         except Exception as e:
             error_message = f"Failed to create MIDI item on track {track_index}: {e}"

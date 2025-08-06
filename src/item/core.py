@@ -195,6 +195,37 @@ def get_selected_items() -> List[Dict[str, Any]]:
         return []
 
 
+def select_item(item: Any) -> bool:
+    """
+    Select a specific item.
+
+    Args:
+        item: The item to select
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Clear all selections first
+        reapy = get_reapy()
+        project = reapy.Project()
+
+        # Deselect all items
+        for track in project.tracks:
+            for track_item in track.items:
+                track_item.selected = False
+
+        # Select the target item
+        item.selected = True
+
+        logger.info(f"Selected item {item.id}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to select item: {e}")
+        return False
+
+
 # =============================================================================
 # ITEM LIFECYCLE MANAGEMENT
 # =============================================================================
@@ -204,34 +235,139 @@ def duplicate_item(
     track_index: int, item_id: int, new_position: Optional[float] = None
 ) -> Optional[int]:
     """
-    Duplicate an item on a track.
+    Duplicate an item on a track and return the concrete index of the new item.
+
+    Behavior:
+    - Accepts item_id as either a track index or a concrete identifier that
+      get_item_by_id_or_index can resolve.
+    - Duplicates the item using the underlying API.
+    - If new_position is provided, repositions the duplicated item.
+    - Returns the new item's index within track.items (stable int), not a
+      handle or sentinel.
 
     Args:
         track_index (int): Index of the track
-        item_id (int): ID of the item to duplicate
+        item_id (int): ID or index of the item to duplicate
         new_position (Optional[float]): New position for the duplicated item
 
     Returns:
-        Optional[int]: ID of the new item if successful, None otherwise
+        Optional[int]: Concrete index of the new item within the track if
+        successful, None otherwise
     """
     try:
-        # Find the original item using our utility function
+        reapy = get_reapy()
+        project = reapy.Project()
+        track = project.tracks[track_index]
+
+        # Resolve original item from id or index
         original_item = get_item_by_id_or_index(track_index, item_id)
         if original_item is None:
             logger.error(f"Item {item_id} not found on track {track_index}")
             return None
 
-        # Duplicate the item
-        new_item = original_item.copy()
+        # Capture a snapshot of existing item ids to detect the new one
+        before_ids = set()
+        for it in track.items:
+            try:
+                before_ids.add(it.id)
+            except Exception:
+                # Ignore items that fail to expose id during snapshot
+                pass
 
-        # Set new position if provided
-        if new_position is not None:
-            new_item.position = new_position
+        # Duplicate the item. Prefer API duplication if available,
+        # otherwise fallback to copy()
+        new_item = None
+        try:
+            if hasattr(original_item, "duplicate"):
+                new_item = original_item.duplicate()
+            else:
+                new_item = original_item.copy()
+        except Exception as e_dup:
+            logger.error(
+                f"Underlying duplication failed for item {item_id} on track {track_index}: {e_dup}"
+            )
+            return None
 
-        return new_item.id
+        # Optionally reposition the new item
+        if new_item is not None and new_position is not None:
+            try:
+                new_item.position = new_position
+            except Exception as e_pos:
+                logger.warning(
+                    f"Failed to set position {new_position} for duplicated item on track {track_index}: {e_pos}"
+                )
+
+        # Commit/refresh project state if necessary (some hosts require updates)
+        try:
+            if hasattr(project, "update_timeline"):
+                project.update_timeline()
+        except Exception:
+            pass
+
+        # Identify the newly created item by comparing ids after duplication
+        new_index = None
+        try:
+            for idx, it in enumerate(track.items):
+                try:
+                    if it.id not in before_ids:
+                        new_index = idx
+                        break
+                except Exception:
+                    # Skip items that don't expose id
+                    continue
+        except Exception as e_scan:
+            logger.warning(
+                f"Failed scanning for new item index on track {track_index}: {e_scan}"
+            )
+
+        # Fallback: if IDs are not comparable, try heuristics via nearest position
+        if new_index is None and new_item is not None:
+            try:
+                target_pos = getattr(new_item, "position", None)
+                if target_pos is not None:
+                    best_idx = None
+                    best_diff = None
+                    for idx, it in enumerate(track.items):
+                        try:
+                            diff = abs((it.position or 0.0) - target_pos)
+                        except Exception:
+                            continue
+                        if best_diff is None or diff < best_diff:
+                            best_diff = diff
+                            best_idx = idx
+                    new_index = best_idx
+            except Exception as e_heur:
+                logger.debug(f"Heuristic index resolution failed: {e_heur}")
+
+        # Final guard: ensure we return a proper integer index
+        if isinstance(new_index, int) and 0 <= new_index < len(track.items):
+            logger.info(
+                "Duplicated item %s on track %s -> new index %s",
+                item_id,
+                track_index,
+                new_index,
+            )
+            return new_index
+
+        # As a last resort, try to return index of 'new_item' if it exists
+        # within track.items by identity
+        if new_item is not None:
+            try:
+                for idx, it in enumerate(track.items):
+                    if it is new_item:
+                        return idx
+            except Exception:
+                pass
+
+        logger.error(
+            "Could not resolve new item index after duplication of %s on track %s",
+            item_id,
+            track_index,
+        )
+        return None
 
     except Exception as e:
-        logger.error(f"Failed to duplicate item {item_id}: {e}")
+        logger.error("Failed to duplicate item %s: %s", item_id, e)
         return None
 
 

@@ -10,6 +10,7 @@ from .core import (
     verify_item_deletion,
     get_items_in_time_range,
     get_selected_items,
+    select_item,
 )
 
 # Re-export all functions for backward compatibility
@@ -19,4 +20,5 @@ __all__ = [
     "verify_item_deletion",
     "get_items_in_time_range",
     "get_selected_items",
+    "select_item",
 ]
