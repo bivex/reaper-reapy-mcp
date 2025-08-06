@@ -21,7 +21,7 @@ class AutomationController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
+
         # Initialize RPR reference
         try:
             reapy = get_reapy()
@@ -77,7 +77,7 @@ class AutomationController:
                     envelope = track.pan_envelope
                 elif envelope_name.lower() == "mute":
                     envelope = track.mute_envelope
-                
+
                 if envelope is None:
                     # Create new envelope using reapy
                     if envelope_name.lower() == "volume":
@@ -88,14 +88,16 @@ class AutomationController:
                         envelope = track.add_envelope("Mute")
                     else:
                         envelope = track.add_envelope(envelope_name)
-                
+
                 if envelope:
                     envelope_index = 0  # Return success indicator
                 else:
                     envelope_index = -1
             except AttributeError:
                 # Fallback to ReaScript API if reapy methods not available
-                envelope_index = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+                envelope_index = self._RPR.GetTrackEnvelopeByName(
+                    track.id, envelope_type
+                )
                 if envelope_index == -1:
                     envelope_index = self._RPR.InsertEnvelope(
                         track.id, envelope_type, True, True, 0, 0, 0
@@ -154,13 +156,13 @@ class AutomationController:
                     envelope = track.pan_envelope
                 elif envelope_name.lower() == "mute":
                     envelope = track.mute_envelope
-                
+
                 if envelope is None:
                     self.logger.error(
                         f"Envelope '{envelope_name}' not found on track {track_index}. Create it first."
                     )
                     return False
-                
+
                 # Add point using reapy API
                 point = envelope.add_point(time, value)
                 if point:

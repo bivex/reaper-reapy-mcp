@@ -75,7 +75,7 @@ class MIDIController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
-        
+
         # Initialize RPR reference
         try:
             reapy = get_reapy()
@@ -176,11 +176,13 @@ class MIDIController:
             reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
-            
+
             # Count items before creation
             item_count_before = len(track.items)
-            self.logger.info(f"Track {track_index} has {item_count_before} items before creation")
-            
+            self.logger.info(
+                f"Track {track_index} has {item_count_before} items before creation"
+            )
+
             # Simple approach: Use reapy's built-in MIDI item creation
             try:
                 # Create MIDI item directly
@@ -192,15 +194,19 @@ class MIDIController:
                         # MIDI takes in reapy are automatically MIDI-ready
                         # No need for complex source creation
                         self._RPR.UpdateArrange()
-                        
+
                         # Verify creation by checking item count
                         item_count_after = len(track.items)
                         if item_count_after > item_count_before:
                             new_index = item_count_before  # New item is at this index
-                            self.logger.info(f"Successfully created MIDI item at index {new_index}")
+                            self.logger.info(
+                                f"Successfully created MIDI item at index {new_index}"
+                            )
                             return new_index
                         else:
-                            self.logger.error("Item count didn't increase after creation")
+                            self.logger.error(
+                                "Item count didn't increase after creation"
+                            )
                             return None
                     else:
                         self.logger.error("Failed to add take to item")

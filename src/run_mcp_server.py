@@ -54,6 +54,7 @@ def main():
     except Exception as e:
         logger.error(f"Error running MCP server: {e}")
         import traceback
+
         traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
