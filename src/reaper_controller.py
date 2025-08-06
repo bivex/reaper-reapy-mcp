@@ -25,6 +25,7 @@ from controllers.master.master_controller import MasterController
 from controllers.project.project_controller import ProjectController
 from controllers.routing.routing_controller import RoutingController
 from controllers.routing.advanced_routing_controller import AdvancedRoutingController
+from controllers.routing.sidechain_controller import SidechainController
 from controllers.automation.automation_controller import AutomationController
 from controllers.audio.advanced_item_controller import AdvancedItemController
 from controllers.analysis.analysis_controller import AnalysisController
@@ -70,6 +71,7 @@ class ReaperControllerFactory:
                     "project": ProjectController,
                     "routing": RoutingController,
                     "advanced_routing": AdvancedRoutingController,
+                    "sidechain": SidechainController,
                     "automation": AutomationController,
                     "advanced_items": AdvancedItemController,
                     "analysis": AnalysisController,
@@ -151,6 +153,11 @@ class ReaperControllerFactory:
     def advanced_routing(self) -> AdvancedRoutingController:
         """Get the advanced routing controller for complex routing operations."""
         return self._get_controller("advanced_routing")
+
+    @property
+    def sidechain(self) -> SidechainController:
+        """Get the sidechain controller for sidechain and bus routing operations."""
+        return self._get_controller("sidechain")
 
     @property
     def automation(self) -> AutomationController:
