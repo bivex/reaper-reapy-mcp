@@ -4,7 +4,8 @@ Backward compatibility wrapper that re-exports from specialized modules.
 """
 
 # Import from specialized modules
-from .lifecycle import duplicate_item, delete_item, verify_item_deletion
+from .duplication import duplicate_item
+from .deletion import delete_item, verify_item_deletion
 from .queries import get_items_in_time_range, get_selected_items
 
 # Re-export all functions for backward compatibility
