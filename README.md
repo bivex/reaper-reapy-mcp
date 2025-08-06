@@ -279,6 +279,9 @@ pip install -e .
 
 # Run tests
 pytest
+
+# Run MCP tool tests only (quiet)
+pytest tests/mcp -q
 ```
 
 ## 📄 License
