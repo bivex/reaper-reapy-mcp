@@ -37,3 +37,33 @@ Issues = "https://github.com/yourusername/reaper_api_usage/issues"
 
 [tool.setuptools]
 packages = ["src"] 
+
+[tool.black]
+line-length = 88
+
+target-version = ['py39']
+
+include = '\.pyi?$'
+
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+skip-string-normalization = false
+
+skip-magic-trailing-comma = false
+
+preview = false
