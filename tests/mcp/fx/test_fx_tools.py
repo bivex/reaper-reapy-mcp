@@ -5,6 +5,12 @@ from src.mcp_tools import _setup_fx_tools, FastMCP
 class DummyMCP(FastMCP):
     def __init__(self):
         super().__init__("reaper-reapy-mcp")
+        self.tools = {}
+    def tool(self, name):
+        def decorator(fn):
+            self.tools[name] = fn
+            return fn
+        return decorator
 
 @pytest.fixture
 def mcp_and_controller():

@@ -35,12 +35,12 @@ def mcp_and_controller():
 
 @pytest.mark.parametrize("tool,kwargs", [
     ("add_send", {"source_track": 0, "destination_track": 1, "volume": -6.0}),
-    ("remove_send", {"track_index": 0, "send_index": 0}),
+    ("remove_send", {"track": 0, "send_index": 0}),
     ("get_sends", {"track_index": 0}),
     ("get_receives", {"track_index": 0}),
-    ("set_send_volume", {"track_index": 0, "send_index": 0, "volume": -3.0}),
-    ("set_send_pan", {"track_index": 0, "send_index": 0, "pan": 0.2}),
-    ("toggle_send_mute", {"track_index": 0, "send_index": 0}),
+    ("set_send_volume", {"track": 0, "send_index": 0, "volume": -3.0}),
+    ("set_send_pan", {"track": 0, "send_index": 0, "pan": 0.2}),
+    ("toggle_send_mute", {"track": 0, "send_index": 0}),
     ("get_track_routing_info", {"track_index": 0}),
     ("debug_track_routing", {"track_index": 0}),
     ("clear_all_sends", {"track_index": 0}),
