@@ -21,6 +21,14 @@ class AutomationController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Initialize RPR reference
+        try:
+            reapy = get_reapy()
+            self._RPR = reapy.reascript_api
+        except Exception as e:
+            self.logger.error(f"Failed to initialize RPR: {e}")
+            self._RPR = None
 
     def create_automation_envelope(self, track_index: int, envelope_name: str) -> int:
         """
@@ -55,15 +63,43 @@ class AutomationController:
 
             envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
 
-            # Create the envelope using the correct API function
-            # First try to get existing envelope
-            envelope_index = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return -1
 
-            if envelope_index == -1:
-                # Create new envelope if it doesn't exist
-                envelope_index = self._RPR.InsertEnvelope(
-                    track.id, envelope_type, True, True, 0, 0, 0
-                )
+            # Use reapy high-level API for envelope creation
+            try:
+                # Try to get existing envelope first
+                envelope = None
+                if envelope_name.lower() == "volume":
+                    envelope = track.volume_envelope
+                elif envelope_name.lower() == "pan":
+                    envelope = track.pan_envelope
+                elif envelope_name.lower() == "mute":
+                    envelope = track.mute_envelope
+                
+                if envelope is None:
+                    # Create new envelope using reapy
+                    if envelope_name.lower() == "volume":
+                        envelope = track.add_envelope("Volume")
+                    elif envelope_name.lower() == "pan":
+                        envelope = track.add_envelope("Pan")
+                    elif envelope_name.lower() == "mute":
+                        envelope = track.add_envelope("Mute")
+                    else:
+                        envelope = track.add_envelope(envelope_name)
+                
+                if envelope:
+                    envelope_index = 0  # Return success indicator
+                else:
+                    envelope_index = -1
+            except AttributeError:
+                # Fallback to ReaScript API if reapy methods not available
+                envelope_index = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+                if envelope_index == -1:
+                    envelope_index = self._RPR.InsertEnvelope(
+                        track.id, envelope_type, True, True, 0, 0, 0
+                    )
 
             self.logger.info(
                 f"Created automation envelope '{envelope_name}' on track {track_index}"
@@ -105,29 +141,56 @@ class AutomationController:
 
             track = project.tracks[track_index]
 
-            # Get envelope
-            envelope_map = {
-                "volume": "VOLENV",
-                "pan": "PANENV",
-                "mute": "MUTEENV",
-                "width": "WIDTHENV",
-                "send_volume": "SENDVOLENV",
-                "send_pan": "SENDPANENV",
-            }
-
-            envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
-            envelope = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
-
-            if envelope == -1:
-                self.logger.error(
-                    f"Envelope '{envelope_name}' not found on track {track_index}"
-                )
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
                 return False
 
-            # Add automation point using the correct API function
-            point_index = self._RPR.InsertEnvelopePoint(
-                envelope, time, value, shape, 0, False, True
-            )
+            # Get envelope using reapy high-level API
+            try:
+                envelope = None
+                if envelope_name.lower() == "volume":
+                    envelope = track.volume_envelope
+                elif envelope_name.lower() == "pan":
+                    envelope = track.pan_envelope
+                elif envelope_name.lower() == "mute":
+                    envelope = track.mute_envelope
+                
+                if envelope is None:
+                    self.logger.error(
+                        f"Envelope '{envelope_name}' not found on track {track_index}. Create it first."
+                    )
+                    return False
+                
+                # Add point using reapy API
+                point = envelope.add_point(time, value)
+                if point:
+                    point_index = 0  # Success indicator
+                else:
+                    point_index = -1
+            except (AttributeError, TypeError):
+                # Fallback to ReaScript API
+                envelope_map = {
+                    "volume": "VOLENV",
+                    "pan": "PANENV",
+                    "mute": "MUTEENV",
+                    "width": "WIDTHENV",
+                    "send_volume": "SENDVOLENV",
+                    "send_pan": "SENDPANENV",
+                }
+
+                envelope_type = envelope_map.get(envelope_name.lower(), "VOLENV")
+                envelope_id = self._RPR.GetTrackEnvelopeByName(track.id, envelope_type)
+
+                if envelope_id == -1:
+                    self.logger.error(
+                        f"Envelope '{envelope_name}' not found on track {track_index}"
+                    )
+                    return False
+
+                # Add automation point using ReaScript API
+                point_index = self._RPR.InsertEnvelopePoint(
+                    envelope_id, time, value, shape, 0, False, True
+                )
 
             self.logger.info(
                 f"Added automation point at {time}s with value {value} on track {track_index}"
@@ -247,6 +310,10 @@ class AutomationController:
 
             automation_mode = mode_map.get(mode.lower(), 0)
 
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return False
+
             # Set automation mode
             self._RPR.SetTrackAutomationMode(track.id, automation_mode)
 
@@ -276,6 +343,10 @@ class AutomationController:
                 return "read"
 
             track = project.tracks[track_index]
+
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return "read"
 
             # Get automation mode
             mode = self._RPR.GetTrackAutomationMode(track.id)

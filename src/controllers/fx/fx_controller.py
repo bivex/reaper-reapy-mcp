@@ -136,6 +136,10 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return False
+                
             project = get_reapy().Project()
             track = project.tracks[track_index]
 
@@ -143,15 +147,20 @@ class FXController:
             param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
 
             for i in range(param_count):
-                param_name_retrieved = self._RPR.TrackFX_GetParamName(
-                    track.id, fx_index, i, ""
-                )
-                if param_name_retrieved == param_name:
-                    # Set the parameter value
-                    success = self._RPR.TrackFX_SetParam(track.id, fx_index, i, value)
-                    if success:
-                        self.logger.info(f"Set FX parameter '{param_name}' to {value}")
-                    return success
+                # Use proper buffer for parameter name retrieval
+                buf_size = 256
+                param_name_buf = "\x00" * buf_size
+                retval = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, buf_size)
+                
+                if retval:
+                    param_name_retrieved = param_name_buf.rstrip('\x00')
+                    
+                    # Case-insensitive partial match to handle parameter name variations
+                    if param_name.lower() in param_name_retrieved.lower() or param_name_retrieved.lower() in param_name.lower():
+                        # Set the parameter value
+                        self._RPR.TrackFX_SetParam(track.id, fx_index, i, value)
+                        self.logger.info(f"Set FX parameter '{param_name_retrieved}' to {value}")
+                        return True
 
             self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
             return False
@@ -173,6 +182,10 @@ class FXController:
             float: Parameter value, or 0.0 if failed
         """
         try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return 0.0
+                
             project = get_reapy().Project()
             track = project.tracks[track_index]
 
@@ -180,14 +193,20 @@ class FXController:
             param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
 
             for i in range(param_count):
-                param_name_retrieved = self._RPR.TrackFX_GetParamName(
-                    track.id, fx_index, i, ""
-                )
-                if param_name_retrieved == param_name:
-                    # Get the parameter value
-                    value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
-                    self.logger.info(f"Got FX parameter '{param_name}': {value}")
-                    return value
+                # Use proper buffer for parameter name retrieval
+                buf_size = 256
+                param_name_buf = "\x00" * buf_size
+                retval = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, buf_size)
+                
+                if retval:
+                    param_name_retrieved = param_name_buf.rstrip('\x00')
+                    
+                    # Case-insensitive partial match
+                    if param_name.lower() in param_name_retrieved.lower() or param_name_retrieved.lower() in param_name.lower():
+                        # Get the parameter value
+                        value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                        self.logger.info(f"Got FX parameter '{param_name_retrieved}': {value}")
+                        return value
 
             self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
             return 0.0
@@ -211,18 +230,49 @@ class FXController:
             List[Dict[str, Any]]: List of parameter dictionaries
         """
         try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return []
+                
             project = get_reapy().Project()
             track = project.tracks[track_index]
 
             param_list = []
             param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
+            
+            self.logger.info(f"FX {fx_index} has {param_count} parameters")
 
             for i in range(param_count):
-                param_name = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "")
+                # Use proper buffer size for parameter name
+                buf_size = 256
+                param_name_buf = "\x00" * buf_size
+                
+                # Get parameter name with proper buffer
+                retval = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, buf_size)
+                
+                if retval:
+                    # Clean the parameter name (remove null bytes)
+                    param_name = param_name_buf.rstrip('\x00')
+                else:
+                    param_name = f"Param_{i}"
+                
+                # Get parameter value
                 param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                
+                # Get formatted parameter value for display
+                format_buf = "\x00" * buf_size
+                self._RPR.TrackFX_GetFormattedParamValue(track.id, fx_index, i, format_buf, buf_size)
+                formatted_value = format_buf.rstrip('\x00')
 
-                param_info = {"index": i, "name": param_name, "value": param_value}
+                param_info = {
+                    "index": i, 
+                    "name": param_name, 
+                    "value": param_value,
+                    "formatted_value": formatted_value
+                }
                 param_list.append(param_info)
+                
+                self.logger.debug(f"Parameter {i}: {param_name} = {param_value} ({formatted_value})")
 
             self.logger.info(
                 f"Retrieved {len(param_list)} parameters for FX {fx_index}"

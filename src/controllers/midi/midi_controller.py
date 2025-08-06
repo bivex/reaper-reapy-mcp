@@ -75,6 +75,14 @@ class MIDIController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Initialize RPR reference
+        try:
+            reapy = get_reapy()
+            self._RPR = reapy.reascript_api
+        except Exception as e:
+            self.logger.error(f"Failed to initialize RPR: {e}")
+            self._RPR = None
 
     def _validate_track_index(self, track_index: int) -> bool:
         """
@@ -161,25 +169,31 @@ class MIDIController:
             Optional[int]: Item ID if successful, None otherwise
         """
         try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return None
+
             reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
 
-            # Create MIDI item using ReaScript API
-            item_id = self._RPR.AddMediaItem(track.id)
-            if item_id >= 0:
-                # Set item position and length
-                self._RPR.SetMediaItemInfo_Value(item_id, "D_POSITION", position)
-                self._RPR.SetMediaItemInfo_Value(item_id, "D_LENGTH", length)
-
-                # Create empty MIDI take
-                take_id = self._RPR.AddTakeToMediaItem(item_id)
-                if take_id >= 0:
-                    # Set take as MIDI
-                    self._RPR.SetMediaItemTakeInfo_Value(
-                        take_id, "P_SOURCE", 0
-                    )  # Empty MIDI source
-                    return item_id
+            # Create MIDI item using reapy high-level API
+            item = track.add_item(position, length)
+            if item:
+                # Add MIDI take
+                take = item.add_take()
+                if take:
+                    # Make it a MIDI take by creating empty MIDI source
+                    take.source = reapy.core.Source()
+                    
+                    # Return the item index within the track for consistency
+                    for idx, track_item in enumerate(track.items):
+                        if track_item.id == item.id:
+                            self.logger.info(f"Created MIDI item at index {idx} on track {track_index}")
+                            return idx
+                    
+                    # Fallback to item ID if index not found
+                    return item.id
 
             return None
 

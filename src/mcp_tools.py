@@ -37,9 +37,17 @@ def _handle_controller_operation(
     """Generic handler for controller operations with proper error handling."""
     try:
         result = operation_func(*args, **kwargs)
-        if result is not None and result is not False:
+        # Handle boolean results: True/False are explicit success/failure
+        # Handle numeric results: >= 0 is success, < 0 is failure
+        # Handle None: generally failure unless operation is expected to return None
+        if result is True or (isinstance(result, (int, float)) and result >= 0):
             return _create_success_response(f"{operation_name} completed successfully")
-        return _create_error_response(f"Failed to {operation_name.lower()}")
+        elif result is False or (isinstance(result, (int, float)) and result < 0):
+            return _create_error_response(f"Failed to {operation_name.lower()}")
+        elif result is not None:  # Non-boolean, non-numeric success (strings, objects, etc.)
+            return _create_success_response(f"{operation_name} completed successfully")
+        else:  # result is None
+            return _create_error_response(f"Failed to {operation_name.lower()}")
     except Exception as e:
         logger.error(f"Controller operation failed: {operation_name} - {str(e)}")
         return _create_error_response(f"Failed to {operation_name.lower()}: {str(e)}")
@@ -408,11 +416,16 @@ def _setup_fx_toggle_tool(mcp: FastMCP, controller) -> None:
         ctx: Context, track_index: int, fx_index: int, enable: Optional[bool] = None
     ) -> Dict[str, Any]:
         """Toggle FX on/off."""
-        action = "enable" if enable else "toggle"
-        operation_name = f"{action.capitalize()} FX {fx_index} on track {track_index}"
-        return _handle_controller_operation(
-            operation_name, controller.fx.toggle_fx, track_index, fx_index, enable
-        )
+        try:
+            result = controller.fx.toggle_fx(track_index, fx_index, enable)
+            action = "enabled" if enable is True else "disabled" if enable is False else "toggled"
+            if result:
+                return _create_success_response(f"FX {fx_index} on track {track_index} {action} successfully")
+            else:
+                return _create_error_response(f"Failed to toggle FX {fx_index} on track {track_index}")
+        except Exception as e:
+            logger.error(f"Toggle FX operation failed: {str(e)}")
+            return _create_error_response(f"Failed to toggle FX {fx_index} on track {track_index}: {str(e)}")
 
 
 def _setup_dynamics_tools(mcp: FastMCP, controller) -> None:
@@ -640,11 +653,20 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             # Handle time conversion if measure is provided
             if start_measure:
                 start_time = parse_position(start_measure)
+            
+            # Use 0.0 as default start time if none provided
+            if start_time is None:
+                start_time = 0.0
 
             item_id = controller.midi.create_midi_item(track_index, start_time, length)
-            return _create_success_response(
-                f"Created MIDI item {item_id} on track {track_index}"
-            )
+            if item_id is not None and item_id >= 0:
+                return _create_success_response(
+                    f"Created MIDI item {item_id} on track {track_index}"
+                )
+            else:
+                return _create_error_response(
+                    f"Failed to create MIDI item on track {track_index}"
+                )
         except Exception as e:
             error_message = f"Failed to create MIDI item: {str(e)}"
             logger.error(error_message)
@@ -800,9 +822,14 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
                 new_time = parse_position(new_measure)
 
             new_item_id = controller.audio.duplicate_item(track_index, item_id, new_time)
-            return _create_success_response(
-                f"Duplicated item {item_id} to {new_item_id}"
-            )
+            if new_item_id is not None and new_item_id != -1:
+                return _create_success_response(
+                    f"Duplicated item {item_id} to {new_item_id}"
+                )
+            else:
+                return _create_error_response(
+                    f"Failed to duplicate item {item_id} on track {track_index}"
+                )
         except Exception as e:
             error_message = f"Failed to duplicate item: {str(e)}"
             logger.error(error_message)

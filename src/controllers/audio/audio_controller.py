@@ -13,11 +13,12 @@ from src.item.utils import (
     get_item_by_id_or_index,
     get_item_properties as get_item_props,
 )
-from src.item.operations import delete_item, verify_item_deletion
+from src.item.operations import delete_item, verify_item_deletion, select_item
 
 # Constants
 INSERTION_WAIT_TIME = 0.1  # Time to wait after media insertion
 POSITION_TOLERANCE = 0.001  # Tolerance for position matching
+DEFAULT_DUPLICATE_OFFSET = 0.1  # Default offset for duplicated items
 
 
 class AudioController:
@@ -27,6 +28,14 @@ class AudioController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Initialize RPR reference
+        try:
+            reapy = get_reapy()
+            self._RPR = reapy.reascript_api
+        except Exception as e:
+            self.logger.error(f"Failed to initialize RPR: {e}")
+            self._RPR = None
 
     def add_audio_item(
         self, track_index: int, file_path: str, position: float = 0.0
@@ -235,21 +244,41 @@ class AudioController:
     def _create_item_duplicate(self, original_item, track, new_position):
         """Create a duplicate of the original item at the new position."""
         try:
-            # Select the original item
-            select_item(original_item)
-
-            # Copy the item
-            self._RPR.CopySelectedMediaItems()
-
-            # Set cursor to new position
-            project = get_reapy().Project()
-            project.cursor_position = new_position
-
-            # Paste the item
-            self._RPR.PasteSelectedMediaItems()
-
-            # Find the newly created item
-            return self._find_duplicated_item(track, new_position)
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return -1
+                
+            # Use reapy high-level API for duplication
+            try:
+                # Create a duplicate using reapy's duplicate method
+                duplicate_item = original_item.copy()
+                if duplicate_item:
+                    duplicate_item.position = new_position
+                    
+                    # Return the index of the duplicate within the track for consistency
+                    for idx, track_item in enumerate(track.items):
+                        if track_item.id == duplicate_item.id:
+                            self.logger.info(f"Duplicated item to index {idx}")
+                            return idx
+                    
+                    # Fallback to item ID
+                    return duplicate_item.id
+            except (AttributeError, TypeError):
+                # Fallback to manual copy-paste method
+                select_item(original_item)
+                
+                # Copy the item
+                self._RPR.Main_OnCommand(40698, 0)  # Edit: Copy items/tracks/envelope points (depending on focus)
+                
+                # Set cursor to new position
+                project = get_reapy().Project()
+                project.cursor_position = new_position
+                
+                # Paste the item
+                self._RPR.Main_OnCommand(40914, 0)  # Edit: Paste items/tracks/envelope points (depending on focus)
+                
+                # Find the newly created item
+                return self._find_duplicated_item(track, new_position)
 
         except Exception as e:
             self.logger.error(f"Failed to create item duplicate: {e}")
