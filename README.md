@@ -6,7 +6,7 @@
 
 ## Overview
 
-This Python-based MCP server provides comprehensive control over REAPER DAW through AI assistants. With 100+ specialized tools, you can manage tracks, effects, MIDI, audio items, routing, automation, professional audio analysis, and advanced mixing/mastering operations—all through natural language commands.
+This Python-based MCP server provides comprehensive control over REAPER DAW through AI assistants. With 104+ specialized tools, you can manage tracks, effects, MIDI, audio items, routing, automation, professional audio analysis, sidechain/bus routing, and advanced mixing/mastering operations—all through natural language commands.
 
 ## ✨ Key Features
 
@@ -17,6 +17,7 @@ This Python-based MCP server provides comprehensive control over REAPER DAW thro
 | 🎹 **MIDI Operations** | Create items, add/edit notes, pitch filtering, musical positioning |
 | 🎧 **Audio Processing** | Insert files, duplicate items, split, fade, crossfade, reverse |
 | 🔗 **Routing & Mixing** | Sends/receives, folder tracks, bus creation, comprehensive routing |
+| 🎚️ **Sidechain & Bus** | Sidechain compression, parallel processing, saturation buses, route analysis |
 | 🎛️ **Automation** | Envelope creation, point editing, automation modes |
 | 🎯 **Project Control** | Tempo, markers, regions, master track, project clearing |
 | 📊 **Audio Analysis** | LUFS/loudness measurement, spectrum analysis, stereo imaging, dynamics |
@@ -69,6 +70,81 @@ python -m src.run_mcp_server
 # Run MCP inspector
 test_mcp.bat
 ```
+
+## 🎚️ Professional Sidechain & Bus Routing
+
+The REAPER MCP server includes advanced sidechain and bus routing tools for professional mixing and mastering workflows.
+
+### Key Features
+
+| Tool | Purpose | Use Cases |
+|------|---------|-----------|
+| **`create_sidechain_send`** | Quick sidechain routing setup | Kick → Bass compression, Vocal → Music ducking |
+| **`setup_parallel_bus`** | Parallel processing with phase compensation | Parallel compression, parallel EQ, New York style processing |
+| **`add_saturation_bus`** | Parallel harmonic enhancement | Tape warmth, tube character, digital excitement |
+| **`sidechain_route_analyzer`** | Route validation and analysis | Latency measurement, feedback detection, channel mapping |
+
+### Sidechain Routing Capabilities
+
+- **Channel routing**: Supports both channels 3/4 (standard sidechain) and 1/2 routing
+- **Pre/Post fader**: Configurable send positioning for optimal signal flow
+- **Level control**: Precise dB-based send level adjustment
+- **Real-time validation**: Automatic route analysis and feedback loop detection
+
+### Bus Processing Features
+
+- **Automatic track creation**: Creates properly configured bus tracks
+- **Phase compensation**: Built-in latency compensation for parallel processing  
+- **Return routing**: Automatic return path setup to master or mix buses
+- **Saturation types**: Multiple saturation algorithms (tape, tube, transistor, digital)
+
+### Workflow Examples
+
+**Sidechain Compression (Kick → Bass):**
+```python
+# 1. Setup sidechain send
+create_sidechain_send(
+    source_track=0,      # Kick drum
+    destination_track=1, # Bass track  
+    dest_channels=3,     # Route to sidechain input 3/4
+    level_db=-3.0        # Moderate send level
+)
+
+# 2. Analyze routing validity
+analysis = sidechain_route_analyzer(0, 1)
+# Returns: route validity, channel mapping, latency info
+```
+
+**Parallel Compression:**
+```python
+# Create parallel bus with automatic compensation
+bus_info = setup_parallel_bus(
+    source_track=2,
+    bus_name="Vocal Parallel",
+    mix_db=-6.0,         # 50/50 blend
+    latency_comp=True    # Enable phase alignment
+)
+# Bus track created at: bus_info.bus_track_index
+```
+
+**Parallel Saturation:**
+```python
+# Add harmonic enhancement bus
+sat_bus = add_saturation_bus(
+    source_track=3,
+    saturation_type="tape",  # Warm tape character
+    mix_percent=20.0         # Subtle enhancement
+)
+# Returns saturation bus track index and FX info
+```
+
+### Technical Implementation
+
+- **Real REAPER API integration**: Uses native REAPER routing functions
+- **Professional channel mapping**: Proper stereo and sidechain channel configuration
+- **Latency measurement**: PDC-based latency calculation and compensation
+- **Route validation**: Comprehensive analysis including feedback detection
+- **Error handling**: Graceful failure modes with detailed error reporting
 
 ## 🔧 Troubleshooting
 
@@ -215,7 +291,40 @@ write_volume_automation_to_target_lufs(track_index=0, target_lufs=-23.0)
 master_chain_analysis(window_sec=10.0)  # Broadcast/streaming compliance
 ```
 
-## 🛠️ Available Tools (100+ Total)
+### Professional Sidechain & Bus Routing
+```python
+# Sidechain compression setup (kick → bass)
+create_sidechain_send(
+    source_track=0,      # Kick drum track
+    destination_track=1, # Bass track with compressor
+    dest_channels=3,     # Route to channels 3/4 for sidechain input
+    level_db=-6.0,       # Send level
+    pre_fader=True       # Pre-fader send
+)
+
+# Parallel compression bus
+setup_parallel_bus(
+    source_track=2,           # Source track (vocals)
+    bus_name="Vocal Parallel", 
+    mix_db=-3.0,             # Parallel mix level
+    latency_comp=True        # Enable phase compensation
+)
+
+# Parallel saturation for harmonic enhancement  
+add_saturation_bus(
+    source_track=3,          # Source track (drums)
+    saturation_type="tape",  # "tape", "tube", "transistor", "digital"
+    mix_percent=25.0         # 25% saturation blend
+)
+
+# Route analysis and validation
+sidechain_route_analyzer(
+    source_track=0,     # Kick 
+    dest_track=1        # Bass
+)  # Returns: validity, channel mapping, latency, warnings
+```
+
+## 🛠️ Available Tools (104+ Total)
 
 <details>
 <summary><strong>🔌 Connection (1)</strong></summary>
@@ -267,6 +376,15 @@ master_chain_analysis(window_sec=10.0)  # Broadcast/streaming compliance
 - `clear_all_sends`, `clear_all_receives`
 - `create_folder_track`, `create_bus_track`, `set_track_parent`
 - `get_track_children`, `set_track_folder_depth`, `get_track_folder_depth`
+</details>
+
+<details>
+<summary><strong>🎛️ Professional Sidechain & Bus Routing (4)</strong></summary>
+
+- `create_sidechain_send` - Quick sidechain routing (kick → bass compressor)
+- `setup_parallel_bus` - Parallel processing with phase compensation
+- `add_saturation_bus` - Parallel harmonic enhancement/saturation
+- `sidechain_route_analyzer` - Route validation and latency analysis
 </details>
 
 <details>

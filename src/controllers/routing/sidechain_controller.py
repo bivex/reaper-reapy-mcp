@@ -117,10 +117,8 @@ class SidechainController:
                 return None
                 
             project = reapy.Project()
-            self.logger.debug(f"Project object: {project}, type: {type(project)}")
-            self.logger.debug(f"Project n_tracks: {getattr(project, 'n_tracks', 'MISSING')}, checking tracks {source_track}, {destination_track}")
             if source_track >= project.n_tracks or destination_track >= project.n_tracks:
-                self.logger.error(f"Track index out of range: source={source_track}, dest={destination_track} (n_tracks={project.n_tracks})")
+                self.logger.error(f"Track index out of range: source={source_track}, dest={destination_track}")
                 return None
                 
             # Get direct API access
