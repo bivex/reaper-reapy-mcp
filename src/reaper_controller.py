@@ -27,6 +27,7 @@ from controllers.routing.routing_controller import RoutingController
 from controllers.routing.advanced_routing_controller import AdvancedRoutingController
 from controllers.automation.automation_controller import AutomationController
 from controllers.audio.advanced_item_controller import AdvancedItemController
+from controllers.analysis.analysis_controller import AnalysisController
 
 
 class ReaperControllerFactory:
@@ -71,6 +72,7 @@ class ReaperControllerFactory:
                     "advanced_routing": AdvancedRoutingController,
                     "automation": AutomationController,
                     "advanced_items": AdvancedItemController,
+                    "analysis": AnalysisController,
                 }[controller_type]
 
                 self._controllers[controller_type] = controller_class(debug=self.debug)
@@ -159,6 +161,11 @@ class ReaperControllerFactory:
     def advanced_items(self) -> AdvancedItemController:
         """Get the advanced items controller for complex item operations."""
         return self._get_controller("advanced_items")
+
+    @property
+    def analysis(self) -> AnalysisController:
+        """Get the analysis controller for loudness and spectrum analysis."""
+        return self._get_controller("analysis")
 
     def verify_connection(self) -> bool:
         """Verify connection to REAPER."""

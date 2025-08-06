@@ -6,7 +6,7 @@
 
 ## Overview
 
-This Python-based MCP server provides comprehensive control over REAPER DAW through AI assistants. With 86 specialized tools, you can manage tracks, effects, MIDI, audio items, routing, automation, and advanced mixing operations—all through natural language commands.
+This Python-based MCP server provides comprehensive control over REAPER DAW through AI assistants. With 100+ specialized tools, you can manage tracks, effects, MIDI, audio items, routing, automation, professional audio analysis, and advanced mixing/mastering operations—all through natural language commands.
 
 ## ✨ Key Features
 
@@ -19,7 +19,10 @@ This Python-based MCP server provides comprehensive control over REAPER DAW thro
 | 🔗 **Routing & Mixing** | Sends/receives, folder tracks, bus creation, comprehensive routing |
 | 🎛️ **Automation** | Envelope creation, point editing, automation modes |
 | 🎯 **Project Control** | Tempo, markers, regions, master track, project clearing |
-| 📊 **Monitoring** | Peak level metering for tracks and master |
+| 📊 **Audio Analysis** | LUFS/loudness measurement, spectrum analysis, stereo imaging, dynamics |
+| 🎚️ **Mastering Tools** | LUFS normalization, broadcast compliance, streaming standards |
+| 📈 **Gain Staging** | Volume automation generation, clip gain adjustment, peak limiting |
+| 📊 **Monitoring** | Peak level metering, crest factor, phase correlation |
 | 🎵 **Dual Positioning** | Time (seconds) and musical (measure:beat) notation support |
 
 ## 🚀 Quick Start
@@ -195,7 +198,24 @@ add_automation_point(track_index=0, envelope_name="volume", time=0.0, value=0.5)
 set_automation_mode(track_index=0, mode="write")
 ```
 
-## 🛠️ Available Tools (86 Total)
+### Professional Audio Analysis
+```python
+# LUFS loudness measurement
+loudness_measure_track(track_index=0, window_sec=30.0)
+loudness_measure_master(window_sec=30.0)
+
+# Spectrum analysis with weighting
+spectrum_analyzer_track(track_index=0, fft_size=8192, weighting="A")
+phase_correlation(track_index=0)
+stereo_image_metrics(track_index=0)
+
+# Professional mastering workflows
+normalize_track_lufs(track_index=0, target_lufs=-16.0, true_peak_ceiling=-1.0)
+write_volume_automation_to_target_lufs(track_index=0, target_lufs=-23.0)
+master_chain_analysis(window_sec=10.0)  # Broadcast/streaming compliance
+```
+
+## 🛠️ Available Tools (100+ Total)
 
 <details>
 <summary><strong>🔌 Connection (1)</strong></summary>
@@ -266,6 +286,18 @@ set_automation_mode(track_index=0, mode="write")
 - **Metering**: `get_track_peak_level`, `get_master_peak_level`
 </details>
 
+<details>
+<summary><strong>📊 Professional Audio Analysis (14)</strong></summary>
+
+- **Loudness Measurement**: `loudness_measure_track`, `loudness_measure_master`
+- **Spectrum Analysis**: `spectrum_analyzer_track`, `spectrum_analyzer_master` 
+- **Stereo Analysis**: `phase_correlation`, `stereo_image_metrics`
+- **Dynamics Analysis**: `crest_factor_track`, `crest_factor_master`
+- **LUFS Normalization**: `normalize_track_lufs`, `match_loudness_between_tracks`
+- **Gain Staging**: `write_volume_automation_to_target_lufs`, `clip_gain_adjust`
+- **Professional Analysis**: `comprehensive_track_analysis`, `master_chain_analysis`
+</details>
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
@@ -279,6 +311,9 @@ pip install -e .
 
 # Run tests
 pytest
+
+# Run MCP tool tests only (quiet)
+pytest tests/mcp -q
 ```
 
 ## 📄 License
