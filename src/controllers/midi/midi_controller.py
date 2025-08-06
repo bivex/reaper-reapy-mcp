@@ -177,59 +177,45 @@ class MIDIController:
             project = reapy.Project()
             track = project.tracks[track_index]
             
-            # Count items before creation to determine new item index
+            # Count items before creation
             item_count_before = len(track.items)
+            self.logger.info(f"Track {track_index} has {item_count_before} items before creation")
             
-            # Method 1: Try using reapy high-level API
+            # Simple approach: Use reapy's built-in MIDI item creation
             try:
+                # Create MIDI item directly
                 item = track.add_item(position, length)
                 if item:
-                    # Try to add MIDI take using reapy
-                    try:
-                        take = item.add_take()
-                        if take:
-                            # Create MIDI source using ReaScript
-                            midi_source = self._RPR.PCM_Source_CreateFromType("MIDI")
-                            if midi_source:
-                                # Set the MIDI source to the take
-                                self._RPR.SetMediaItemTake_Source(take.id, midi_source)
-                    except Exception as take_error:
-                        self.logger.warning(f"Take creation error (item still created): {take_error}")
-                    
-                    # Return the index of the new item
-                    new_index = item_count_before
-                    self.logger.info(f"Created MIDI item at index {new_index} on track {track_index}")
-                    return new_index
-            except Exception as reapy_error:
-                self.logger.warning(f"Reapy method failed, trying ReaScript: {reapy_error}")
-            
-            # Method 2: Fallback to ReaScript API
-            try:
-                # Create item using ReaScript
-                item_ptr = self._RPR.AddMediaItem(track.id)
-                if item_ptr:
-                    # Set position and length
-                    self._RPR.SetMediaItemInfo_Value(item_ptr, "D_POSITION", position)
-                    self._RPR.SetMediaItemInfo_Value(item_ptr, "D_LENGTH", length)
-                    
-                    # Add MIDI take
-                    take_ptr = self._RPR.AddTakeToMediaItem(item_ptr)
-                    if take_ptr:
-                        # Create MIDI source
-                        midi_source = self._RPR.PCM_Source_CreateFromType("MIDI")
-                        if midi_source:
-                            self._RPR.SetMediaItemTake_Source(take_ptr, midi_source)
-                        
-                        # Update the project to reflect changes
+                    # Add a take and make it MIDI
+                    take = item.add_take()
+                    if take:
+                        # MIDI takes in reapy are automatically MIDI-ready
+                        # No need for complex source creation
                         self._RPR.UpdateArrange()
                         
-                        new_index = item_count_before
-                        self.logger.info(f"Created MIDI item at index {new_index} on track {track_index} using ReaScript")
-                        return new_index
-            except Exception as reascript_error:
-                self.logger.error(f"ReaScript method also failed: {reascript_error}")
-            
-            return None
+                        # Verify creation by checking item count
+                        item_count_after = len(track.items)
+                        if item_count_after > item_count_before:
+                            new_index = item_count_before  # New item is at this index
+                            self.logger.info(f"Successfully created MIDI item at index {new_index}")
+                            return new_index
+                        else:
+                            self.logger.error("Item count didn't increase after creation")
+                            return None
+                    else:
+                        self.logger.error("Failed to add take to item")
+                        # Clean up the item if take creation failed
+                        try:
+                            item.delete()
+                        except:
+                            pass
+                        return None
+                else:
+                    self.logger.error("Failed to create item using reapy")
+                    return None
+            except Exception as creation_error:
+                self.logger.error(f"MIDI item creation failed: {creation_error}")
+                return None
 
         except Exception as e:
             error_message = f"Failed to create MIDI item on track {track_index}: {e}"

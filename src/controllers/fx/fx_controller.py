@@ -154,13 +154,22 @@ class FXController:
                 
                 if retval:
                     param_name_retrieved = param_name_buf.rstrip('\x00')
-                    
-                    # Case-insensitive partial match to handle parameter name variations
-                    if param_name.lower() in param_name_retrieved.lower() or param_name_retrieved.lower() in param_name.lower():
-                        # Set the parameter value
-                        self._RPR.TrackFX_SetParam(track.id, fx_index, i, value)
-                        self.logger.info(f"Set FX parameter '{param_name_retrieved}' to {value}")
-                        return True
+                else:
+                    # Try direct string method as fallback
+                    param_name_retrieved = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "", 256)
+                    if not param_name_retrieved:
+                        param_name_retrieved = self._generate_contextual_param_name(
+                            self._RPR.TrackFX_GetFXName(track.id, fx_index, "", 256) or "Unknown", i
+                        )
+                
+                # Case-insensitive partial match to handle parameter name variations
+                if param_name.lower() in param_name_retrieved.lower() or param_name_retrieved.lower() in param_name.lower():
+                    # Set the parameter value
+                    self._RPR.TrackFX_SetParam(track.id, fx_index, i, value)
+                    # Verify the value was set by reading it back
+                    actual_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    self.logger.info(f"Set FX parameter '{param_name_retrieved}' (index {i}) to {value}, actual: {actual_value}")
+                    return True
 
             self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
             return False
@@ -200,13 +209,20 @@ class FXController:
                 
                 if retval:
                     param_name_retrieved = param_name_buf.rstrip('\x00')
-                    
-                    # Case-insensitive partial match
-                    if param_name.lower() in param_name_retrieved.lower() or param_name_retrieved.lower() in param_name.lower():
-                        # Get the parameter value
-                        value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
-                        self.logger.info(f"Got FX parameter '{param_name_retrieved}': {value}")
-                        return value
+                else:
+                    # Try direct string method as fallback
+                    param_name_retrieved = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "", 256)
+                    if not param_name_retrieved:
+                        param_name_retrieved = self._generate_contextual_param_name(
+                            self._RPR.TrackFX_GetFXName(track.id, fx_index, "", 256) or "Unknown", i
+                        )
+                
+                # Case-insensitive partial match
+                if param_name.lower() in param_name_retrieved.lower() or param_name_retrieved.lower() in param_name.lower():
+                    # Get the parameter value
+                    value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    self.logger.info(f"Got FX parameter '{param_name_retrieved}' (index {i}): {value}")
+                    return value
 
             self.logger.error(f"Parameter '{param_name}' not found in FX {fx_index}")
             return 0.0
@@ -242,60 +258,52 @@ class FXController:
             
             self.logger.info(f"FX {fx_index} has {param_count} parameters")
 
+            # Get FX name for context
+            fx_name_buf = "\x00" * 256
+            self._RPR.TrackFX_GetFXName(track.id, fx_index, fx_name_buf, 256)
+            fx_name = fx_name_buf.rstrip('\x00')
+            
             for i in range(param_count):
                 try:
-                    # Method 1: Try with proper buffer allocation
-                    buf_size = 512  # Larger buffer for safety
-                    param_name_buf = "\x00" * buf_size
-                    
-                    # Get parameter name with proper buffer - note the different call signature
-                    retval, param_name_result = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, buf_size)
-                    
-                    if retval and param_name_result:
-                        param_name = param_name_result.rstrip('\x00')
-                    elif param_name_buf and param_name_buf != "\x00" * buf_size:
-                        param_name = param_name_buf.rstrip('\x00')
-                    else:
-                        # Method 2: Try alternative approach for ReaEQ-like plugins
+                    # Method 1: Direct string-based approach (most compatible)
+                    param_name = ""
+                    try:
+                        # This is the most reliable method for most ReaScript APIs
+                        buf_size = 256
+                        param_name = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "", buf_size)
+                        if not param_name or len(param_name.strip()) == 0:
+                            raise Exception("Empty parameter name")
+                    except Exception:
+                        # Method 2: Try with buffer approach
                         try:
-                            # Some plugins need different approach
-                            param_name = f"Parameter_{i}"
-                            # Try to get a better name using alternative method
-                            fx_name = self._RPR.TrackFX_GetFXName(track.id, fx_index, "")
-                            if "reaeq" in fx_name.lower():
-                                # ReaEQ specific parameter names based on common patterns
-                                if i < 5:  # First few are typically band enables
-                                    param_name = f"Band_{i+1}_Enable"
-                                elif i < 10:
-                                    param_name = f"Band_{i-4}_Frequency"
-                                elif i < 15:
-                                    param_name = f"Band_{i-9}_Gain"
-                                else:
-                                    param_name = f"Parameter_{i}"
-                        except Exception as name_error:
-                            self.logger.debug(f"Name generation error: {name_error}")
-                            param_name = f"Param_{i}"
+                            param_name_buf = "\x00" * 256
+                            success = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, 256)
+                            if success and param_name_buf:
+                                param_name = param_name_buf.rstrip('\x00')
+                                if not param_name:
+                                    raise Exception("Empty buffer result")
+                        except Exception:
+                            # Method 3: Generate contextual names based on FX type
+                            param_name = self._generate_contextual_param_name(fx_name, i)
                     
-                    # Get parameter value
+                    # Get parameter value (raw 0.0-1.0)
                     param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
                     
-                    # Get formatted parameter value for display
+                    # Get formatted parameter value (user-friendly display)
+                    formatted_value = ""
                     try:
-                        format_buf = "\x00" * buf_size
-                        format_retval, formatted_result = self._RPR.TrackFX_GetFormattedParamValue(
-                            track.id, fx_index, i, format_buf, buf_size
-                        )
-                        if format_retval and formatted_result:
-                            formatted_value = formatted_result.rstrip('\x00')
-                        else:
-                            formatted_value = str(param_value)
-                    except Exception as format_error:
-                        self.logger.debug(f"Format error: {format_error}")
-                        formatted_value = str(param_value)
+                        format_buf = "\x00" * 256
+                        success = self._RPR.TrackFX_GetFormattedParamValue(track.id, fx_index, i, format_buf, 256)
+                        if success and format_buf:
+                            formatted_value = format_buf.rstrip('\x00')
+                        if not formatted_value:
+                            formatted_value = f"{param_value:.3f}"
+                    except Exception:
+                        formatted_value = f"{param_value:.3f}"
 
                     param_info = {
                         "index": i, 
-                        "name": param_name, 
+                        "name": param_name or f"Param_{i}", 
                         "value": param_value,
                         "formatted_value": formatted_value
                     }
@@ -308,9 +316,9 @@ class FXController:
                     # Still add a basic entry so we don't miss parameters
                     param_list.append({
                         "index": i,
-                        "name": f"Unknown_Param_{i}",
+                        "name": f"Param_{i}",
                         "value": 0.0,
-                        "formatted_value": "Unknown"
+                        "formatted_value": "0.000"
                     })
 
             self.logger.info(
@@ -322,6 +330,45 @@ class FXController:
             error_message = f"Failed to get FX parameter list for FX {fx_index}: {e}"
             self.logger.error(error_message)
             return []
+    
+    def _generate_contextual_param_name(self, fx_name: str, param_index: int) -> str:
+        """Generate contextual parameter names based on FX type."""
+        fx_name_lower = fx_name.lower()
+        
+        if "reacomp" in fx_name_lower:
+            # ReaComp parameter mapping (typical order)
+            reacomp_params = [
+                "Threshold", "Ratio", "Attack", "Release", "Knee", 
+                "Auto-release", "Makeup", "Dry", "Detector input", "RMS size",
+                "Pre-comp", "Program dependent", "Adapt release", "Lookahead",
+                "Auto-makeup", "Feedback", "Output gain", "Mix", "Detector HPF",
+                "Detector LPF", "Saturate", "Log output", "Output meter", "Compressor"
+            ]
+            if param_index < len(reacomp_params):
+                return reacomp_params[param_index]
+        elif "realimit" in fx_name_lower or "limit" in fx_name_lower:
+            # ReaLimit parameter mapping
+            realimit_params = [
+                "Threshold", "Release", "Ceiling", "Brickwall limiter",
+                "Advanced limiter", "Output gain", "Mix"
+            ]
+            if param_index < len(realimit_params):
+                return realimit_params[param_index]
+        elif "reaeq" in fx_name_lower:
+            # ReaEQ parameter mapping (simplified)
+            if param_index == 0:
+                return "HP Frequency"
+            elif param_index == 1:
+                return "HP Enable"
+            elif param_index <= 21:  # 20 bands max
+                band_num = ((param_index - 2) // 4) + 1
+                param_type = ["Frequency", "Gain", "Q", "Type"][((param_index - 2) % 4)]
+                return f"Band{band_num}_{param_type}"
+            else:
+                return f"EQ_Param_{param_index}"
+        
+        # Default fallback
+        return f"Parameter_{param_index}"
 
     def get_fx_list(self, track_index: int) -> List[Dict[str, Any]]:
         """

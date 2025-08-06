@@ -213,13 +213,21 @@ class AudioController:
             new_position (float, optional): New position for the duplicated item
 
         Returns:
-            int or str: ID of the duplicated item, or -1 if failed
+            int: Index of the duplicated item, or -1 if failed
         """
         try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return -1
+                
             project = get_reapy().Project()
             track = project.tracks[track_index]
+            
+            # Count items before duplication
+            item_count_before = len(track.items)
+            self.logger.info(f"Track {track_index} has {item_count_before} items before duplication")
 
-            # Get the original item
+            # Get the original item by ID or index
             original_item = get_item_by_id_or_index(track, item_id)
             if original_item is None:
                 error_message = f"Item {item_id} not found on track {track_index}"
@@ -229,9 +237,43 @@ class AudioController:
             # Calculate new position if not provided
             if new_position is None:
                 new_position = self._calculate_duplicate_position(original_item)
+                
+            self.logger.info(f"Duplicating item {item_id} to position {new_position}")
 
-            # Create the duplicate
-            return self._create_item_duplicate(original_item, track, new_position)
+            # Simple duplication approach
+            try:
+                # Use reapy's copy method
+                duplicate_item = original_item.copy()
+                if duplicate_item:
+                    # Set the new position
+                    duplicate_item.position = new_position
+                    
+                    # Update the arrangement
+                    self._RPR.UpdateArrange()
+                    
+                    # Verify duplication by checking item count
+                    item_count_after = len(track.items)
+                    if item_count_after > item_count_before:
+                        new_index = item_count_after - 1  # Last item is the new one
+                        # Double-check by position
+                        if abs(track.items[new_index].position - new_position) < POSITION_TOLERANCE:
+                            self.logger.info(f"Successfully duplicated item to index {new_index}")
+                            return new_index
+                        else:
+                            # Search for the correct item by position
+                            for idx, item in enumerate(track.items):
+                                if abs(item.position - new_position) < POSITION_TOLERANCE:
+                                    self.logger.info(f"Found duplicated item at index {idx} by position")
+                                    return idx
+                    
+                    self.logger.error(f"Item count didn't increase after duplication (before: {item_count_before}, after: {item_count_after})")
+                    return -1
+                else:
+                    self.logger.error("Failed to create duplicate using reapy copy()")
+                    return -1
+            except Exception as reapy_error:
+                self.logger.error(f"Reapy duplication failed: {reapy_error}")
+                return -1
 
         except Exception as e:
             self.logger.error(f"Failed to duplicate item: {e}")
