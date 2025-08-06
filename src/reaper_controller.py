@@ -158,7 +158,8 @@ class ReaperControllerFactory:
         
         try:
             import socket
-            ports_to_try = [2306, 2307, 2308, 2309]
+            from .constants import REAPER_DEFAULT_PORTS
+            ports_to_try = REAPER_DEFAULT_PORTS
             
             for port in ports_to_try:
                 try:

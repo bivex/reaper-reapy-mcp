@@ -89,7 +89,7 @@ class RoutingController:
     def add_send(self, source_track: int, destination_track: int, 
                  volume: float = 0.0, pan: float = 0.0, 
                  mute: bool = False, phase: bool = False, 
-                 channels: int = 2) -> Optional[int]:
+                 channels: int = None) -> Optional[int]:
         """
         Add a send from source track to destination track.
         
@@ -105,6 +105,10 @@ class RoutingController:
         Returns:
             Optional[int]: Send ID if successful, None if failed
         """
+        from ...constants import DEFAULT_STEREO_CHANNELS
+        if channels is None:
+            channels = DEFAULT_STEREO_CHANNELS
+            
         try:
             source = self._get_track(source_track)
             destination = self._get_track(destination_track)

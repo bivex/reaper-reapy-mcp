@@ -133,10 +133,11 @@ class TrackController:
             track = project.tracks[track_index]
             
             # Convert dB to linear volume (REAPER uses linear 0.0 to ~3.98 for +12dB)
-            if volume_db <= -150:  # Treat as -inf dB
+            from ...constants import SILENCE_THRESHOLD_DB, DB_VOLUME_CONVERSION_FACTOR, DB_CONVERSION_FACTOR
+            if volume_db <= SILENCE_THRESHOLD_DB:  # Treat as -inf dB
                 linear_volume = 0.0
             else:
-                linear_volume = 10 ** (volume_db / 20.0)
+                linear_volume = DB_VOLUME_CONVERSION_FACTOR ** (volume_db / DB_CONVERSION_FACTOR)
             
             # Set volume using ReaScript API for more precise control
             reapy.reascript_api.SetMediaTrackInfo_Value(track.id, "D_VOL", linear_volume)
@@ -169,10 +170,11 @@ class TrackController:
             linear_volume = reapy.reascript_api.GetMediaTrackInfo_Value(track.id, "D_VOL")
             
             # Convert linear to dB
+            from ...constants import SILENCE_THRESHOLD_DB, DB_CONVERSION_FACTOR
             if linear_volume <= 0.0:
-                volume_db = -150.0  # Represent -inf dB as -150
+                volume_db = SILENCE_THRESHOLD_DB  # Represent -inf dB as -150
             else:
-                volume_db = 20.0 * math.log10(linear_volume)
+                volume_db = DB_CONVERSION_FACTOR * math.log10(linear_volume)
             
             return volume_db
             

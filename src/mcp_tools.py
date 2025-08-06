@@ -839,12 +839,13 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
 
 def _setup_routing_tools(mcp: FastMCP, controller) -> None:
     """Setup routing-related MCP tools."""
+    from .constants import DEFAULT_STEREO_CHANNELS
     
     @mcp.tool("add_send")
     def add_send(ctx: Context, source_track: int, destination_track: int, 
                  volume: float = 0.0, pan: float = 0.0, 
                  mute: bool = False, phase: bool = False, 
-                 channels: int = 2) -> Dict[str, Any]:
+                 channels: int = DEFAULT_STEREO_CHANNELS) -> Dict[str, Any]:
         """
         Add a send from source track to destination track.
         

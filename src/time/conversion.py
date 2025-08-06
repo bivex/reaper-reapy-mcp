@@ -34,7 +34,8 @@ def parse_position(position_input: Union[str, float]) -> Optional[float]:
             # Check if it's in measure:beat format
             if ':' in position_input:
                 parts = position_input.split(':')
-                if len(parts) == 2:
+                from ..constants import POSITION_COMPONENTS_COUNT
+                if len(parts) == POSITION_COMPONENTS_COUNT:
                     try:
                         measure = int(parts[0])
                         beat = float(parts[1])
@@ -104,7 +105,8 @@ def time_to_measure_beat(time_seconds: float) -> Tuple[int, float, float]:
         beats_per_measure = time_signature[0] / time_signature[1]
         
         # Convert time to beats
-        beats = time_seconds * project.tempo / 60.0
+        from ..constants import SECONDS_PER_MINUTE
+        beats = time_seconds * project.tempo / SECONDS_PER_MINUTE
         
         # Calculate measure and beat
         measure = int(beats / beats_per_measure) + 1
@@ -141,7 +143,8 @@ def measure_beat_to_time(measure: int, beat: float) -> float:
         total_beats = (measure - 1) * beats_per_measure + (beat - 1)
         
         # Convert beats to time
-        time_seconds = total_beats * 60.0 / project.tempo
+        from ..constants import SECONDS_PER_MINUTE
+        time_seconds = total_beats * SECONDS_PER_MINUTE / project.tempo
         
         return time_seconds
         
