@@ -22,6 +22,14 @@ class FXController:
         self.logger = logging.getLogger(__name__)
         if debug:
             self.logger.setLevel(logging.INFO)
+        
+        # Initialize RPR reference
+        try:
+            reapy = get_reapy()
+            self._RPR = reapy.reascript_api
+        except Exception as e:
+            self.logger.error(f"Failed to initialize RPR: {e}")
+            self._RPR = None
 
     def add_fx_to_track(self, track_index: int, fx_name: str) -> bool:
         """
@@ -60,7 +68,7 @@ class FXController:
             int: FX index if successful, -1 otherwise
         """
         try:
-            reapy = self._get_reapy()
+            reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
 
@@ -93,7 +101,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Remove the FX using ReaScript API
@@ -128,7 +136,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Get the parameter index by name
@@ -165,7 +173,7 @@ class FXController:
             float: Parameter value, or 0.0 if failed
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Get the parameter index by name
@@ -203,7 +211,7 @@ class FXController:
             List[Dict[str, Any]]: List of parameter dictionaries
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             param_list = []
@@ -420,7 +428,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             if enable is None:
@@ -474,7 +482,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Common parameter names across different compressor plugins
@@ -601,7 +609,7 @@ class FXController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Common parameter names across different limiter plugins
@@ -696,7 +704,7 @@ class FXController:
             Dict[str, float]: Peak levels in dB for left and right channels
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Get peak levels using ReaScript API
@@ -746,7 +754,7 @@ class FXController:
             Dict[str, float]: Peak levels in dB for left and right channels
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             master_track = project.master_track
 
             # Get peak levels using ReaScript API

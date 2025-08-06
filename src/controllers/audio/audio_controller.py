@@ -117,7 +117,7 @@ class AudioController:
         """
         try:
             # Find the item in the actual project
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Use shared utility to find the item
@@ -147,7 +147,7 @@ class AudioController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             item = get_item_by_id_or_index(track, item_id)
@@ -177,7 +177,7 @@ class AudioController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             item = get_item_by_id_or_index(track, item_id)
@@ -207,7 +207,7 @@ class AudioController:
             int or str: ID of the duplicated item, or -1 if failed
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Get the original item
@@ -242,7 +242,7 @@ class AudioController:
             self._RPR.CopySelectedMediaItems()
 
             # Set cursor to new position
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             project.cursor_position = new_position
 
             # Paste the item
@@ -288,7 +288,7 @@ class AudioController:
             bool: True if successful, False otherwise
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             item = get_item_by_id_or_index(track, item_id)
@@ -325,7 +325,7 @@ class AudioController:
             list: List of item IDs within the time range
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             track = project.tracks[track_index]
 
             # Set default time range if not provided
@@ -362,7 +362,7 @@ class AudioController:
             list: List of dictionaries containing item information
         """
         try:
-            project = self._get_reapy().Project()
+            project = get_reapy().Project()
             selected_items = []
 
             for track in project.tracks:
