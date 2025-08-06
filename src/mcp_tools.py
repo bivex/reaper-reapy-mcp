@@ -63,7 +63,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def create_track(ctx: Context, name: Optional[str] = None) -> Dict[str, Any]:
         """Create a new track in Reaper."""
         try:
-            track_index = controller.create_track(name)
+            track_index = controller.track.create_track(name)
             return _create_success_response(f"Created track {track_index}")
         except Exception as e:
             logger.error(f"Failed to create track: {str(e)}")
@@ -74,7 +74,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """Rename an existing track."""
         operation_message = f"Rename track {track_index} to {new_name}"
         return _handle_controller_operation(
-            operation_message, controller.rename_track, track_index, new_name
+            operation_message, controller.track.rename_track, track_index, new_name
         )
 
     @mcp.tool("set_track_color")
@@ -82,14 +82,14 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """Set the color of a track."""
         operation_message = f"Set color of track {track_index} to {color}"
         return _handle_controller_operation(
-            operation_message, controller.set_track_color, track_index, color
+            operation_message, controller.track.set_track_color, track_index, color
         )
 
     @mcp.tool("get_track_color")
     def get_track_color(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the color of a track."""
         try:
-            color = controller.get_track_color(track_index)
+            color = controller.track.get_track_color(track_index)
             return _create_success_response(f"Color of track {track_index}: {color}")
         except Exception as e:
             logger.error(f"Failed to get track color: {str(e)}")
@@ -99,7 +99,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def get_track_count(ctx: Context) -> Dict[str, Any]:
         """Get the number of tracks in the project."""
         try:
-            count = controller.get_track_count()
+            count = controller.track.get_track_count()
             return _create_success_response(f"Track count: {count}")
         except Exception as e:
             logger.error(f"Failed to get track count: {str(e)}")
@@ -118,7 +118,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {track_index} volume to {volume_db} dB",
-            controller.set_track_volume,
+            controller.track.set_track_volume,
             track_index,
             volume_db,
         )
@@ -127,7 +127,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def get_track_volume(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the volume of a track in dB."""
         try:
-            volume = controller.get_track_volume(track_index)
+            volume = controller.track.get_track_volume(track_index)
             return _create_success_response(
                 f"Track {track_index} volume: {volume:.2f} dB"
             )
@@ -146,7 +146,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {track_index} pan to {pan}",
-            controller.set_track_pan,
+            controller.track.set_track_pan,
             track_index,
             pan,
         )
@@ -155,7 +155,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def get_track_pan(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the pan position of a track."""
         try:
-            pan = controller.get_track_pan(track_index)
+            pan = controller.track.get_track_pan(track_index)
             return _create_success_response(f"Track {track_index} pan: {pan}")
         except Exception as e:
             logger.error(f"Failed to get track pan: {str(e)}")
@@ -172,7 +172,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {track_index} mute to {mute}",
-            controller.set_track_mute,
+            controller.track.set_track_mute,
             track_index,
             mute,
         )
@@ -181,7 +181,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def get_track_mute(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the mute state of a track."""
         try:
-            mute = controller.get_track_mute(track_index)
+            mute = controller.track.get_track_mute(track_index)
             return _create_success_response(f"Track {track_index} mute: {mute}")
         except Exception as e:
             logger.error(f"Failed to get track mute: {str(e)}")
@@ -198,7 +198,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {track_index} solo to {solo}",
-            controller.set_track_solo,
+            controller.track.set_track_solo,
             track_index,
             solo,
         )
@@ -207,7 +207,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def get_track_solo(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the solo state of a track."""
         try:
-            solo = controller.get_track_solo(track_index)
+            solo = controller.track.get_track_solo(track_index)
             return _create_success_response(f"Track {track_index} solo: {solo}")
         except Exception as e:
             logger.error(f"Failed to get track solo: {str(e)}")
@@ -218,7 +218,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """Toggle the mute state of a track."""
         return _handle_controller_operation(
             f"Toggle track {track_index} mute",
-            controller.toggle_track_mute,
+            controller.track.toggle_track_mute,
             track_index,
         )
 
@@ -227,7 +227,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """Toggle the solo state of a track."""
         return _handle_controller_operation(
             f"Toggle track {track_index} solo",
-            controller.toggle_track_solo,
+            controller.track.toggle_track_solo,
             track_index,
         )
 
@@ -242,7 +242,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {track_index} record arm to {arm}",
-            controller.set_track_arm,
+            controller.track.set_track_arm,
             track_index,
             arm,
         )
@@ -251,7 +251,7 @@ def _setup_track_tools(mcp: FastMCP, controller) -> None:
     def get_track_arm(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get the record arm state of a track."""
         try:
-            arm = controller.get_track_arm(track_index)
+            arm = controller.track.get_track_arm(track_index)
             return _create_success_response(f"Track {track_index} record arm: {arm}")
         except Exception as e:
             logger.error(f"Failed to get track record arm: {str(e)}")
@@ -265,14 +265,14 @@ def _setup_project_tools(mcp: FastMCP, controller) -> None:
     def set_tempo(ctx: Context, bpm: float) -> Dict[str, Any]:
         """Set the project tempo."""
         return _handle_controller_operation(
-            f"Set tempo to {bpm} BPM", controller.set_tempo, bpm
+            f"Set tempo to {bpm} BPM", controller.project.set_tempo, bpm
         )
 
     @mcp.tool("get_tempo")
     def get_tempo(ctx: Context) -> Dict[str, Any]:
         """Get the current project tempo."""
         try:
-            tempo = controller.get_tempo()
+            tempo = controller.project.get_tempo()
             return _create_success_response(f"Current tempo: {tempo} BPM")
         except Exception as e:
             logger.error(f"Failed to get tempo: {str(e)}")
@@ -282,7 +282,7 @@ def _setup_project_tools(mcp: FastMCP, controller) -> None:
     def clear_project(ctx: Context) -> Dict[str, Any]:
         """Clear all items from all tracks in the project."""
         return _handle_controller_operation(
-            "Clear all items from project", controller.clear_project
+            "Clear all items from project", controller.project.clear_project
         )
 
 
@@ -303,7 +303,7 @@ def _setup_fx_add_remove_tools(mcp: FastMCP, controller) -> None:
     def add_fx(ctx: Context, track_index: int, fx_name: str) -> Dict[str, Any]:
         """Add an FX to a track."""
         try:
-            fx_index = controller.add_fx(track_index, fx_name)
+            fx_index = controller.fx.add_fx(track_index, fx_name)
             if fx_index >= 0:
                 return _create_success_response(
                     f"Added FX {fx_name} to track {track_index} " f"at index {fx_index}"
@@ -318,7 +318,7 @@ def _setup_fx_add_remove_tools(mcp: FastMCP, controller) -> None:
         """Remove an FX from a track."""
         return _handle_controller_operation(
             f"Remove FX {fx_index} from track {track_index}",
-            controller.remove_fx,
+            controller.fx.remove_fx,
             track_index,
             fx_index,
         )
@@ -342,7 +342,7 @@ def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set FX parameter {param_name} to {value}",
-            controller.set_fx_param,
+            controller.fx.set_fx_param,
             track_index,
             fx_index,
             param_name,
@@ -355,7 +355,7 @@ def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
     ) -> Dict[str, Any]:
         """Get an FX parameter value."""
         try:
-            value = controller.get_fx_param(track_index, fx_index, param_name)
+            value = controller.fx.get_fx_param(track_index, fx_index, param_name)
             return _create_success_response(f"FX parameter {param_name}: {value}")
         except Exception as e:
             logger.error(f"Failed to get FX parameter: {str(e)}")
@@ -367,7 +367,7 @@ def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
     ) -> Dict[str, Any]:
         """Get list of FX parameters."""
         try:
-            params = controller.get_fx_param_list(track_index, fx_index)
+            params = controller.fx.get_fx_param_list(track_index, fx_index)
             return _create_success_response(f"FX parameters: {params}")
         except Exception as e:
             logger.error(f"Failed to get FX parameters: {str(e)}")
@@ -381,7 +381,7 @@ def _setup_fx_list_tools(mcp: FastMCP, controller) -> None:
     def get_fx_list(ctx: Context, track_index: int) -> Dict[str, Any]:
         """Get list of FX on a track."""
         try:
-            fx_list = controller.get_fx_list(track_index)
+            fx_list = controller.fx.get_fx_list(track_index)
             return _create_success_response(
                 f"FX list for track {track_index}: {fx_list}"
             )
@@ -393,7 +393,7 @@ def _setup_fx_list_tools(mcp: FastMCP, controller) -> None:
     def get_available_fx_list(ctx: Context) -> Dict[str, Any]:
         """Get list of available FX."""
         try:
-            fx_list = controller.get_available_fx_list()
+            fx_list = controller.fx.get_available_fx_list()
             return _create_success_response(f"Available FX: {fx_list}")
         except Exception as e:
             logger.error(f"Failed to get available FX: {str(e)}")
@@ -411,7 +411,7 @@ def _setup_fx_toggle_tool(mcp: FastMCP, controller) -> None:
         action = "enable" if enable else "toggle"
         operation_name = f"{action.capitalize()} FX {fx_index} on track {track_index}"
         return _handle_controller_operation(
-            operation_name, controller.toggle_fx, track_index, fx_index, enable
+            operation_name, controller.fx.toggle_fx, track_index, fx_index, enable
         )
 
 
@@ -443,7 +443,7 @@ def _setup_dynamics_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set compressor parameters on track {track_index} FX {fx_index}",
-            controller.set_compressor_params,
+            controller.fx.set_compressor_params,
             track_index,
             fx_index,
             threshold,
@@ -474,7 +474,7 @@ def _setup_dynamics_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set limiter parameters on track {track_index} FX {fx_index}",
-            controller.set_limiter_params,
+            controller.fx.set_limiter_params,
             track_index,
             fx_index,
             threshold,
@@ -495,7 +495,7 @@ def _setup_meter_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to get peak levels from
         """
         try:
-            peak_levels = controller.get_track_peak_level(track_index)
+            peak_levels = controller.fx.get_track_peak_level(track_index)
             return _create_success_response(
                 f"Track {track_index} peak levels: {peak_levels}"
             )
@@ -507,7 +507,7 @@ def _setup_meter_tools(mcp: FastMCP, controller) -> None:
     def get_master_peak_level(ctx: Context) -> Dict[str, Any]:
         """Get the current peak levels for the master track."""
         try:
-            peak_levels = controller.get_master_peak_level()
+            peak_levels = controller.fx.get_master_peak_level()
             return _create_success_response(f"Master peak levels: {peak_levels}")
         except Exception as e:
             logger.error(f"Failed to get master peak level: {str(e)}")
@@ -531,14 +531,14 @@ def _setup_marker_tools(mcp: FastMCP, controller) -> None:
         """
         operation_name = f"Create region '{name}' from {start_time} to {end_time}"
         return _handle_controller_operation(
-            operation_name, controller.create_region, start_time, end_time, name
+            operation_name, controller.marker.create_region, start_time, end_time, name
         )
 
     @mcp.tool("delete_region")
     def delete_region(ctx: Context, region_index: int) -> Dict[str, Any]:
         """Delete a region from the project."""
         return _handle_controller_operation(
-            f"Delete region {region_index}", controller.delete_region, region_index
+            f"Delete region {region_index}", controller.marker.delete_region, region_index
         )
 
     @mcp.tool("create_marker")
@@ -551,14 +551,14 @@ def _setup_marker_tools(mcp: FastMCP, controller) -> None:
             name (str): Name of the marker
         """
         return _handle_controller_operation(
-            f"Create marker '{name}' at {time}", controller.create_marker, time, name
+            f"Create marker '{name}' at {time}", controller.marker.create_marker, time, name
         )
 
     @mcp.tool("delete_marker")
     def delete_marker(ctx: Context, marker_index: int) -> Dict[str, Any]:
         """Delete a marker from the project."""
         return _handle_controller_operation(
-            f"Delete marker {marker_index}", controller.delete_marker, marker_index
+            f"Delete marker {marker_index}", controller.marker.delete_marker, marker_index
         )
 
 
@@ -569,7 +569,7 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
     def get_master_track(ctx: Context) -> Dict[str, Any]:
         """Get master track information."""
         try:
-            master_info = controller.get_master_track()
+            master_info = controller.master.get_master_track()
             return _create_success_response(f"Master track info: {master_info}")
         except Exception as e:
             logger.error(f"Failed to get master track: {str(e)}")
@@ -584,7 +584,7 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
             volume (float): Volume in dB (use number, not string, e.g., -6.0, 0.0, 3.0)
         """
         return _handle_controller_operation(
-            f"Set master volume to {volume}", controller.set_master_volume, volume
+            f"Set master volume to {volume}", controller.master.set_master_volume, volume
         )
 
     @mcp.tool("set_master_pan")
@@ -596,7 +596,7 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
             pan (float): Pan position (-1.0 to 1.0, use number, not string)
         """
         return _handle_controller_operation(
-            f"Set master pan to {pan}", controller.set_master_pan, pan
+            f"Set master pan to {pan}", controller.master.set_master_pan, pan
         )
 
     @mcp.tool("toggle_master_mute")
@@ -604,7 +604,7 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
         """Toggle master track mute."""
         action = "mute" if mute else "toggle mute"
         return _handle_controller_operation(
-            f"{action.capitalize()} master track", controller.toggle_master_mute, mute
+            f"{action.capitalize()} master track", controller.master.toggle_master_mute, mute
         )
 
     @mcp.tool("toggle_master_solo")
@@ -612,7 +612,7 @@ def _setup_master_tools(mcp: FastMCP, controller) -> None:
         """Toggle master track solo."""
         action = "solo" if solo else "toggle solo"
         return _handle_controller_operation(
-            f"{action.capitalize()} master track", controller.toggle_master_solo, solo
+            f"{action.capitalize()} master track", controller.master.toggle_master_solo, solo
         )
 
 
@@ -641,7 +641,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             if start_measure:
                 start_time = parse_position(start_measure)
 
-            item_id = controller.create_midi_item(track_index, start_time, length)
+            item_id = controller.midi.create_midi_item(track_index, start_time, length)
             return _create_success_response(
                 f"Created MIDI item {item_id} on track {track_index}"
             )
@@ -677,7 +677,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
             note_params = MIDIController.MIDINoteParams(
                 pitch=pitch, start_time=start_time, length=length, velocity=velocity
             )
-            success = controller.add_midi_note(track_index, item_id, note_params)
+            success = controller.midi.add_midi_note(track_index, item_id, note_params)
             if success:
                 return _create_success_response(
                     f"Added MIDI note pitch {pitch} to item {item_id}"
@@ -694,7 +694,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
         """Clear all MIDI notes from a MIDI item."""
         return _handle_controller_operation(
             f"Clear MIDI item {item_id} on track {track_index}",
-            controller.clear_midi_item,
+            controller.midi.clear_midi_item,
             track_index,
             item_id,
         )
@@ -703,7 +703,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
     def get_midi_notes(ctx: Context, track_index: int, item_id: int) -> Dict[str, Any]:
         """Get all MIDI notes from a MIDI item."""
         try:
-            notes = controller.get_midi_notes(track_index, item_id)
+            notes = controller.midi.get_midi_notes(track_index, item_id)
             return _create_success_response(f"MIDI notes in item {item_id}: {notes}")
         except Exception as e:
             logger.error(f"Failed to get MIDI notes: {str(e)}")
@@ -715,7 +715,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
     ) -> Dict[str, Any]:
         """Find MIDI notes within a pitch range."""
         try:
-            notes = controller.find_midi_notes_by_pitch(pitch_min, pitch_max)
+            notes = controller.midi.find_midi_notes_by_pitch(pitch_min, pitch_max)
             return _create_success_response(
                 f"MIDI notes in pitch range {pitch_min}-{pitch_max}: {notes}"
             )
@@ -727,7 +727,7 @@ def _setup_midi_tools(mcp: FastMCP, controller) -> None:
     def get_selected_midi_item(ctx: Context) -> Dict[str, Any]:
         """Get the currently selected MIDI item."""
         try:
-            item_info = controller.get_selected_midi_item()
+            item_info = controller.midi.get_selected_midi_item()
             return _create_success_response(f"Selected MIDI item: {item_info}")
         except Exception as e:
             logger.error(f"Failed to get selected MIDI item: {str(e)}")
@@ -766,7 +766,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
             if start_measure:
                 start_time = parse_position(start_measure)
 
-            item_id = controller.insert_audio_item(
+            item_id = controller.audio.insert_audio_item(
                 track_index, file_path, start_time, start_measure
             )
             return _create_success_response(
@@ -799,7 +799,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
             if new_measure:
                 new_time = parse_position(new_measure)
 
-            new_item_id = controller.duplicate_item(track_index, item_id, new_time)
+            new_item_id = controller.audio.duplicate_item(track_index, item_id, new_time)
             return _create_success_response(
                 f"Duplicated item {item_id} to {new_item_id}"
             )
@@ -819,7 +819,7 @@ def _setup_audio_item_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Delete item {item_id} from track {track_index}",
-            controller.delete_item,
+            controller.audio.delete_item,
             track_index,
             item_id,
         )
@@ -840,7 +840,7 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
             item_id (int): ID of the item to get properties from
         """
         try:
-            properties = controller.get_item_properties(track_index, item_id)
+            properties = controller.audio.get_item_properties(track_index, item_id)
             return _create_success_response(f"Item {item_id} properties: {properties}")
         except Exception as e:
             logger.error(f"Failed to get item properties: {str(e)}")
@@ -868,7 +868,7 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
             if position_measure:
                 position_time = parse_position(position_measure)
 
-            success = controller.set_item_position(track_index, item_id, position_time)
+            success = controller.audio.set_item_position(track_index, item_id, position_time)
             if success:
                 return _create_success_response(f"Set position of item {item_id}")
             return _create_error_response(f"Failed to set item position")
@@ -890,7 +890,7 @@ def _setup_item_property_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set length of item {item_id} to {length}",
-            controller.set_item_length,
+            controller.audio.set_item_length,
             track_index,
             item_id,
             length,
@@ -926,7 +926,7 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
             if end_measure:
                 end_time = parse_position(end_measure)
 
-            items = controller.get_items_in_time_range(
+            items = controller.audio.get_items_in_time_range(
                 track_index, start_time, end_time
             )
             return _create_success_response(f"Items in time range: {items}")
@@ -940,7 +940,7 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
     def get_selected_items(ctx: Context) -> Dict[str, Any]:
         """Get all selected items."""
         try:
-            items = controller.get_selected_items()
+            items = controller.audio.get_selected_items()
             return _create_success_response(f"Selected items: {items}")
         except Exception as e:
             logger.error(f"Failed to get selected items: {str(e)}")
@@ -975,7 +975,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             channels (int): Number of channels (1 or 2)
         """
         try:
-            send_id = controller.add_send(
+            send_id = controller.routing.add_send(
                 source_track, destination_track, volume, pan, mute, phase, channels
             )
             if send_id is not None:
@@ -1000,7 +1000,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Remove send {send_id} from track {source_track}",
-            controller.remove_send,
+            controller.routing.remove_send,
             source_track,
             send_id,
         )
@@ -1014,7 +1014,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to get sends from
         """
         try:
-            sends = controller.get_sends(track_index)
+            sends = controller.routing.get_sends(track_index)
             return _create_success_response(f"Sends for track {track_index}: {sends}")
         except Exception as e:
             logger.error(f"Failed to get sends: {str(e)}")
@@ -1029,7 +1029,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to get receives from
         """
         try:
-            receives = controller.get_receives(track_index)
+            receives = controller.routing.get_receives(track_index)
             return _create_success_response(
                 f"Receives for track {track_index}: {receives}"
             )
@@ -1051,7 +1051,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set send {send_id} volume to {volume} dB",
-            controller.set_send_volume,
+            controller.routing.set_send_volume,
             source_track,
             send_id,
             volume,
@@ -1071,7 +1071,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set send {send_id} pan to {pan}",
-            controller.set_send_pan,
+            controller.routing.set_send_pan,
             source_track,
             send_id,
             pan,
@@ -1090,7 +1090,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             mute (bool, optional): If True, mute the send; if False, unmute; if None, toggle
         """
         try:
-            success = controller.toggle_send_mute(source_track, send_id, mute)
+            success = controller.routing.toggle_send_mute(source_track, send_id, mute)
             if success:
                 action = "toggled" if mute is None else f"set to {mute}"
                 return _create_success_response(f"Send {send_id} mute {action}")
@@ -1108,7 +1108,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to get routing info for
         """
         try:
-            routing_info = controller.get_track_routing_info(track_index)
+            routing_info = controller.routing.get_track_routing_info(track_index)
             return _create_success_response(
                 f"Routing info for track {track_index}: {routing_info}"
             )
@@ -1125,7 +1125,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to debug routing for
         """
         try:
-            debug_info = controller.debug_track_routing(track_index)
+            debug_info = controller.routing.debug_track_routing(track_index)
             return _create_success_response(
                 f"Debug info for track {track_index}: {debug_info}"
             )
@@ -1143,7 +1143,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Clear all sends from track {track_index}",
-            controller.clear_all_sends,
+            controller.routing.clear_all_sends,
             track_index,
         )
 
@@ -1157,7 +1157,7 @@ def _setup_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Clear all receives from track {track_index}",
-            controller.clear_all_receives,
+            controller.routing.clear_all_receives,
             track_index,
         )
 
@@ -1174,7 +1174,7 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
             name (str): Name for the folder track
         """
         return _handle_controller_operation(
-            f"Create folder track '{name}'", controller.create_folder_track, name
+            f"Create folder track '{name}'", controller.advanced_routing.create_folder_track, name
         )
 
     @mcp.tool("create_bus_track")
@@ -1186,7 +1186,7 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
             name (str): Name for the bus track
         """
         return _handle_controller_operation(
-            f"Create bus track '{name}'", controller.create_bus_track, name
+            f"Create bus track '{name}'", controller.advanced_routing.create_bus_track, name
         )
 
     @mcp.tool("set_track_parent")
@@ -1202,7 +1202,7 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {child_track_index} as child of track {parent_track_index}",
-            controller.set_track_parent,
+            controller.advanced_routing.set_track_parent,
             child_track_index,
             parent_track_index,
         )
@@ -1216,7 +1216,7 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
             parent_track_index (int): Index of the parent track
         """
         try:
-            children = controller.get_track_children(parent_track_index)
+            children = controller.advanced_routing.get_track_children(parent_track_index)
             return _create_success_response(
                 f"Children of track {parent_track_index}: {children}"
             )
@@ -1237,7 +1237,7 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set track {track_index} folder depth to {depth}",
-            controller.set_track_folder_depth,
+            controller.advanced_routing.set_track_folder_depth,
             track_index,
             depth,
         )
@@ -1251,7 +1251,7 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to get folder depth for
         """
         try:
-            depth = controller.get_track_folder_depth(track_index)
+            depth = controller.advanced_routing.get_track_folder_depth(track_index)
             return _create_success_response(
                 f"Track {track_index} folder depth: {depth}"
             )
@@ -1276,7 +1276,7 @@ def _setup_automation_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Create automation envelope '{envelope_name}' on track {track_index}",
-            controller.create_automation_envelope,
+            controller.automation.create_automation_envelope,
             track_index,
             envelope_name,
         )
@@ -1302,7 +1302,7 @@ def _setup_automation_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Add automation point at {time}s with value {value} on track {track_index}",
-            controller.add_automation_point,
+            controller.automation.add_automation_point,
             track_index,
             envelope_name,
             time,
@@ -1322,7 +1322,7 @@ def _setup_automation_tools(mcp: FastMCP, controller) -> None:
             envelope_name (str): Name of the automation envelope
         """
         try:
-            points = controller.get_automation_points(track_index, envelope_name)
+            points = controller.automation.get_automation_points(track_index, envelope_name)
             return _create_success_response(
                 f"Automation points for '{envelope_name}' on track {track_index}: {points}"
             )
@@ -1343,7 +1343,7 @@ def _setup_automation_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Set automation mode to '{mode}' on track {track_index}",
-            controller.set_automation_mode,
+            controller.automation.set_automation_mode,
             track_index,
             mode,
         )
@@ -1357,7 +1357,7 @@ def _setup_automation_tools(mcp: FastMCP, controller) -> None:
             track_index (int): Index of the track to get automation mode for
         """
         try:
-            mode = controller.get_automation_mode(track_index)
+            mode = controller.automation.get_automation_mode(track_index)
             return _create_success_response(
                 f"Track {track_index} automation mode: {mode}"
             )
@@ -1379,7 +1379,7 @@ def _setup_automation_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Delete automation point {point_index} from '{envelope_name}' on track {track_index}",
-            controller.delete_automation_point,
+            controller.automation.delete_automation_point,
             track_index,
             envelope_name,
             point_index,
@@ -1402,7 +1402,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
             split_time (float): Time position in seconds to split the item (use number, not string)
         """
         try:
-            new_items = controller.split_item(track_index, item_index, split_time)
+            new_items = controller.advanced_items.split_item(track_index, item_index, split_time)
             return _create_success_response(
                 f"Split item {item_index} at {split_time}s, created {len(new_items)} new items: {new_items}"
             )
@@ -1423,7 +1423,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Glue {len(item_indices)} items on track {track_index}",
-            controller.glue_items,
+            controller.advanced_items.glue_items,
             track_index,
             item_indices,
         )
@@ -1447,7 +1447,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Add {fade_length}s fade-in to item {item_index} on track {track_index}",
-            controller.fade_in,
+            controller.advanced_items.fade_in,
             track_index,
             item_index,
             fade_length,
@@ -1473,7 +1473,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Add {fade_length}s fade-out to item {item_index} on track {track_index}",
-            controller.fade_out,
+            controller.advanced_items.fade_out,
             track_index,
             item_index,
             fade_length,
@@ -1499,7 +1499,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Create {crossfade_length}s crossfade between items {item1_index} and {item2_index}",
-            controller.crossfade_items,
+            controller.advanced_items.crossfade_items,
             track_index,
             item1_index,
             item2_index,
@@ -1517,7 +1517,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
         """
         return _handle_controller_operation(
             f"Reverse item {item_index} on track {track_index}",
-            controller.reverse_item,
+            controller.advanced_items.reverse_item,
             track_index,
             item_index,
         )
@@ -1534,7 +1534,7 @@ def _setup_advanced_item_tools(mcp: FastMCP, controller) -> None:
             item_index (int): Index of the item to get fade info for
         """
         try:
-            fade_info = controller.get_item_fade_info(track_index, item_index)
+            fade_info = controller.advanced_items.get_item_fade_info(track_index, item_index)
             return _create_success_response(
                 f"Fade info for item {item_index} on track {track_index}: {fade_info}"
             )
