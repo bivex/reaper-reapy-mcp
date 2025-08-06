@@ -26,7 +26,7 @@ class TestFXOperations(unittest.TestCase):
         # Create a track for the FX
         track_index = self.controller.create_track("FX Test Track")
         self.assertGreaterEqual(track_index, 0, "Failed to create track for FX test")
-        
+
         fx_index = self.controller.add_fx(track_index, "ReaEQ")
         self.assertGreaterEqual(fx_index, 0, "FX addition failed")
         self.logger.info(f"✓ FX added with index {fx_index}")

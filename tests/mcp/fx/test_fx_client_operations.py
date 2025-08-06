@@ -15,7 +15,7 @@ class TestFXClientOperations(unittest.TestCase):
     def setUpClass(cls):
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         cls.logger = logging.getLogger(__name__)
         cls.controller = ReaperController(debug=True)
@@ -32,7 +32,10 @@ class TestFXClientOperations(unittest.TestCase):
         self.assertGreaterEqual(fx_index, 0, f"Failed to add {fx_name}.")
         self.logger.info(f"Added {fx_name} to track {track_index} at index {fx_index}")
 
-        self.assertTrue(self.controller.set_fx_param(track_index, fx_index, "Gain", 6.0), "Failed to set FX parameter.")
+        self.assertTrue(
+            self.controller.set_fx_param(track_index, fx_index, "Gain", 6.0),
+            "Failed to set FX parameter.",
+        )
         self.logger.info(f"Set ReaEQ gain to 6.0")
 
         param_list = self.controller.get_fx_param_list(track_index, fx_index)

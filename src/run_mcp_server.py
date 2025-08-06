@@ -15,8 +15,8 @@ def main():
     # Setup logging to stderr only (not stdout which is used for MCP JSON)
     logging.basicConfig(
         level=logging.ERROR,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        stream=sys.stderr
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        stream=sys.stderr,
     )
     logger = logging.getLogger(__name__)
 

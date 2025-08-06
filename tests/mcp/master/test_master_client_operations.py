@@ -15,7 +15,7 @@ class TestMasterClientOperations(unittest.TestCase):
     def setUpClass(cls):
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         cls.logger = logging.getLogger(__name__)
         cls.controller = ReaperController(debug=True)
@@ -24,8 +24,12 @@ class TestMasterClientOperations(unittest.TestCase):
 
     def test_master_track_operations(self):
         self.logger.info("Testing master track operations...")
-        self.assertTrue(self.controller.set_master_volume(0.8), "Failed to set master volume.")
-        self.assertTrue(self.controller.set_master_pan(-0.5), "Failed to set master pan.")
+        self.assertTrue(
+            self.controller.set_master_volume(0.8), "Failed to set master volume."
+        )
+        self.assertTrue(
+            self.controller.set_master_pan(-0.5), "Failed to set master pan."
+        )
         self.logger.info("Set master volume to 0.8 and pan to -0.5")
 
 

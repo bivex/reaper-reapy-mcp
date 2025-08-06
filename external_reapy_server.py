@@ -15,19 +15,20 @@ if sys.version_info[0] < 3:
 
 try:
     import reapy
+
     print("Starting external reapy server...")
-    
+
     # Configure reapy for external use
     reapy.config.configure_reaper()
-    
+
     print("Reapy server configured successfully!")
     print("You can now use reapy from external applications.")
     print("Press Ctrl+C to stop the server.")
-    
+
     # Keep the server running
     while True:
         time.sleep(1)
-        
+
 except ImportError:
     print("Error: reapy not installed.")
     print("Install with: pip install python-reapy")

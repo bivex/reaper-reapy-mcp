@@ -15,7 +15,7 @@ class TestProjectClientOperations(unittest.TestCase):
     def setUpClass(cls):
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         cls.logger = logging.getLogger(__name__)
         cls.controller = ReaperController(debug=True)
