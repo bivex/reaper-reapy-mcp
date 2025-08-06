@@ -8,9 +8,9 @@ import sys
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, script_dir)
 
-from utils.reapy_utils import get_reapy
-from utils.item_utils import get_item_by_id_or_index, get_item_properties as get_item_props
-from utils.item_operations import delete_item, verify_item_deletion
+from src.core.reapy_bridge import get_reapy
+from src.item.utils import get_item_by_id_or_index, get_item_properties as get_item_props
+from src.item.operations import delete_item, verify_item_deletion
 
 # Constants
 INSERTION_WAIT_TIME = 0.1  # Time to wait after media insertion

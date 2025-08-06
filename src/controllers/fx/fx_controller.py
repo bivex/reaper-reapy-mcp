@@ -8,7 +8,7 @@ import sys
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, script_dir)
 
-from utils.reapy_utils import get_reapy
+from src.core.reapy_bridge import get_reapy
 
 # Constants to replace magic numbers
 PLUGIN_NAME_INDEX = 2  # Index of plugin name in comma-separated format

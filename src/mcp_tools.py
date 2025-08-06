@@ -2,19 +2,10 @@ from mcp import types
 from mcp.server.fastmcp import FastMCP, Context
 from typing import Optional, Dict, Any, List, Union
 import logging
-from src.utils.position_utils import parse_position, measure_beat_to_time, time_to_measure_beat
+from src.time.conversion import parse_position, measure_beat_to_time, time_to_measure_beat
 
-# Lazy import of reapy to avoid connection issues at module load time
-def _get_reapy():
-    try:
-        import reapy
-        return reapy
-    except ImportError:
-        logger.error("reapy library not available")
-        return None
-    except Exception as e:
-        logger.error(f"Failed to import reapy: {e}")
-        return None
+# Use centralized reapy bridge
+from src.core.reapy_bridge import get_reapy
 
 # Setup logger
 logger = logging.getLogger(__name__)

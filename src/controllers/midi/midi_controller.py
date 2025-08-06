@@ -2,8 +2,8 @@ import logging
 from typing import List, Dict, Any, Optional, Union, Tuple
 from dataclasses import dataclass
 
-from src.utils.item_utils import get_item_by_id_or_index, get_item_properties
-from src.utils.item_operations import delete_item, verify_item_deletion
+from src.item.utils import get_item_by_id_or_index, get_item_properties
+from src.item.operations import delete_item, verify_item_deletion
 
 # Constants
 DEFAULT_MIDI_LENGTH = 4.0  # Default length for MIDI items in seconds
@@ -19,7 +19,7 @@ import os
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, script_dir)
 
-from utils.reapy_utils import get_reapy
+from src.core.reapy_bridge import get_reapy
 
 
 class MIDIController:

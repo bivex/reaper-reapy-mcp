@@ -8,7 +8,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.reaper_controller import ReaperController
-from src.utils.sample_audio import ensure_sample_file
+from src.media.sample_downloader import ensure_sample_file
 from src.controllers.midi.midi_controller import MIDIController
 
 # Constants to replace magic numbers
