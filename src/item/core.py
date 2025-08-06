@@ -195,6 +195,37 @@ def get_selected_items() -> List[Dict[str, Any]]:
         return []
 
 
+def select_item(item: Any) -> bool:
+    """
+    Select a specific item.
+
+    Args:
+        item: The item to select
+
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Clear all selections first
+        reapy = get_reapy()
+        project = reapy.Project()
+        
+        # Deselect all items
+        for track in project.tracks:
+            for track_item in track.items:
+                track_item.selected = False
+        
+        # Select the target item
+        item.selected = True
+        
+        logger.info(f"Selected item {item.id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to select item: {e}")
+        return False
+
+
 # =============================================================================
 # ITEM LIFECYCLE MANAGEMENT
 # =============================================================================
