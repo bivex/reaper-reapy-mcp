@@ -32,7 +32,7 @@ class ProjectController:
             reapy = get_reapy()
             
             # Try to connect to REAPER first with connection retry
-            from ...constants import TEMPO_DECIMAL_PLACES
+            from constants import TEMPO_DECIMAL_PLACES
             max_retries = TEMPO_DECIMAL_PLACES
             for attempt in range(max_retries):
                 try:
@@ -83,7 +83,7 @@ class ProjectController:
             reapy = get_reapy()
             
             # Try to connect to REAPER first with connection retry
-            from ...constants import TEMPO_DECIMAL_PLACES
+            from constants import TEMPO_DECIMAL_PLACES
             max_retries = TEMPO_DECIMAL_PLACES
             for attempt in range(max_retries):
                 try:

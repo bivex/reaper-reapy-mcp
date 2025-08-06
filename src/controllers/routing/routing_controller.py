@@ -105,7 +105,7 @@ class RoutingController:
         Returns:
             Optional[int]: Send ID if successful, None if failed
         """
-        from ...constants import DEFAULT_STEREO_CHANNELS
+        from constants import DEFAULT_STEREO_CHANNELS
         if channels is None:
             channels = DEFAULT_STEREO_CHANNELS
             

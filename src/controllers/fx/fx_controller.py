@@ -680,7 +680,7 @@ class FXController:
             
             # Convert linear to dB
             import math
-            from ...constants import DB_CONVERSION_FACTOR, SILENCE_THRESHOLD_DB, MINIMUM_PEAK_VALUE
+            from constants import DB_CONVERSION_FACTOR, SILENCE_THRESHOLD_DB, MINIMUM_PEAK_VALUE
             left_db = DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, left_peak)) if left_peak > 0 else SILENCE_THRESHOLD_DB
             right_db = DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, right_peak)) if right_peak > 0 else SILENCE_THRESHOLD_DB
             
@@ -692,7 +692,7 @@ class FXController:
             
         except Exception as e:
             self.logger.error(f"Failed to get track peak level: {e}")
-            from ...constants import SILENCE_THRESHOLD_DB
+            from constants import SILENCE_THRESHOLD_DB
             return {"left_peak_db": SILENCE_THRESHOLD_DB, "right_peak_db": SILENCE_THRESHOLD_DB, "max_peak_db": SILENCE_THRESHOLD_DB}
 
     def get_master_peak_level(self) -> Dict[str, float]:
@@ -712,7 +712,7 @@ class FXController:
             
             # Convert linear to dB
             import math
-            from ...constants import DB_CONVERSION_FACTOR, SILENCE_THRESHOLD_DB, MINIMUM_PEAK_VALUE
+            from constants import DB_CONVERSION_FACTOR, SILENCE_THRESHOLD_DB, MINIMUM_PEAK_VALUE
             left_db = DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, left_peak)) if left_peak > 0 else SILENCE_THRESHOLD_DB
             right_db = DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, right_peak)) if right_peak > 0 else SILENCE_THRESHOLD_DB
             
@@ -724,5 +724,5 @@ class FXController:
             
         except Exception as e:
             self.logger.error(f"Failed to get master peak level: {e}")
-            from ...constants import SILENCE_THRESHOLD_DB
+            from constants import SILENCE_THRESHOLD_DB
             return {"left_peak_db": SILENCE_THRESHOLD_DB, "right_peak_db": SILENCE_THRESHOLD_DB, "max_peak_db": SILENCE_THRESHOLD_DB}

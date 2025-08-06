@@ -839,7 +839,7 @@ def _setup_item_selection_tools(mcp: FastMCP, controller) -> None:
 
 def _setup_routing_tools(mcp: FastMCP, controller) -> None:
     """Setup routing-related MCP tools."""
-    from .constants import DEFAULT_STEREO_CHANNELS
+    from constants import DEFAULT_STEREO_CHANNELS
     
     @mcp.tool("add_send")
     def add_send(ctx: Context, source_track: int, destination_track: int, 

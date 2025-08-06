@@ -203,7 +203,7 @@ class AutomationController:
             track = project.tracks[track_index]
             
             # Map mode names to REAPER automation modes
-            from ...constants import AUTOMATION_MODE_TRIM, AUTOMATION_MODE_TOUCH, AUTOMATION_MODE_LATCH
+            from constants import AUTOMATION_MODE_TRIM, AUTOMATION_MODE_TOUCH, AUTOMATION_MODE_LATCH
             mode_map = {
                 "read": 0,
                 "write": 1,

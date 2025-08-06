@@ -291,7 +291,7 @@ class MIDIController:
             self.logger.error(f"Invalid pitch: {pitch}. Must be between {self.MIN_MIDI_PITCH} and {self.MAX_MIDI_PITCH}")
             return False
         
-        from ...constants import MIDI_MAX_VALUE
+        from constants import MIDI_MAX_VALUE
         if not (0 <= velocity <= MIDI_MAX_VALUE):  # MIDI velocity range is 0-127
             self.logger.error(f"Invalid velocity: {velocity}. Must be between 0 and {MIDI_MAX_VALUE}")
             return False
@@ -380,7 +380,7 @@ class MIDIController:
                 # Try to get MIDI notes using the correct method
                 midi_notes = take.notes if hasattr(take, 'notes') else []
                 for note in midi_notes:
-                    from ...constants import MIDI_MIDDLE_C, MIDI_DEFAULT_VELOCITY
+                    from constants import MIDI_MIDDLE_C, MIDI_DEFAULT_VELOCITY
                     note_info = {
                         "pitch": note.pitch if hasattr(note, 'pitch') else MIDI_MIDDLE_C,
                         "start": note.start if hasattr(note, 'start') else 0.0,
