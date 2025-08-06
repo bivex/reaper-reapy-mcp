@@ -1,6 +1,6 @@
 import pytest
 from types import SimpleNamespace
-from src.mcp_tools import _setup_master_tools, FastMCP
+from src.mcp_tools import setup_mcp_tools, FastMCP
 
 class DummyMCP(FastMCP):
     def __init__(self):
@@ -24,7 +24,7 @@ def mcp_and_controller():
         )
     )
     mcp = DummyMCP()
-    _setup_master_tools(mcp, controller)
+    setup_mcp_tools(mcp, controller)
     return mcp, controller
 
 @pytest.mark.parametrize("tool,kwargs", [
