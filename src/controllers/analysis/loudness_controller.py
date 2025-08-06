@@ -267,18 +267,58 @@ class LoudnessController:
             return False
 
     def _get_track_peak_levels(self, track) -> Optional[Dict[str, float]]:
-        """Get peak and RMS levels for a track."""
+        """Get peak and RMS levels for a track using REAPER API."""
         try:
-            # Get track VU meters - simplified implementation
-            # In production, you'd use REAPER's track_get_info API
-            # or specialized metering plugins
+            import math
+            from src.core.reapy_bridge import get_reapy
+            from src.constants import (
+                DB_CONVERSION_FACTOR,
+                SILENCE_THRESHOLD_DB,
+                MINIMUM_PEAK_VALUE,
+            )
             
-            # Placeholder values - replace with actual REAPER API calls
+            reapy = get_reapy()
+            if not reapy:
+                return None
+                
+            # Get direct API access
+            RPR = reapy.reascript_api
+            
+            # Get peak levels for both channels
+            left_peak = RPR.Track_GetPeakInfo(track.id, 0)
+            right_peak = RPR.Track_GetPeakInfo(track.id, 1)
+            
+            # Convert peak levels to dB
+            left_peak_db = (
+                DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, left_peak))
+                if left_peak > 0
+                else SILENCE_THRESHOLD_DB
+            )
+            right_peak_db = (
+                DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, right_peak))
+                if right_peak > 0
+                else SILENCE_THRESHOLD_DB
+            )
+            
+            # Get RMS levels using REAPER's VU meter functionality
+            # Note: REAPER doesn't have direct RMS API, so we approximate from peak
+            # In production, you'd use specialized metering plugins or custom analysis
+            
+            # Approximate RMS from peak levels using adaptive crest factor
+            # This is still an approximation - real RMS would require sample-by-sample analysis
+            crest_factor_db = self._estimate_crest_factor(left_peak_db, right_peak_db, is_master=False)
+            left_rms_db = left_peak_db - crest_factor_db
+            right_rms_db = right_peak_db - crest_factor_db
+            
+            # Ensure RMS levels don't go below silence threshold
+            left_rms_db = max(left_rms_db, SILENCE_THRESHOLD_DB)
+            right_rms_db = max(right_rms_db, SILENCE_THRESHOLD_DB)
+            
             return {
-                'left_peak': -12.0,    # dBFS
-                'right_peak': -11.5,   # dBFS  
-                'left_rms': -18.0,     # dBFS
-                'right_rms': -17.5,    # dBFS
+                'left_peak': left_peak_db,    # dBFS
+                'right_peak': right_peak_db,  # dBFS  
+                'left_rms': left_rms_db,      # dBFS (approximated)
+                'right_rms': right_rms_db,    # dBFS (approximated)
             }
             
         except Exception as e:
@@ -286,14 +326,54 @@ class LoudnessController:
             return None
 
     def _get_master_peak_levels(self, master_track) -> Optional[Dict[str, float]]:
-        """Get peak and RMS levels for master track."""
+        """Get peak and RMS levels for master track using REAPER API."""
         try:
-            # Placeholder implementation
+            import math
+            from src.core.reapy_bridge import get_reapy
+            from src.constants import (
+                DB_CONVERSION_FACTOR,
+                SILENCE_THRESHOLD_DB,
+                MINIMUM_PEAK_VALUE,
+            )
+            
+            reapy = get_reapy()
+            if not reapy:
+                return None
+                
+            # Get direct API access
+            RPR = reapy.reascript_api
+            
+            # Get peak levels for both channels of master track
+            left_peak = RPR.Track_GetPeakInfo(master_track.id, 0)
+            right_peak = RPR.Track_GetPeakInfo(master_track.id, 1)
+            
+            # Convert peak levels to dB
+            left_peak_db = (
+                DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, left_peak))
+                if left_peak > 0
+                else SILENCE_THRESHOLD_DB
+            )
+            right_peak_db = (
+                DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, right_peak))
+                if right_peak > 0
+                else SILENCE_THRESHOLD_DB
+            )
+            
+            # Approximate RMS from peak levels for master track
+            # Master tracks typically have lower crest factor (more compressed/limited)
+            crest_factor_db = self._estimate_crest_factor(left_peak_db, right_peak_db, is_master=True)
+            left_rms_db = left_peak_db - crest_factor_db
+            right_rms_db = right_peak_db - crest_factor_db
+            
+            # Ensure RMS levels don't go below silence threshold
+            left_rms_db = max(left_rms_db, SILENCE_THRESHOLD_DB)
+            right_rms_db = max(right_rms_db, SILENCE_THRESHOLD_DB)
+            
             return {
-                'left_peak': -6.0,     # dBFS
-                'right_peak': -5.8,    # dBFS
-                'left_rms': -12.0,     # dBFS  
-                'right_rms': -11.8,    # dBFS
+                'left_peak': left_peak_db,    # dBFS
+                'right_peak': right_peak_db,  # dBFS
+                'left_rms': left_rms_db,      # dBFS (approximated)  
+                'right_rms': right_rms_db,    # dBFS (approximated)
             }
             
         except Exception as e:
@@ -302,25 +382,90 @@ class LoudnessController:
 
     def _calculate_lufs_approximation(self, rms_left: float, rms_right: float) -> float:
         """
-        Calculate LUFS approximation from RMS levels.
+        Calculate LUFS approximation from RMS levels using ITU-R BS.1770-4 methodology.
         
-        Note: This is a simplified approximation. For production use,
-        implement proper ITU-R BS.1770-4 LUFS calculation.
+        This implements the core LUFS calculation with K-weighting compensation.
+        For full compliance, real-time sample-by-sample analysis would be required.
         """
         try:
             import math
             
-            # Convert RMS to linear
-            linear_left = 10 ** (rms_left / 20)
-            linear_right = 10 ** (rms_right / 20)
+            # Ensure we have valid RMS levels
+            if rms_left == -150.0 and rms_right == -150.0:  # Both channels silent
+                return -70.0  # Very quiet LUFS value
             
-            # Simple stereo sum (not K-weighted as per BS.1770-4)
-            stereo_sum = (linear_left + linear_right) / 2
+            # Convert RMS dB to linear power values
+            # RMS in dBFS -> linear power
+            linear_left = 10 ** (rms_left / 10)  # Power, not amplitude
+            linear_right = 10 ** (rms_right / 10)
             
-            # Convert back to dB and apply approximate LUFS offset
-            lufs_approx = 20 * math.log10(stereo_sum) - 0.691  # Approximate K-weighting offset
+            # Apply ITU-R BS.1770-4 channel weighting for stereo
+            # Left and Right channels have equal weighting (1.0 each)
+            weighted_power = linear_left + linear_right
             
-            return lufs_approx
+            # Convert power sum back to dB
+            if weighted_power > 0:
+                loudness_db = 10 * math.log10(weighted_power)
+                
+                # Apply K-weighting compensation
+                # The K-weighting filter adds approximately -0.691 dB offset
+                # This compensates for the high-frequency pre-emphasis in the K-filter
+                k_weighting_offset = -0.691  # dB
+                
+                # Apply gating threshold compensation
+                # ITU-R BS.1770-4 uses absolute gating at -70 LUFS and relative gating
+                gating_compensation = 0.0  # Simplified - real implementation needs sample analysis
+                
+                lufs_value = loudness_db + k_weighting_offset + gating_compensation
+                
+                # Clamp to reasonable LUFS range
+                lufs_value = max(-70.0, min(0.0, lufs_value))
+                
+                return lufs_value
+            else:
+                return -70.0  # Below measurement threshold
+                
+        except Exception as e:
+            self.logger.error(f"LUFS calculation error: {e}")
+            return -23.0  # Default broadcast standard LUFS value
+
+    def _estimate_crest_factor(self, left_peak_db: float, right_peak_db: float, is_master: bool = False) -> float:
+        """
+        Estimate crest factor based on peak levels and track type.
+        
+        Args:
+            left_peak_db: Left channel peak in dBFS
+            right_peak_db: Right channel peak in dBFS
+            is_master: Whether this is a master track
             
-        except Exception:
-            return -23.0  # Default LUFS value
+        Returns:
+            Estimated crest factor in dB
+        """
+        try:
+            # Get maximum peak level
+            max_peak_db = max(left_peak_db, right_peak_db)
+            
+            # Base crest factor estimates based on signal level and track type
+            if is_master:
+                # Master tracks are typically more compressed/limited
+                if max_peak_db > -6.0:  # Hot master
+                    return 6.0   # Heavily compressed
+                elif max_peak_db > -12.0:  # Normal master
+                    return 8.0   # Moderately compressed
+                else:  # Quiet master
+                    return 10.0  # Less compression
+            else:
+                # Individual tracks have more dynamic range
+                if max_peak_db > -6.0:  # Hot track
+                    return 10.0  # Some limiting/compression
+                elif max_peak_db > -12.0:  # Normal level
+                    return 14.0  # Typical music crest factor
+                elif max_peak_db > -24.0:  # Moderate level
+                    return 16.0  # More dynamic content
+                else:  # Quiet track
+                    return 18.0  # Very dynamic (e.g., classical, ambient)
+                    
+        except Exception as e:
+            self.logger.error(f"Crest factor estimation error: {e}")
+            # Return safe defaults
+            return 8.0 if is_master else 14.0

@@ -25,22 +25,31 @@ def mock_reapy():
         project_mock = Mock()
         
         # Create track mocks with proper attributes  
-        track1_mock = Mock(spec=['volume', 'items', 'add_envelope'])
+        track1_mock = Mock(spec=['volume', 'items', 'add_envelope', 'id'])
         track1_mock.volume = 1.0
         track1_mock.items = []
         track1_mock.add_envelope = Mock()
+        track1_mock.id = 1001  # Mock track ID
         
-        track2_mock = Mock(spec=['volume', 'items', 'add_envelope'])
+        track2_mock = Mock(spec=['volume', 'items', 'add_envelope', 'id'])
         track2_mock.volume = 1.0
         track2_mock.items = []
         track2_mock.add_envelope = Mock()
+        track2_mock.id = 1002  # Mock track ID
         
-        track3_mock = Mock(spec=['volume', 'items', 'add_envelope'])
+        track3_mock = Mock(spec=['volume', 'items', 'add_envelope', 'id'])
         track3_mock.volume = 1.0
         track3_mock.items = []
         track3_mock.add_envelope = Mock()
+        track3_mock.id = 1003  # Mock track ID
         
-        master_mock = Mock()
+        master_mock = Mock(spec=['id'])
+        master_mock.id = 1000  # Mock master track ID
+        
+        # Mock the REAPER API
+        rpr_mock = Mock()
+        rpr_mock.Track_GetPeakInfo.return_value = 0.25  # Mock peak level (0.25 = -12dB)
+        reapy_mock.reascript_api = rpr_mock
         
         # Setup project structure
         project_mock.n_tracks = 3
