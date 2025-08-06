@@ -243,36 +243,75 @@ class FXController:
             self.logger.info(f"FX {fx_index} has {param_count} parameters")
 
             for i in range(param_count):
-                # Use proper buffer size for parameter name
-                buf_size = 256
-                param_name_buf = "\x00" * buf_size
-                
-                # Get parameter name with proper buffer
-                retval = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, buf_size)
-                
-                if retval:
-                    # Clean the parameter name (remove null bytes)
-                    param_name = param_name_buf.rstrip('\x00')
-                else:
-                    param_name = f"Param_{i}"
-                
-                # Get parameter value
-                param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
-                
-                # Get formatted parameter value for display
-                format_buf = "\x00" * buf_size
-                self._RPR.TrackFX_GetFormattedParamValue(track.id, fx_index, i, format_buf, buf_size)
-                formatted_value = format_buf.rstrip('\x00')
+                try:
+                    # Method 1: Try with proper buffer allocation
+                    buf_size = 512  # Larger buffer for safety
+                    param_name_buf = "\x00" * buf_size
+                    
+                    # Get parameter name with proper buffer - note the different call signature
+                    retval, param_name_result = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, buf_size)
+                    
+                    if retval and param_name_result:
+                        param_name = param_name_result.rstrip('\x00')
+                    elif param_name_buf and param_name_buf != "\x00" * buf_size:
+                        param_name = param_name_buf.rstrip('\x00')
+                    else:
+                        # Method 2: Try alternative approach for ReaEQ-like plugins
+                        try:
+                            # Some plugins need different approach
+                            param_name = f"Parameter_{i}"
+                            # Try to get a better name using alternative method
+                            fx_name = self._RPR.TrackFX_GetFXName(track.id, fx_index, "")
+                            if "reaeq" in fx_name.lower():
+                                # ReaEQ specific parameter names based on common patterns
+                                if i < 5:  # First few are typically band enables
+                                    param_name = f"Band_{i+1}_Enable"
+                                elif i < 10:
+                                    param_name = f"Band_{i-4}_Frequency"
+                                elif i < 15:
+                                    param_name = f"Band_{i-9}_Gain"
+                                else:
+                                    param_name = f"Parameter_{i}"
+                        except Exception as name_error:
+                            self.logger.debug(f"Name generation error: {name_error}")
+                            param_name = f"Param_{i}"
+                    
+                    # Get parameter value
+                    param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    
+                    # Get formatted parameter value for display
+                    try:
+                        format_buf = "\x00" * buf_size
+                        format_retval, formatted_result = self._RPR.TrackFX_GetFormattedParamValue(
+                            track.id, fx_index, i, format_buf, buf_size
+                        )
+                        if format_retval and formatted_result:
+                            formatted_value = formatted_result.rstrip('\x00')
+                        else:
+                            formatted_value = str(param_value)
+                    except Exception as format_error:
+                        self.logger.debug(f"Format error: {format_error}")
+                        formatted_value = str(param_value)
 
-                param_info = {
-                    "index": i, 
-                    "name": param_name, 
-                    "value": param_value,
-                    "formatted_value": formatted_value
-                }
-                param_list.append(param_info)
-                
-                self.logger.debug(f"Parameter {i}: {param_name} = {param_value} ({formatted_value})")
+                    param_info = {
+                        "index": i, 
+                        "name": param_name, 
+                        "value": param_value,
+                        "formatted_value": formatted_value
+                    }
+                    param_list.append(param_info)
+                    
+                    self.logger.debug(f"Parameter {i}: {param_name} = {param_value} ({formatted_value})")
+                    
+                except Exception as param_error:
+                    self.logger.warning(f"Failed to get parameter {i}: {param_error}")
+                    # Still add a basic entry so we don't miss parameters
+                    param_list.append({
+                        "index": i,
+                        "name": f"Unknown_Param_{i}",
+                        "value": 0.0,
+                        "formatted_value": "Unknown"
+                    })
 
             self.logger.info(
                 f"Retrieved {len(param_list)} parameters for FX {fx_index}"
@@ -487,19 +526,23 @@ class FXController:
                 enable = not current_state
 
             # Set the enabled state
-            success = self._RPR.TrackFX_SetEnabled(track.id, fx_index, enable)
+            self._RPR.TrackFX_SetEnabled(track.id, fx_index, enable)
+            
+            # Verify the state was actually set by checking current state
+            current_state = self._RPR.TrackFX_GetEnabled(track.id, fx_index)
+            success = (current_state == enable)
 
             if success:
                 state_str = "enabled" if enable else "disabled"
                 self.logger.info(
                     f"{state_str.capitalize()} FX {fx_index} on track {track_index}"
                 )
+                return True
             else:
                 self.logger.error(
-                    f"Failed to toggle FX {fx_index} on track {track_index}"
+                    f"Failed to toggle FX {fx_index} on track {track_index}. Current state: {current_state}, wanted: {enable}"
                 )
-
-            return success
+                return False
 
         except Exception as e:
             error_message = f"Failed to toggle FX: {e}"

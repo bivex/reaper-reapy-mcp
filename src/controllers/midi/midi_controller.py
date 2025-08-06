@@ -166,7 +166,7 @@ class MIDIController:
             length (float): Length of the item in seconds
 
         Returns:
-            Optional[int]: Item ID if successful, None otherwise
+            Optional[int]: Item index if successful, None otherwise
         """
         try:
             if self._RPR is None:
@@ -176,25 +176,59 @@ class MIDIController:
             reapy = get_reapy()
             project = reapy.Project()
             track = project.tracks[track_index]
-
-            # Create MIDI item using reapy high-level API
-            item = track.add_item(position, length)
-            if item:
-                # Add MIDI take
-                take = item.add_take()
-                if take:
-                    # Make it a MIDI take by creating empty MIDI source
-                    take.source = reapy.core.Source()
+            
+            # Count items before creation to determine new item index
+            item_count_before = len(track.items)
+            
+            # Method 1: Try using reapy high-level API
+            try:
+                item = track.add_item(position, length)
+                if item:
+                    # Try to add MIDI take using reapy
+                    try:
+                        take = item.add_take()
+                        if take:
+                            # Create MIDI source using ReaScript
+                            midi_source = self._RPR.PCM_Source_CreateFromType("MIDI")
+                            if midi_source:
+                                # Set the MIDI source to the take
+                                self._RPR.SetMediaItemTake_Source(take.id, midi_source)
+                    except Exception as take_error:
+                        self.logger.warning(f"Take creation error (item still created): {take_error}")
                     
-                    # Return the item index within the track for consistency
-                    for idx, track_item in enumerate(track.items):
-                        if track_item.id == item.id:
-                            self.logger.info(f"Created MIDI item at index {idx} on track {track_index}")
-                            return idx
+                    # Return the index of the new item
+                    new_index = item_count_before
+                    self.logger.info(f"Created MIDI item at index {new_index} on track {track_index}")
+                    return new_index
+            except Exception as reapy_error:
+                self.logger.warning(f"Reapy method failed, trying ReaScript: {reapy_error}")
+            
+            # Method 2: Fallback to ReaScript API
+            try:
+                # Create item using ReaScript
+                item_ptr = self._RPR.AddMediaItem(track.id)
+                if item_ptr:
+                    # Set position and length
+                    self._RPR.SetMediaItemInfo_Value(item_ptr, "D_POSITION", position)
+                    self._RPR.SetMediaItemInfo_Value(item_ptr, "D_LENGTH", length)
                     
-                    # Fallback to item ID if index not found
-                    return item.id
-
+                    # Add MIDI take
+                    take_ptr = self._RPR.AddTakeToMediaItem(item_ptr)
+                    if take_ptr:
+                        # Create MIDI source
+                        midi_source = self._RPR.PCM_Source_CreateFromType("MIDI")
+                        if midi_source:
+                            self._RPR.SetMediaItemTake_Source(take_ptr, midi_source)
+                        
+                        # Update the project to reflect changes
+                        self._RPR.UpdateArrange()
+                        
+                        new_index = item_count_before
+                        self.logger.info(f"Created MIDI item at index {new_index} on track {track_index} using ReaScript")
+                        return new_index
+            except Exception as reascript_error:
+                self.logger.error(f"ReaScript method also failed: {reascript_error}")
+            
             return None
 
         except Exception as e:

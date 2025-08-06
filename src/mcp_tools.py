@@ -373,9 +373,20 @@ def _setup_fx_param_tools(mcp: FastMCP, controller) -> None:
     def get_fx_param_list(
         ctx: Context, track_index: int, fx_index: int
     ) -> Dict[str, Any]:
-        """Get list of FX parameters."""
+        """Get list of FX parameters.
+        
+        Note: Some FX like ReaEQ may have limited parameter enumeration. 
+        For better parameter testing, try ReaComp or ReaLimit instead.
+        """
         try:
             params = controller.fx.get_fx_param_list(track_index, fx_index)
+            if not params:
+                # Provide helpful message if no parameters found
+                fx_list = controller.fx.get_fx_list(track_index)
+                fx_name = fx_list[fx_index]['name'] if fx_index < len(fx_list) else 'Unknown'
+                return _create_success_response(
+                    f"No parameters found for FX '{fx_name}'. Try ReaComp or ReaLimit for better parameter enumeration."
+                )
             return _create_success_response(f"FX parameters: {params}")
         except Exception as e:
             logger.error(f"Failed to get FX parameters: {str(e)}")
@@ -399,7 +410,11 @@ def _setup_fx_list_tools(mcp: FastMCP, controller) -> None:
 
     @mcp.tool("get_available_fx_list")
     def get_available_fx_list(ctx: Context) -> Dict[str, Any]:
-        """Get list of available FX."""
+        """Get list of available FX.
+        
+        Note: For testing FX parameters, ReaComp and ReaLimit typically work better 
+        than ReaEQ for parameter enumeration.
+        """
         try:
             fx_list = controller.fx.get_available_fx_list()
             return _create_success_response(f"Available FX: {fx_list}")

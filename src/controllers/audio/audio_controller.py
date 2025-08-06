@@ -247,61 +247,83 @@ class AudioController:
             if self._RPR is None:
                 self.logger.error("RPR not initialized")
                 return -1
-                
-            # Use reapy high-level API for duplication
+            
+            # Count items before duplication to determine new item index
+            item_count_before = len(track.items)
+            
+            # Method 1: Use reapy high-level API for duplication
             try:
-                # Create a duplicate using reapy's duplicate method
                 duplicate_item = original_item.copy()
                 if duplicate_item:
                     duplicate_item.position = new_position
                     
-                    # Return the index of the duplicate within the track for consistency
-                    for idx, track_item in enumerate(track.items):
-                        if track_item.id == duplicate_item.id:
-                            self.logger.info(f"Duplicated item to index {idx}")
-                            return idx
+                    # Update arrange to reflect changes
+                    self._RPR.UpdateArrange()
                     
-                    # Fallback to item ID
-                    return duplicate_item.id
-            except (AttributeError, TypeError):
-                # Fallback to manual copy-paste method
-                select_item(original_item)
+                    # The new item should be at the end of the items list
+                    new_index = item_count_before
+                    
+                    # Verify the item exists at this index
+                    if new_index < len(track.items):
+                        verify_item = track.items[new_index]
+                        if abs(verify_item.position - new_position) < POSITION_TOLERANCE:
+                            self.logger.info(f"Duplicated item to index {new_index}")
+                            return new_index
+                    
+                    # Fallback: search for the item by position
+                    return self._find_duplicated_item_index(track, new_position)
+                    
+            except (AttributeError, TypeError, Exception) as reapy_error:
+                self.logger.warning(f"Reapy duplication failed, trying ReaScript: {reapy_error}")
                 
-                # Copy the item
-                self._RPR.Main_OnCommand(40698, 0)  # Edit: Copy items/tracks/envelope points (depending on focus)
-                
-                # Set cursor to new position
-                project = get_reapy().Project()
-                project.cursor_position = new_position
-                
-                # Paste the item
-                self._RPR.Main_OnCommand(40914, 0)  # Edit: Paste items/tracks/envelope points (depending on focus)
-                
-                # Find the newly created item
-                return self._find_duplicated_item(track, new_position)
+                # Method 2: Fallback to ReaScript copy-paste method
+                try:
+                    # Select the original item
+                    select_item(original_item)
+                    
+                    # Copy the item using ReaScript command
+                    self._RPR.Main_OnCommand(40698, 0)  # Edit: Copy items
+                    
+                    # Set cursor to new position
+                    project = get_reapy().Project()
+                    project.cursor_position = new_position
+                    
+                    # Paste the item
+                    self._RPR.Main_OnCommand(40914, 0)  # Edit: Paste items
+                    
+                    # Update arrange
+                    self._RPR.UpdateArrange()
+                    
+                    # Find the newly created item index
+                    return self._find_duplicated_item_index(track, new_position)
+                    
+                except Exception as reascript_error:
+                    self.logger.error(f"ReaScript duplication also failed: {reascript_error}")
+                    return -1
 
         except Exception as e:
             self.logger.error(f"Failed to create item duplicate: {e}")
             return -1
 
-    def _find_duplicated_item(self, track, new_position):
-        """Find the newly duplicated item."""
-        # Wait a moment for the paste operation to complete
+    def _find_duplicated_item_index(self, track, new_position):
+        """Find the index of the newly duplicated item."""
+        # Wait a moment for the operation to complete
         time.sleep(INSERTION_WAIT_TIME)
 
-        # Find the item at the new position
-        for item in track.items:
+        # Find the item at the new position and return its index
+        for idx, item in enumerate(track.items):
             if abs(item.position - new_position) < POSITION_TOLERANCE:
                 self.logger.info(
-                    f"Found duplicated item at position {item.position}, ID: {item.id}"
+                    f"Found duplicated item at position {item.position}, index: {idx}"
                 )
-                return item.id
+                return idx
 
-        # If not found at exact position, return the last item
+        # If not found at exact position, check the last item
         if track.items:
-            last_item = track.items[-1]
-            self.logger.info(f"Using last item as duplicate: {last_item.id}")
-            return last_item.id
+            last_index = len(track.items) - 1
+            last_item = track.items[last_index]
+            self.logger.info(f"Using last item as duplicate at index {last_index}, position: {last_item.position}")
+            return last_index
 
         return -1
 
