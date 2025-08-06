@@ -1,10 +1,14 @@
 """
 Item lifecycle operations for REAPER items.
-Backward compatibility wrapper that re-exports from consolidated modules.
+Backward compatibility wrapper that re-exports from the core module.
 """
 
-# Import from consolidated modules
-from .management import duplicate_item, delete_item, verify_item_deletion
+# Import from core module
+from .core import (
+    duplicate_item,
+    delete_item, 
+    verify_item_deletion
+)
 
 # Re-export all functions for backward compatibility
 __all__ = [
