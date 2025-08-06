@@ -16,7 +16,9 @@ from src.item.utils import (
 from src.item.operations import delete_item, verify_item_deletion, select_item
 
 # Constants
-INSERTION_WAIT_TIME = 0.1  # Time to wait after media insertion
+INSERTION_WAIT_TIME = (
+    0.25  # Time to wait after media insertion (increased for reliability)
+)
 POSITION_TOLERANCE = 0.001  # Tolerance for position matching
 DEFAULT_DUPLICATE_OFFSET = 0.1  # Default offset for duplicated items
 
@@ -110,13 +112,23 @@ class AudioController:
 
             reapy = get_reapy()
             project = reapy.Project()
+
+            # Defensive: clamp track_index
+            if track_index < 0 or track_index >= len(project.tracks):
+                self.logger.error("Track index out of range: %s", track_index)
+                return None
+
             track = project.tracks[track_index]
 
             # Determine insertion position
             position = 0.0 if start_time is None else float(start_time)
 
-            # Snapshot count before insertion
-            count_before = len(track.items)
+            # Snapshot all items (track_id, item_index, position) before insertion
+            before_snapshot = {
+                (ti, idx)
+                for ti, tr in enumerate(project.tracks)
+                for idx, it in enumerate(tr.items)
+            }
 
             # 1) Move edit cursor to position
             project.cursor_position = position
@@ -129,78 +141,106 @@ class AudioController:
                     pass
             track.is_selected = True
 
-            # 3) Try to insert media explicitly on the selected track (mode=3 is more reliable)
-            #    If mode=3 fails to yield an item on the track, fall back to mode=0.
+            # 3) Primary attempt: insert media on selected track (mode=3)
             self._RPR.InsertMedia(file_path, 3)
-            time.sleep(0.25)  # slightly longer to ensure media is realized
+            time.sleep(INSERTION_WAIT_TIME)
             self._RPR.UpdateArrange()
 
-            # Determine new item index by comparing counts or searching by position
-            count_after = len(track.items)
-            if count_after <= count_before:
-                # Fallback attempt with mode=0 at edit cursor
-                self.logger.debug("Fallback to InsertMedia mode=0")
-                self._RPR.InsertMedia(file_path, 0)
-                time.sleep(0.25)
-                self._RPR.UpdateArrange()
-                count_after = len(track.items)
+            # Create after snapshot
+            after_snapshot = {
+                (ti, idx)
+                for ti, tr in enumerate(project.tracks)
+                for idx, it in enumerate(tr.items)
+            }
 
-            if count_after > count_before:
-                # The new item is typically appended to the end
-                new_index = count_after - 1
-                inserted = track.items[new_index]
-                if abs((inserted.position or 0.0) - position) < POSITION_TOLERANCE:
+            # Find new items (could be on any track depending on REAPER prefs)
+            new_pairs = sorted(list(after_snapshot - before_snapshot))
+            if not new_pairs:
+                # Fallback: try mode=0 (insert at edit cursor)
+                self.logger.debug(
+                    "InsertMedia mode=3 yielded no new items, fallback to mode=0"
+                )
+                self._RPR.InsertMedia(file_path, 0)
+                time.sleep(INSERTION_WAIT_TIME)
+                self._RPR.UpdateArrange()
+
+                after_snapshot = {
+                    (ti, idx)
+                    for ti, tr in enumerate(project.tracks)
+                    for idx, it in enumerate(tr.items)
+                }
+                new_pairs = sorted(list(after_snapshot - before_snapshot))
+
+            if not new_pairs:
+                self.logger.error("No new items detected after InsertMedia")
+                return None
+
+            # Prefer items at the intended position; otherwise take the first new item
+            selected_pair = None
+            for ti, idx in new_pairs:
+                it = project.tracks[ti].items[idx]
+                if abs((it.position or 0.0) - position) < POSITION_TOLERANCE:
+                    selected_pair = (ti, idx)
+                    break
+            if selected_pair is None:
+                selected_pair = new_pairs[-1]  # last created is often the inserted one
+
+            src_ti, src_idx = selected_pair
+            src_track = project.tracks[src_ti]
+            inserted_item = src_track.items[src_idx]
+
+            # If item landed on a different track, move it to the requested track
+            if src_ti != track_index:
+                try:
+                    # ReaScript: SetMediaItemInfo_Value(item, "P_TRACK", track_id)
+                    self._RPR.SetMediaItemInfo_Value(
+                        inserted_item.id, "P_TRACK", track.id
+                    )
+                    time.sleep(INSERTION_WAIT_TIME)
+                    self._RPR.UpdateArrange()
+                    # After moving, re-bind 'track' reference
+                    track = project.tracks[track_index]
+                except Exception as move_err:
+                    self.logger.error(
+                        "Failed to move inserted item to track %s: %s",
+                        track_index,
+                        move_err,
+                    )
+                    return None
+
+            # Ensure position is correct on the target track
+            try:
+                inserted_item.position = position
+                time.sleep(INSERTION_WAIT_TIME)
+                self._RPR.UpdateArrange()
+            except Exception as pos_err:
+                self.logger.warning(
+                    "Failed to set position on inserted item: %s", pos_err
+                )
+
+            # Return the index of the inserted item on the target track (find by position or last index)
+            # Prefer exact position match
+            for idx, it in enumerate(track.items):
+                if abs((it.position or 0.0) - position) < POSITION_TOLERANCE:
                     self.logger.info(
                         "Inserted audio item on track %s at index %s (pos=%s)",
                         track_index,
-                        new_index,
-                        inserted.position,
+                        idx,
+                        it.position,
                     )
-                    return new_index
+                    return idx
 
-                # Search on the same track by position
-                for idx, it in enumerate(track.items):
-                    if abs((it.position or 0.0) - position) < POSITION_TOLERANCE:
-                        self.logger.info(
-                            "Inserted audio item found by search at index %s (pos=%s)",
-                            idx,
-                            it.position,
-                        )
-                        return idx
-
-                # As a final fallback return last index on this track
+            # Fallback: last item
+            if track.items:
+                last_idx = len(track.items) - 1
                 self.logger.warning(
-                    "Inserted audio item position check failed; returning last index %s",
-                    new_index,
+                    "Returning last index %s for inserted audio item on track %s",
+                    last_idx,
+                    track_index,
                 )
-                return new_index
+                return last_idx
 
-            # As a diagnostic fallback, search across all tracks at the target position
-            found_idx: Optional[int] = None
-            found_track_idx: Optional[int] = None
-            for ti, tr in enumerate(project.tracks):
-                for idx, it in enumerate(tr.items):
-                    if abs((it.position or 0.0) - position) < POSITION_TOLERANCE:
-                        found_idx = idx
-                        found_track_idx = ti
-                        break
-                if found_idx is not None:
-                    break
-
-            if found_idx is not None:
-                self.logger.warning(
-                    "Item inserted on different track %s at index %s; consider moving it programmatically",
-                    found_track_idx,
-                    found_idx,
-                )
-                # For now, report failure to respect contract: should appear on requested track
-                return None
-
-            self.logger.error(
-                "No new item detected after InsertMedia (before=%s, after=%s)",
-                count_before,
-                count_after,
-            )
+            self.logger.error("Inserted item not found on the target track after move")
             return None
 
         except Exception as e:
@@ -520,6 +560,87 @@ class AudioController:
             return last_index
 
         return -1
+
+    def create_blank_item_on_track(
+        self,
+        track_index: int,
+        start_time: float,
+        length: float = 1.0,
+    ) -> int:
+        """
+        Create a blank media item on a track and return its index.
+
+        Args:
+            track_index (int): Destination track index
+            start_time (float): Start time in seconds
+            length (float): Item length in seconds (min 0.1s)
+
+        Returns:
+            int: Index of the created item on the track, or -1 on failure
+        """
+        try:
+            if self._RPR is None:
+                self.logger.error("RPR not initialized")
+                return -1
+
+            # Enforce minimal length
+            length = max(0.1, float(length))
+            start_time = float(start_time)
+
+            reapy = get_reapy()
+            project = reapy.Project()
+
+            if track_index < 0 or track_index >= len(project.tracks):
+                self.logger.error("Track index out of range: %s", track_index)
+                return -1
+
+            track = project.tracks[track_index]
+
+            # Snapshot before
+            before_count = len(track.items)
+
+            # Move cursor and select only target track
+            project.cursor_position = start_time
+            for t in project.tracks:
+                try:
+                    t.is_selected = False
+                except Exception:
+                    pass
+            track.is_selected = True
+
+            # Insert empty item using REAPER action (40142)
+            self._RPR.Main_OnCommand(40142, 0)
+            time.sleep(INSERTION_WAIT_TIME)
+            self._RPR.UpdateArrange()
+
+            # Verify new item on the track
+            after_count = len(track.items)
+            if after_count <= before_count:
+                self.logger.error(
+                    "Failed to create blank item on track %s", track_index
+                )
+                return -1
+
+            # New item should be last
+            new_index = after_count - 1
+            item = track.items[new_index]
+            try:
+                item.position = start_time
+                item.length = length
+                time.sleep(INSERTION_WAIT_TIME)
+                self._RPR.UpdateArrange()
+            except Exception as e:
+                self.logger.warning("Failed to set blank item props: %s", e)
+
+            # Prefer exact position match
+            for idx, it in enumerate(track.items):
+                if abs((it.position or 0.0) - start_time) < POSITION_TOLERANCE:
+                    return idx
+
+            return new_index
+        except Exception as e:
+            self.logger.error("Failed to create blank item: %s", e)
+            return -1
 
     def delete_item(self, track_index, item_id):
         """
