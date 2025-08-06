@@ -15,7 +15,7 @@ class TestBasicTrackClientOperations(unittest.TestCase):
     def setUpClass(cls):
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         cls.logger = logging.getLogger(__name__)
         cls.controller = ReaperController(debug=True)
@@ -27,8 +27,11 @@ class TestBasicTrackClientOperations(unittest.TestCase):
         track_index = self.controller.create_track("Test Track")
         self.assertGreaterEqual(track_index, 0, "Failed to create track.")
         self.logger.info(f"Created track {track_index}")
-        
-        self.assertTrue(self.controller.set_track_color(track_index, "#FF0000"), "Failed to set track color.")
+
+        self.assertTrue(
+            self.controller.set_track_color(track_index, "#FF0000"),
+            "Failed to set track color.",
+        )
         self.logger.info(f"Set track {track_index} color to red")
 
 
