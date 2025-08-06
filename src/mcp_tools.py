@@ -1373,6 +1373,171 @@ def _setup_advanced_routing_tools(mcp: FastMCP, controller) -> None:
             return _create_error_response(f"Failed to get track folder depth: {str(e)}")
 
 
+def _setup_sidechain_tools(mcp: FastMCP, controller) -> None:
+    """Setup sidechain and bus routing MCP tools."""
+
+    @mcp.tool("create_sidechain_send")
+    def create_sidechain_send(
+        ctx: Context,
+        source_track: int,
+        destination_track: int,
+        dest_channels: int = 3,
+        level_db: float = 0.0,
+        pre_fader: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Create a sidechain send between tracks for ducking/compression.
+        
+        Args:
+            source_track (int): Index of the source track (e.g., kick drum)
+            destination_track (int): Index of the destination track (e.g., bass with compressor)
+            dest_channels (int): Destination channels (3 for channels 3/4, 1 for channels 1/2)
+            level_db (float): Send level in dB
+            pre_fader (bool): True for pre-fader, False for post-fader
+        """
+        try:
+            result = controller.sidechain.create_sidechain_send(
+                source_track=source_track,
+                destination_track=destination_track,
+                dest_channels=dest_channels,
+                level_db=level_db,
+                pre_fader=pre_fader
+            )
+            if result:
+                return {
+                    "status": "success",
+                    "message": f"Created sidechain send: track {source_track} -> track {destination_track}",
+                    "data": {
+                        "send_id": result.send_id,
+                        "sidechain_channels": result.sidechain_channels,
+                        "level_db": result.level_db,
+                        "pre_fader": result.pre_fader,
+                        "latency_ms": result.latency_ms,
+                        "route_valid": result.route_valid
+                    }
+                }
+            else:
+                return _create_error_response("Failed to create sidechain send")
+        except Exception as e:
+            logger.error(f"Failed to create sidechain send: {str(e)}")
+            return _create_error_response(f"Failed to create sidechain send: {str(e)}")
+
+    @mcp.tool("setup_parallel_bus")
+    def setup_parallel_bus(
+        ctx: Context,
+        source_track: int,
+        bus_name: str,
+        mix_db: float = -6.0,
+        latency_comp: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Create a parallel processing bus with phase compensation.
+        
+        Args:
+            source_track (int): Index of the source track
+            bus_name (str): Name for the parallel bus track
+            mix_db (float): Mix level for parallel processing in dB
+            latency_comp (bool): Enable automatic latency compensation
+        """
+        try:
+            result = controller.sidechain.setup_parallel_bus(
+                source_track=source_track,
+                bus_name=bus_name,
+                mix_db=mix_db,
+                latency_comp=latency_comp
+            )
+            if result:
+                return {
+                    "status": "success",
+                    "message": f"Created parallel bus '{bus_name}' for track {source_track}",
+                    "data": {
+                        "bus_track_index": result.bus_track_index,
+                        "send_id": result.send_id,
+                        "return_send_id": result.return_send_id,
+                        "mix_db": result.mix_db,
+                        "latency_compensation": result.latency_compensation
+                    }
+                }
+            else:
+                return _create_error_response("Failed to setup parallel bus")
+        except Exception as e:
+            logger.error(f"Failed to setup parallel bus: {str(e)}")
+            return _create_error_response(f"Failed to setup parallel bus: {str(e)}")
+
+    @mcp.tool("add_saturation_bus")
+    def add_saturation_bus(
+        ctx: Context,
+        source_track: int,
+        saturation_type: str,
+        mix_percent: float = 30.0
+    ) -> Dict[str, Any]:
+        """
+        Create a saturation bus for parallel harmonic enhancement.
+        
+        Args:
+            source_track (int): Index of the source track
+            saturation_type (str): Type of saturation ("tape", "tube", "transistor", "digital")
+            mix_percent (float): Saturation mix percentage (0-100%)
+        """
+        try:
+            result = controller.sidechain.add_saturation_bus(
+                source_track=source_track,
+                saturation_type=saturation_type,
+                mix_percent=mix_percent
+            )
+            if result:
+                return {
+                    "status": "success",
+                    "message": f"Created {saturation_type} saturation bus for track {source_track}",
+                    "data": {
+                        "bus_track_index": result.bus_track_index,
+                        "saturation_fx_id": result.saturation_fx_id,
+                        "saturation_type": result.saturation_type,
+                        "send_id": result.send_id,
+                        "return_send_id": result.return_send_id,
+                        "mix_percent": result.mix_percent
+                    }
+                }
+            else:
+                return _create_error_response("Failed to create saturation bus")
+        except Exception as e:
+            logger.error(f"Failed to create saturation bus: {str(e)}")
+            return _create_error_response(f"Failed to create saturation bus: {str(e)}")
+
+    @mcp.tool("sidechain_route_analyzer")
+    def sidechain_route_analyzer(
+        ctx: Context,
+        source_track: int,
+        dest_track: int
+    ) -> Dict[str, Any]:
+        """
+        Analyze sidechain routing validity and configuration.
+        
+        Args:
+            source_track (int): Index of the source track
+            dest_track (int): Index of the destination track
+        """
+        try:
+            result = controller.sidechain.sidechain_route_analyzer(
+                source_track=source_track,
+                dest_track=dest_track
+            )
+            return {
+                "status": "success" if result.valid else "warning",
+                "message": f"Route analysis: {source_track} -> {dest_track}",
+                "data": {
+                    "valid": result.valid,
+                    "channels_map": result.channels_map,
+                    "latency_ms": result.latency_ms,
+                    "warnings": result.warnings,
+                    "errors": result.errors
+                }
+            }
+        except Exception as e:
+            logger.error(f"Failed to analyze sidechain route: {str(e)}")
+            return _create_error_response(f"Failed to analyze sidechain route: {str(e)}")
+
+
 def _setup_automation_tools(mcp: FastMCP, controller) -> None:
     """Setup automation and modulation MCP tools."""
 
@@ -1992,6 +2157,7 @@ def setup_mcp_tools(mcp: FastMCP, controller) -> None:
     _setup_audio_tools(mcp, controller)
     _setup_routing_tools(mcp, controller)
     _setup_advanced_routing_tools(mcp, controller)
+    _setup_sidechain_tools(mcp, controller)
     _setup_automation_tools(mcp, controller)
     _setup_advanced_item_tools(mcp, controller)
     _setup_analysis_tools(mcp, controller)
