@@ -1,6 +1,8 @@
 import pytest
 from types import SimpleNamespace
-from src.mcp_tools import setup_mcp_tools, FastMCP
+from mcp.server.fastmcp import FastMCP
+from src.mcp_tools import setup_mcp_tools
+from src.mcp_tools._helpers import DEFAULT_MIDI_LENGTH
 
 class DummyMCP(FastMCP):
     def __init__(self):

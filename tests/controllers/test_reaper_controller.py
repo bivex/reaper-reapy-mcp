@@ -11,6 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.reaper_controller import ReaperController
 from src.media.sample_downloader import ensure_sample_file
 from src.controllers.midi.midi_controller import MIDIController
+from src.mcp_tools._helpers import DEFAULT_MIDI_LENGTH
 
 # Constants to replace magic numbers
 DEFAULT_TEMPO = 120.0
@@ -301,8 +302,8 @@ class TestReaperController(unittest.TestCase):
         track_index = self.controller.create_track("MIDI Test Track")
 
         # Create MIDI item
-        start_time = MIDIController.DEFAULT_MIDI_START_TIME
-        length = MIDIController.DEFAULT_MIDI_LENGTH
+        start_time = 0.0
+        length = DEFAULT_MIDI_LENGTH
         midi_item_id = self.controller.create_midi_item(
             track_index, start_time, length=length
         )
