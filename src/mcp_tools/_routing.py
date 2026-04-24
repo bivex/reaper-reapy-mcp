@@ -6,7 +6,7 @@ from ._helpers import _create_success_response, _create_error_response, _handle_
 
 def _setup_routing_tools(mcp: FastMCP, controller) -> None:
     """Setup routing-related MCP tools."""
-    from constants import DEFAULT_STEREO_CHANNELS
+    from src.constants import DEFAULT_STEREO_CHANNELS
 
     @mcp.tool("add_send")
     def add_send(
