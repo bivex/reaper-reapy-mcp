@@ -2,7 +2,10 @@
 
 from ._connection import _setup_connection_tools as setup_connection_tools
 from ._track import _setup_track_tools as setup_track_tools
-from ._project import _setup_project_tools as setup_project_tools
+from ._project import (
+    _setup_project_tools as setup_project_tools,
+    _setup_marker_tools as setup_marker_tools,
+)
 from ._midi import _setup_midi_tools as setup_midi_tools
 from ._master import _setup_master_tools as setup_master_tools
 from ._automation import _setup_automation_tools as setup_automation_tools
@@ -20,6 +23,7 @@ def setup_mcp_tools(mcp, controller) -> None:
     setup_connection_tools(mcp, controller)
     setup_track_tools(mcp, controller)
     setup_project_tools(mcp, controller)
+    setup_marker_tools(mcp, controller)
     setup_midi_tools(mcp, controller)
     setup_master_tools(mcp, controller)
     setup_automation_tools(mcp, controller)
@@ -34,6 +38,7 @@ __all__ = [
     "setup_connection_tools",
     "setup_track_tools",
     "setup_project_tools",
+    "setup_marker_tools",
     "setup_midi_tools",
     "setup_master_tools",
     "setup_automation_tools",
