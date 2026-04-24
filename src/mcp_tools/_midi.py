@@ -8,6 +8,10 @@ from ._helpers import (
     _create_error_response,
     _handle_controller_operation,
     logger,
+    DEFAULT_MIDI_LENGTH,
+    DEFAULT_MIDI_VELOCITY,
+    MIN_MIDI_PITCH,
+    MAX_MIDI_PITCH,
 )
 
 
