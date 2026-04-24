@@ -7,7 +7,6 @@ import sys
 from src.core.reapy_bridge import get_reapy
 from .fx_manage_controller import FXManageController
 from .fx_params_controller import FXParamsController
-from .fx_presets_controller import FXPresetsController
 from .fx_routing_controller import FXRoutingController
 
 # Add utils path for imports (kept for backward-compat if needed by other modules)
@@ -36,7 +35,6 @@ class FXController:
             self._RPR = None
         self.manage = FXManageController(self._RPR, self.logger)
         self.params = FXParamsController(self._RPR, self.logger)
-        self.presets = FXPresetsController(self._RPR, self.logger)
         self.routing = FXRoutingController(self._RPR, self.logger)
 
     def add_fx_to_track(self, track_index: int, fx_name: str) -> bool:
@@ -56,7 +54,9 @@ class FXController:
     def get_fx_param(self, track_index: int, fx_index: int, param_name: str) -> float:
         return self.params.get_fx_param(track_index, fx_index, param_name)
 
-    def get_fx_param_list(self, track_index: int, fx_index: int) -> List[Dict[str, Any]]:
+    def get_fx_param_list(
+        self, track_index: int, fx_index: int
+    ) -> List[Dict[str, Any]]:
         return self.params.get_fx_param_list(track_index, fx_index)
 
     def _generate_contextual_param_name(self, fx_name: str, param_index: int) -> str:
@@ -154,12 +154,15 @@ class FXController:
         for part in parts:
             if part.strip() and '"' in part:
                 import re as _re
+
                 name_match = _re.search(r'"([^"]+)"', part)
                 if name_match:
                     return name_match.group(1)
         return None
 
-    def toggle_fx(self, track_index: int, fx_index: int, enable: bool | None = None) -> bool:
+    def toggle_fx(
+        self, track_index: int, fx_index: int, enable: bool | None = None
+    ) -> bool:
         return self.manage.toggle_fx(track_index, fx_index, enable)
 
     def set_compressor_params(
@@ -241,11 +244,13 @@ class FXController:
             return max(0.0, min(1.0, (value - 1.0) / 19.0))
         elif param_type == "attack":
             import math
+
             return max(
                 0.0, min(1.0, math.log10(max(0.1, value) / 0.1) / math.log10(1000))
             )
         elif param_type == "release":
             import math
+
             return max(0.0, min(1.0, math.log10(max(10, value) / 10) / math.log10(100)))
         elif param_type == "makeup_gain":
             return max(0.0, min(1.0, value / 20.0))
@@ -318,6 +323,7 @@ class FXController:
             return max(0.0, min(1.0, (value + 10.0) / 10.0))
         elif param_type == "release":
             import math
+
             return max(0.0, min(1.0, math.log10(max(1, value)) / math.log10(100)))
         else:
             return max(0.0, min(1.0, value))
@@ -334,6 +340,7 @@ class FXController:
                 SILENCE_THRESHOLD_DB,
                 MINIMUM_PEAK_VALUE,
             )
+
             left_db = (
                 DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, left_peak))
                 if left_peak > 0
@@ -352,6 +359,7 @@ class FXController:
         except Exception as e:
             self.logger.error(f"Failed to get track peak level: {e}")
             from constants import SILENCE_THRESHOLD_DB
+
             return {
                 "left_peak_db": SILENCE_THRESHOLD_DB,
                 "right_peak_db": SILENCE_THRESHOLD_DB,
@@ -370,6 +378,7 @@ class FXController:
                 SILENCE_THRESHOLD_DB,
                 MINIMUM_PEAK_VALUE,
             )
+
             left_db = (
                 DB_CONVERSION_FACTOR * math.log10(max(MINIMUM_PEAK_VALUE, left_peak))
                 if left_peak > 0
@@ -388,6 +397,7 @@ class FXController:
         except Exception as e:
             self.logger.error(f"Failed to get master peak level: {e}")
             from constants import SILENCE_THRESHOLD_DB
+
             return {
                 "left_peak_db": SILENCE_THRESHOLD_DB,
                 "right_peak_db": SILENCE_THRESHOLD_DB,

@@ -138,7 +138,9 @@ class AudioController:
                 try:
                     t.is_selected = False
                 except Exception:
-                    pass
+                    self.logger.debug(
+                        "Failed to deselect track (may already be deselected)"
+                    )
             track.is_selected = True
 
             # 3) Primary attempt: insert media on selected track (mode=3)
@@ -605,7 +607,9 @@ class AudioController:
                 try:
                     t.is_selected = False
                 except Exception:
-                    pass
+                    self.logger.debug(
+                        "Failed to deselect track during blank item creation"
+                    )
             track.is_selected = True
 
             # Insert empty item using REAPER action (40142)

@@ -272,7 +272,10 @@ def duplicate_item(
                 before_ids.add(it.id)
             except Exception:
                 # Ignore items that fail to expose id during snapshot
-                pass
+                logger.debug(
+                    "Item %s has no id attribute",
+                    it.id if hasattr(it, "id") else "unknown",
+                )
 
         # Duplicate the item. Prefer API duplication if available,
         # otherwise fallback to copy()
@@ -302,7 +305,7 @@ def duplicate_item(
             if hasattr(project, "update_timeline"):
                 project.update_timeline()
         except Exception:
-            pass
+            logger.debug("Project timeline update not supported or failed")
 
         # Identify the newly created item by comparing ids after duplication
         new_index = None
@@ -357,7 +360,7 @@ def duplicate_item(
                     if it is new_item:
                         return idx
             except Exception:
-                pass
+                logger.debug("Item comparison failed during index lookup")
 
         logger.error(
             "Could not resolve new item index after duplication of %s on track %s",

@@ -1,34 +1,17 @@
 """
 REAPER Controller - Composition-based architecture for REAPER integration.
 
-This module provides organized access to REAPER functionality through 
+This module provides organized access to REAPER functionality through
 specialized controllers rather than a monolithic facade pattern.
 """
 
-import os
-import sys
+from __future__ import annotations
+
+import importlib
 import logging
 from typing import Optional
 
-# Add necessary paths for imports
-script_dir = os.path.dirname(os.path.abspath(__file__))
-repo_root = os.path.dirname(script_dir)
-sys.path.insert(0, script_dir)  # Add script directory to path
-
-# Import controllers using relative imports to avoid circular imports
-from controllers.track.track_controller import TrackController
-from controllers.fx.fx_controller import FXController
-from controllers.marker.marker_controller import MarkerController
-from controllers.midi.midi_controller import MIDIController
-from controllers.audio.audio_controller import AudioController
-from controllers.master.master_controller import MasterController
-from controllers.project.project_controller import ProjectController
-from controllers.routing.routing_controller import RoutingController
-from controllers.routing.advanced_routing_controller import AdvancedRoutingController
-from controllers.routing.sidechain_controller import SidechainController
-from controllers.automation.automation_controller import AutomationController
-from controllers.audio.advanced_item_controller import AdvancedItemController
-from controllers.analysis.analysis_controller import AnalysisController
+# No top-level controller imports to reduce coupling (lazy-loaded)
 
 
 class ReaperControllerFactory:
@@ -51,43 +34,40 @@ class ReaperControllerFactory:
         if debug:
             self.logger.setLevel(logging.INFO)
 
-        # Connection status
         self._connection_verified = None
-
-        # Initialize controllers lazily
         self._controllers = {}
 
     def _get_controller(self, controller_type: str):
-        """Get or create a controller instance with error handling."""
+        """Get or create a controller instance with lazy loading and error handling."""
         if controller_type not in self._controllers:
             try:
-                controller_class = {
-                    "track": TrackController,
-                    "fx": FXController,
-                    "marker": MarkerController,
-                    "midi": MIDIController,
-                    "audio": AudioController,
-                    "master": MasterController,
-                    "project": ProjectController,
-                    "routing": RoutingController,
-                    "advanced_routing": AdvancedRoutingController,
-                    "sidechain": SidechainController,
-                    "automation": AutomationController,
-                    "advanced_items": AdvancedItemController,
-                    "analysis": AnalysisController,
-                }[controller_type]
-
+                # Lazy import to reduce module-level coupling
+                mapping = {
+                    "track": "controllers.track.track_controller.TrackController",
+                    "fx": "controllers.fx.fx_controller.FXController",
+                    "marker": "controllers.marker.marker_controller.MarkerController",
+                    "midi": "controllers.midi.midi_controller.MIDIController",
+                    "audio": "controllers.audio.audio_controller.AudioController",
+                    "master": "controllers.master.master_controller.MasterController",
+                    "project": "controllers.project.project_controller.ProjectController",
+                    "routing": "controllers.routing.routing_controller.RoutingController",
+                    "advanced_routing": "controllers.routing.advanced_routing_controller.AdvancedRoutingController",
+                    "sidechain": "controllers.routing.sidechain_controller.SidechainController",
+                    "automation": "controllers.automation.automation_controller.AutomationController",
+                    "advanced_items": "controllers.audio.advanced_item_controller.AdvancedItemController",
+                    "analysis": "controllers.analysis.analysis_controller.AnalysisController",
+                }
+                module_path, class_name = mapping[controller_type].rsplit(".", 1)
+                module = importlib.import_module(module_path, package=__package__)
+                controller_class = getattr(module, class_name)
                 self._controllers[controller_type] = controller_class(debug=self.debug)
-
             except Exception as e:
                 self.logger.error(
                     f"Failed to initialize {controller_type} controller: {e}"
                 )
-                # Create placeholder that fails gracefully
                 self._controllers[controller_type] = (
                     self._create_placeholder_controller(controller_type)
                 )
-
         return self._controllers[controller_type]
 
     def _create_placeholder_controller(self, controller_type: str):

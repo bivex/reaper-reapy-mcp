@@ -101,7 +101,7 @@ class MIDIController:
 
             if track_index < 0 or track_index >= track_count:
                 self.logger.error(
-                    f"Track index {track_index} out of range (0-{track_count-1})"
+                    f"Track index {track_index} out of range (0-{track_count - 1})"
                 )
                 return False
 
@@ -214,7 +214,7 @@ class MIDIController:
                         try:
                             item.delete()
                         except:
-                            pass
+                            self.logger.warning("Failed to delete failed MIDI item")
                         return None
                 else:
                     self.logger.error("Failed to create item using reapy")
@@ -610,7 +610,6 @@ class MIDIController:
                             and item.active_take
                             and item.active_take.is_midi
                         ):
-
                             item_info = {
                                 "track_index": track_index,
                                 "item_id": item.id,
