@@ -6,6 +6,28 @@
 ```
 Options → Preferences → Plug-ins → ReaScript
 ✓ Enable Python for use with ReaScript
+```
+
+**macOS (miniconda, Python 3.13):**
+```
+Custom path to Python dylib directory:
+  /opt/homebrew/Caskroom/miniconda/base/lib
+
+Force ReaScript to use specific Python dylib:
+  libpython3.13.dylib
+```
+
+Если 3.13 не работает — попробуй env `omni` (Python 3.12):
+```
+Custom path to Python dylib directory:
+  /opt/homebrew/Caskroom/miniconda/base/envs/omni/lib
+
+Force ReaScript to use specific Python dylib:
+  libpython3.12.dylib
+```
+
+**Windows (anaconda):**
+```
 Custom path: C:\ProgramData\anaconda3
 DLL name: python312.dll
 ```
