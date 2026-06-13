@@ -313,13 +313,13 @@ class AudioController:
             track = project.tracks[track_index]
 
             # Use shared utility to find the item
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 self.logger.warning(f"Item {item_id} not found on track {track_index}")
                 return {}
 
             # Get properties using shared utility
-            return get_item_props(item)
+            return get_item_props(track_index, item_id)
 
         except Exception as e:
             error_message = f"Failed to get properties for item {item_id}: {e}"
@@ -342,7 +342,7 @@ class AudioController:
             project = get_reapy().Project()
             track = project.tracks[track_index]
 
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 self.logger.warning(f"Item {item_id} not found on track {track_index}")
                 return False
@@ -372,7 +372,7 @@ class AudioController:
             project = get_reapy().Project()
             track = project.tracks[track_index]
 
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 self.logger.warning(f"Item {item_id} not found on track {track_index}")
                 return False
@@ -413,7 +413,7 @@ class AudioController:
             )
 
             # Get the original item by ID or index
-            original_item = get_item_by_id_or_index(track, item_id)
+            original_item = get_item_by_id_or_index(track_index, item_id)
             if original_item is None:
                 error_message = f"Item {item_id} not found on track {track_index}"
                 self.logger.error(error_message)
@@ -425,49 +425,26 @@ class AudioController:
 
             self.logger.info(f"Duplicating item {item_id} to position {new_position}")
 
-            # Simple duplication approach
+            # Simple duplication approach using RPR API
             try:
-                # Use reapy's copy method
-                duplicate_item = original_item.copy()
-                if duplicate_item:
-                    # Set the new position
-                    duplicate_item.position = new_position
+                # Select only the original item, then duplicate via action
+                self._RPR.SetMediaItemSelected(original_item.id, True)
+                # Duplicate selected items (action 41295)
+                self._RPR.Main_OnCommand(41295, 0)
+                self._RPR.UpdateArrange()
 
-                    # Update the arrangement
+                # Verify duplication by checking item count
+                item_count_after = len(track.items)
+                if item_count_after > item_count_before:
+                    # Move the new item to requested position
+                    new_index = item_count_after - 1
+                    new_item = track.items[new_index]
+                    new_item.position = new_position
                     self._RPR.UpdateArrange()
-
-                    # Verify duplication by checking item count
-                    item_count_after = len(track.items)
-                    if item_count_after > item_count_before:
-                        new_index = item_count_after - 1  # Last item is the new one
-                        # Double-check by position
-                        if (
-                            abs(track.items[new_index].position - new_position)
-                            < POSITION_TOLERANCE
-                        ):
-                            self.logger.info(
-                                f"Successfully duplicated item to index {new_index}"
-                            )
-                            return new_index
-                        else:
-                            # Search for the correct item by position
-                            for idx, item in enumerate(track.items):
-                                if (
-                                    abs(item.position - new_position)
-                                    < POSITION_TOLERANCE
-                                ):
-                                    self.logger.info(
-                                        f"Found duplicated item at index {idx} by position"
-                                    )
-                                    return idx
-
-                    self.logger.error(
-                        f"Item count didn't increase after duplication (before: {item_count_before}, after: {item_count_after})"
+                    self.logger.info(
+                        f"Successfully duplicated item to index {new_index}"
                     )
-                    return -1
-                else:
-                    self.logger.error("Failed to create duplicate using reapy copy()")
-                    return -1
+                    return new_index
             except Exception as reapy_error:
                 self.logger.error(f"Reapy duplication failed: {reapy_error}")
                 return -1
@@ -673,7 +650,7 @@ class AudioController:
             project = get_reapy().Project()
             track = project.tracks[track_index]
 
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 return False
 
