@@ -29,46 +29,63 @@ This Python-based MCP server provides comprehensive control over REAPER DAW thro
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.10+ (3.13 tested on macOS with miniconda)
 - REAPER DAW installed
-- Internet connection (for sample audio downloads)
+- `python-reapy` installed: `pip install python-reapy`
 
 ### 1. Install Dependencies
 ```bash
 pip install -e .
 ```
 
-### 2. Configure REAPER
-1. In REAPER: **Options → Preferences → Plug-ins → ReaScript**
-2. Check **"Enable Python for use with ReaScript"**
-3. Set **Custom path to Python dll directory** to: `C:\ProgramData\anaconda3`
-4. Set **Force ReaScript to use specific Python dll** to: `python312.dll`
+### 2. Configure REAPER — Enable Python for ReaScripts
 
-![REAPER Python Configuration](docs/media/Screenshot_2.png)
+**macOS (miniconda):**
 
-### 3. Enable reapy Server
-- In REAPER: **Actions → Load ReaScript** → select `reaper_side_enable_server.py` and run it
-- Or run from command line: `python reaper_side_enable_server.py`
+In REAPER: **Options → Preferences → Plug-ins → ReaScript**
+- Check **"Enable Python for use with ReaScript"**
+- Custom path to Python dylib directory: `/opt/homebrew/Caskroom/miniconda/base/lib`
+- Force ReaScript to use specific Python dylib: `libpython3.13.dylib`
 
-### 4. Start the MCP Server
+If Python 3.13 doesn't work, try the `omni` env (Python 3.12):
+- Custom path: `/opt/homebrew/Caskroom/miniconda/base/envs/omni/lib`
+- Dylib: `libpython3.12.dylib`
 
-**Windows (Recommended):**
+**Windows (anaconda):**
+- Custom path: `C:\ProgramData\anaconda3`
+- DLL: `python312.dll`
+
+### 3. Configure reapy (run once from terminal, with REAPER closed or running)
 ```bash
-# Double-click this file
-start_mcp_server.bat
+python3 reaper_side_enable_server.py
 ```
 
-**Command Line:**
+This patches `reaper.ini` directly — works around a reapy configparser bug on Python 3.13.
+
+### 4. Enable Web Interface in REAPER
+
+In REAPER: **Options → Preferences → Control/OSC/web** → Add → **Web browser interface** → port `2307` → OK → Apply
+
+This is required for reapy dist API to connect.
+
+### 5. Activate reapy Server in REAPER
+
+In REAPER: **Actions → Run ReaScript** → select `activate_reapy_server.py` from the project root.
+
+Run this every time REAPER starts (or add it to REAPER startup actions).
+
+### 6. Start the MCP Server
 ```bash
-uv run -m src.run_mcp_server
-# or
-python -m src.run_mcp_server
+python3 src/run_mcp_server.py
+# or as module
+python3 -m src.run_mcp_server
 ```
 
-### 5. Test Connection
+Both direct script execution and module execution are supported.
+
+### 7. Verify Connection
 ```bash
-# Run MCP inspector
-test_mcp.bat
+python3 -c "import warnings; warnings.filterwarnings('ignore'); import reapy; print('tracks:', reapy.Project().n_tracks)"
 ```
 
 ## 🎚️ Professional Sidechain & Bus Routing
