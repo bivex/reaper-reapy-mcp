@@ -542,7 +542,7 @@ class SidechainController:
         # Common latency estimates in samples at 48kHz
         if "comp" in fx_name_lower or "limit" in fx_name_lower:
             return 1.0  # Compressors typically have minimal latency
-        elif "reverb" in fx_name_lower or "delay" in fx_name_lower:
+        elif "reverb" in fx_name_lower or "verb" in fx_name_lower or "delay" in fx_name_lower:
             return 10.0  # Time-based effects
         elif "eq" in fx_name_lower or "filter" in fx_name_lower:
             return 2.0  # EQs have some latency from filters

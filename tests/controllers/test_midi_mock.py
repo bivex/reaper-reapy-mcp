@@ -1,4 +1,5 @@
 import unittest
+import pytest
 from unittest.mock import patch, MagicMock
 from dataclasses import dataclass
 
@@ -198,6 +199,8 @@ class MockReaperController:
 
 
 # Test class
+
+@pytest.mark.reaper
 class TestMIDIOperations(unittest.TestCase):
 
     def setUp(self):

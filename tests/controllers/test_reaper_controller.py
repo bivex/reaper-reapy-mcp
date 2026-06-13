@@ -1,4 +1,5 @@
 import unittest
+import pytest
 import logging
 import os
 
@@ -43,6 +44,8 @@ DEFAULT_FX_PARAMETER_COUNT = 5
 DEFAULT_FX_PARAMETER_LIMIT = 3
 
 
+
+@pytest.mark.reaper
 class TestReaperController(unittest.TestCase):
     """Test suite for ReaperController functionality."""
 
@@ -75,40 +78,40 @@ class TestReaperController(unittest.TestCase):
     def test_create_and_rename_track(self):
         """Test track creation and renaming."""
         # Create a track
-        track_index = self.controller.create_track("Test Track")
+        track_index = self.controller.track.create_track("Test Track")
         self.assertGreaterEqual(track_index, 0)
 
         # Rename the track
         new_name = "Renamed Track"
-        self.assertTrue(self.controller.rename_track(track_index, new_name))
+        self.assertTrue(self.controller.track.rename_track(track_index, new_name))
 
     def test_tempo_control(self):
         """Test tempo control."""
         # Set tempo
         test_tempo = DEFAULT_TEMPO
-        self.assertTrue(self.controller.set_tempo(test_tempo))
+        self.assertTrue(self.controller.project.set_tempo(test_tempo))
 
         # Get tempo
-        current_tempo = self.controller.get_tempo()
+        current_tempo = self.controller.project.get_tempo()
         self.assertEqual(current_tempo, test_tempo)
 
     def test_track_color(self):
         """Test track color operations."""
         # Create a track
-        track_index = self.controller.create_track()
+        track_index = self.controller.track.create_track()
 
         # Set color
         color = "#FF0000"
-        self.assertTrue(self.controller.set_track_color(track_index, color))
+        self.assertTrue(self.controller.track.set_track_color(track_index, color))
 
         # Get color
-        current_color = self.controller.get_track_color(track_index)
+        current_color = self.controller.track.get_track_color(track_index)
         self.assertEqual(current_color, color)
 
     def test_fx_operations(self):
         """Test FX operations."""
         # Create a track
-        track_index = self.controller.create_track()
+        track_index = self.controller.track.create_track()
 
         # Test basic FX operations
         self._test_fx_basic_operations(track_index)
@@ -125,20 +128,20 @@ class TestReaperController(unittest.TestCase):
     def _test_fx_basic_operations(self, track_index: int):
         """Test basic FX operations (add/remove)."""
         fx_name = "VST: ReaEQ (Cockos)"
-        fx_index = self.controller.add_fx(track_index, fx_name)
+        fx_index = self.controller.fx.add_fx(track_index, fx_name)
         self.assertGreaterEqual(fx_index, 0)
 
         # Remove FX
-        self.assertTrue(self.controller.remove_fx(track_index, fx_index))
+        self.assertTrue(self.controller.fx.remove_fx(track_index, fx_index))
 
     def _test_fx_parameter_operations(self, track_index: int):
         """Test FX parameter operations."""
         fx_name = "VST: ReaEQ (Cockos)"
-        fx_index = self.controller.add_fx(track_index, fx_name)
+        fx_index = self.controller.fx.add_fx(track_index, fx_name)
         self.assertGreaterEqual(fx_index, 0)
 
         # Get FX parameter list
-        param_list = self.controller.get_fx_param_list(track_index, fx_index)
+        param_list = self.controller.fx.get_fx_param_list(track_index, fx_index)
         self.assertIsInstance(param_list, list)
         self.assertGreater(len(param_list), 0)
 
@@ -146,7 +149,7 @@ class TestReaperController(unittest.TestCase):
         self._test_parameter_modification(track_index, fx_index, param_list)
 
         # Clean up
-        self.controller.remove_fx(track_index, fx_index)
+        self.controller.fx.remove_fx(track_index, fx_index)
 
     def _test_parameter_modification(
         self, track_index: int, fx_index: int, param_list: list
@@ -197,13 +200,13 @@ class TestReaperController(unittest.TestCase):
         )
 
         self.logger.info(f"Setting {param_name} from {current_value} to {new_value}")
-        set_result = self.controller.set_fx_param(
+        set_result = self.controller.fx.set_fx_param(
             track_index, fx_index, param_name, new_value
         )
         self.assertTrue(set_result, f"Should be able to set parameter {param_name}")
 
         # Get the updated value
-        updated_value = self.controller.get_fx_param(track_index, fx_index, param_name)
+        updated_value = self.controller.fx.get_fx_param(track_index, fx_index, param_name)
         self.logger.info(f"Parameter {param_name} after setting: {updated_value}")
 
         return updated_value != current_value
@@ -211,16 +214,16 @@ class TestReaperController(unittest.TestCase):
     def _test_fx_list_operations(self, track_index: int):
         """Test FX list operations."""
         fx_name = "VST: ReaEQ (Cockos)"
-        fx_index = self.controller.add_fx(track_index, fx_name)
+        fx_index = self.controller.fx.add_fx(track_index, fx_name)
 
         # Get FX list on track
-        fx_list = self.controller.get_fx_list(track_index)
+        fx_list = self.controller.fx.get_fx_list(track_index)
         self.assertIsInstance(fx_list, list)
         self.assertGreater(len(fx_list), 0)
         self.assertEqual(fx_list[0]["name"], fx_name)
 
         # Get available FX list
-        available_fx = self.controller.get_available_fx_list()
+        available_fx = self.controller.fx.get_available_fx_list()
         self.assertIsInstance(available_fx, list)
         self.assertGreater(len(available_fx), 0)
 
@@ -232,19 +235,19 @@ class TestReaperController(unittest.TestCase):
         )
 
         # Clean up
-        self.controller.remove_fx(track_index, fx_index)
+        self.controller.fx.remove_fx(track_index, fx_index)
 
     def _test_fx_toggle_operations(self, track_index: int):
         """Test FX toggle operations."""
         fx_name = "VST: ReaEQ (Cockos)"
-        fx_index = self.controller.add_fx(track_index, fx_name)
+        fx_index = self.controller.fx.add_fx(track_index, fx_name)
 
         # Toggle FX
-        self.assertTrue(self.controller.toggle_fx(track_index, fx_index, False))
-        self.assertTrue(self.controller.toggle_fx(track_index, fx_index, True))
+        self.assertTrue(self.controller.fx.toggle_fx(track_index, fx_index, False))
+        self.assertTrue(self.controller.fx.toggle_fx(track_index, fx_index, True))
 
         # Clean up
-        self.controller.remove_fx(track_index, fx_index)
+        self.controller.fx.remove_fx(track_index, fx_index)
 
     def test_regions_and_markers(self):
         """Test region and marker operations."""
@@ -252,23 +255,23 @@ class TestReaperController(unittest.TestCase):
         start_time = DEFAULT_REGION_START_TIME
         end_time = DEFAULT_REGION_END_TIME
         region_name = "Test Region"
-        region_index = self.controller.create_region(start_time, end_time, region_name)
+        region_index = self.controller.marker.create_region(start_time, end_time, region_name)
         self.assertGreaterEqual(region_index, 0)
 
         # Create marker
         marker_time = DEFAULT_MARKER_TIME
         marker_name = "Test Marker"
-        marker_index = self.controller.create_marker(marker_time, marker_name)
+        marker_index = self.controller.marker.create_marker(marker_time, marker_name)
         self.assertGreaterEqual(marker_index, 0)
 
         # Delete region
-        self.assertTrue(self.controller.delete_region(region_index))
+        self.assertTrue(self.controller.marker.delete_region(region_index))
 
         # Delete marker
-        self.assertTrue(self.controller.delete_marker(marker_index))
+        self.assertTrue(self.controller.marker.delete_marker(marker_index))
         # Verify marker is actually deleted
         if hasattr(self.controller, "get_markers"):
-            markers = self.controller.get_markers()
+            markers = self.controller.marker.get_markers()
             marker_names = [m.get("name", "") for m in markers]
             self.assertNotIn(
                 marker_name, marker_names, "Marker should be deleted from project"
@@ -277,34 +280,34 @@ class TestReaperController(unittest.TestCase):
     def test_master_track(self):
         """Test master track operations."""
         # Get master track info
-        master_info = self.controller.get_master_track()
+        master_info = self.controller.master.get_master_track()
         self.assertIsInstance(master_info, dict)
 
         # Set master volume
         volume = DEFAULT_MASTER_VOLUME
-        self.assertTrue(self.controller.set_master_volume(volume))
+        self.assertTrue(self.controller.master.set_master_volume(volume))
 
         # Set master pan
         pan = DEFAULT_MASTER_PAN
-        self.assertTrue(self.controller.set_master_pan(pan))
+        self.assertTrue(self.controller.master.set_master_pan(pan))
 
         # Toggle master mute
-        self.assertTrue(self.controller.toggle_master_mute(True))
-        self.assertTrue(self.controller.toggle_master_mute(False))
+        self.assertTrue(self.controller.master.toggle_master_mute(True))
+        self.assertTrue(self.controller.master.toggle_master_mute(False))
 
         # Toggle master solo
-        self.assertTrue(self.controller.toggle_master_solo(True))
-        self.assertTrue(self.controller.toggle_master_solo(False))
+        self.assertTrue(self.controller.master.toggle_master_solo(True))
+        self.assertTrue(self.controller.master.toggle_master_solo(False))
 
     def test_midi_operations(self):
         """Test MIDI operations."""
         # Create a track
-        track_index = self.controller.create_track("MIDI Test Track")
+        track_index = self.controller.track.create_track("MIDI Test Track")
 
         # Create MIDI item
         start_time = 0.0
         length = DEFAULT_MIDI_LENGTH
-        midi_item_id = self.controller.create_midi_item(
+        midi_item_id = self.controller.midi.create_midi_item(
             track_index, start_time, length=length
         )
 
@@ -317,7 +320,7 @@ class TestReaperController(unittest.TestCase):
         # Add MIDI notes
         for pitch in MIDIController.DEFAULT_MIDI_NOTE_PITCHES:
             self.assertTrue(
-                self.controller.add_midi_note(
+                self.controller.midi.add_midi_note(
                     track_index,
                     midi_item_id,
                     MIDIController.MIDINoteParams(
@@ -330,7 +333,7 @@ class TestReaperController(unittest.TestCase):
             )
 
         # Get all MIDI notes from the item
-        midi_notes = self.controller.get_midi_notes(track_index, midi_item_id)
+        midi_notes = self.controller.midi.get_midi_notes(track_index, midi_item_id)
         self.assertEqual(
             len(midi_notes),
             MIDIController.DEFAULT_MIDI_NOTE_COUNT,
@@ -346,18 +349,18 @@ class TestReaperController(unittest.TestCase):
         )
 
         # Test finding notes by pitch
-        c_notes = self.controller.find_midi_notes_by_pitch(60, 60)
+        c_notes = self.controller.midi.find_midi_notes_by_pitch(60, 60)
         self.assertGreaterEqual(len(c_notes), 1, "Should find at least 1 C4 note")
 
         # Test getting all MIDI items
-        midi_items = self.controller.get_all_midi_items()
+        midi_items = self.controller.midi.get_all_midi_items()
         self.assertGreaterEqual(len(midi_items), 1, "Should find at least 1 MIDI item")
 
         # Clear MIDI item
-        self.assertTrue(self.controller.clear_midi_item(track_index, midi_item_id))
+        self.assertTrue(self.controller.midi.clear_midi_item(track_index, midi_item_id))
 
         # Verify that the notes were cleared
-        cleared_notes = self.controller.get_midi_notes(track_index, midi_item_id)
+        cleared_notes = self.controller.midi.get_midi_notes(track_index, midi_item_id)
         self.assertEqual(
             len(cleared_notes), 0, "MIDI item should have no notes after clearing"
         )
@@ -365,7 +368,7 @@ class TestReaperController(unittest.TestCase):
     def test_mp3_file_insertion(self):
         """Test MP3 file insertion."""
         # Create a track for the MP3
-        track_index = self.controller.create_track("MP3 Test Track")
+        track_index = self.controller.track.create_track("MP3 Test Track")
 
         # Test MP3 file insertion
         mp3_item_id = self._test_mp3_insertion(track_index)
@@ -389,7 +392,7 @@ class TestReaperController(unittest.TestCase):
         )
 
         # Insert the MP3 file at position 0.0
-        mp3_item_id = self.controller.insert_audio_item(
+        mp3_item_id = self.controller.audio.insert_audio_item(
             track_index, self.sample_audio_path, DEFAULT_MP3_POSITION
         )
 
@@ -404,7 +407,7 @@ class TestReaperController(unittest.TestCase):
     def _test_mp3_properties(self, track_index: int, mp3_item_id):
         """Test MP3 item properties."""
         # Get the properties of the inserted MP3 item
-        mp3_properties = self.controller.get_item_properties(track_index, mp3_item_id)
+        mp3_properties = self.controller.audio.get_item_properties(track_index, mp3_item_id)
         self.assertIsInstance(mp3_properties, dict)
         self.logger.info(f"MP3 item properties: {mp3_properties}")
 
@@ -427,20 +430,20 @@ class TestReaperController(unittest.TestCase):
         """Test modifying MP3 item properties."""
         # Create a marker at the start of the MP3
         marker_name = "MP3 Start"
-        marker_index = self.controller.create_marker(0.0, marker_name)
+        marker_index = self.controller.marker.create_marker(0.0, marker_name)
         self.assertGreaterEqual(marker_index, 0)
 
         # Try to modify the MP3 properties
         if not self.controller.debug:
-            self.controller.set_item_position(
+            self.controller.audio.set_item_position(
                 track_index, mp3_item_id, DEFAULT_MP3_NEW_POSITION
             )
-            self.controller.set_item_length(
+            self.controller.audio.set_item_length(
                 track_index, mp3_item_id, DEFAULT_MP3_NEW_LENGTH
             )
 
             # Verify the changes
-            updated_properties = self.controller.get_item_properties(
+            updated_properties = self.controller.audio.get_item_properties(
                 track_index, mp3_item_id
             )
             self.assertIsInstance(updated_properties, dict)
@@ -460,17 +463,17 @@ class TestReaperController(unittest.TestCase):
                 )
 
         # Delete the marker
-        self.assertTrue(self.controller.delete_marker(marker_index))
+        self.assertTrue(self.controller.marker.delete_marker(marker_index))
 
     def _cleanup_mp3_test(self, track_index: int, mp3_item_id):
         """Clean up MP3 test resources."""
         # Clean up - delete the MP3 item
-        self.assertTrue(self.controller.delete_item(track_index, mp3_item_id))
+        self.assertTrue(self.controller.audio.delete_item(track_index, mp3_item_id))
 
     def test_media_item_operations(self):
         """Test media item operations."""
         # Create a track
-        track_index = self.controller.create_track("Audio Test Track")
+        track_index = self.controller.track.create_track("Audio Test Track")
 
         # Test MIDI item operations
         midi_item_id = self._test_midi_item_operations(track_index)
@@ -487,7 +490,7 @@ class TestReaperController(unittest.TestCase):
     def _test_midi_item_operations(self, track_index: int):
         """Test MIDI item operations."""
         # Create a MIDI item to test item operations
-        midi_item_id = self.controller.create_midi_item(track_index, 0.0, 4.0)
+        midi_item_id = self.controller.midi.create_midi_item(track_index, 0.0, 4.0)
 
         # Check if the item ID is valid
         if isinstance(midi_item_id, str):
@@ -496,11 +499,11 @@ class TestReaperController(unittest.TestCase):
             self.assertGreaterEqual(midi_item_id, 0, "Item ID should be >= 0")
 
         # Test item operations
-        properties = self.controller.get_item_properties(track_index, midi_item_id)
+        properties = self.controller.audio.get_item_properties(track_index, midi_item_id)
         self.assertIsInstance(properties, dict)
 
         # Test item duplication
-        duplicated_id = self.controller.duplicate_item(track_index, midi_item_id)
+        duplicated_id = self.controller.audio.duplicate_item(track_index, midi_item_id)
         if isinstance(duplicated_id, str):
             self.assertTrue(duplicated_id, "Duplicated item ID should not be empty")
         else:
@@ -509,7 +512,7 @@ class TestReaperController(unittest.TestCase):
             )
 
         # Get items in time range
-        items = self.controller.get_items_in_time_range(
+        items = self.controller.audio.get_items_in_time_range(
             track_index, DEFAULT_TIME_RANGE_START, DEFAULT_TIME_RANGE_END
         )
         self.assertGreaterEqual(
@@ -527,7 +530,7 @@ class TestReaperController(unittest.TestCase):
 
         # Insert at position 6.0
         mp3_start_time = DEFAULT_MP3_START_TIME
-        mp3_item_id = self.controller.insert_audio_item(
+        mp3_item_id = self.controller.audio.insert_audio_item(
             track_index, self.sample_audio_path, mp3_start_time
         )
 
@@ -538,7 +541,7 @@ class TestReaperController(unittest.TestCase):
             self.assertGreaterEqual(mp3_item_id, 0, "MP3 item ID should be >= 0")
 
         # Get and verify properties
-        mp3_properties = self.controller.get_item_properties(track_index, mp3_item_id)
+        mp3_properties = self.controller.audio.get_item_properties(track_index, mp3_item_id)
         self.assertIsInstance(mp3_properties, dict)
         self.logger.info(f"MP3 item properties: {mp3_properties}")
 
@@ -555,13 +558,13 @@ class TestReaperController(unittest.TestCase):
         if not self.controller.debug:
             new_mp3_position = DEFAULT_MP3_NEW_POSITION_2
             self.assertTrue(
-                self.controller.set_item_position(
+                self.controller.audio.set_item_position(
                     track_index, mp3_item_id, new_mp3_position
                 )
             )
 
             # Check if the position was updated
-            updated_mp3_properties = self.controller.get_item_properties(
+            updated_mp3_properties = self.controller.audio.get_item_properties(
                 track_index, mp3_item_id
             )
             if "position" in updated_mp3_properties:
@@ -581,7 +584,7 @@ class TestReaperController(unittest.TestCase):
             os.path.dirname(os.path.dirname(__file__)), "test_audio.wav"
         )
         if os.path.exists(audio_file_path):
-            audio_item_id = self.controller.insert_audio_item(
+            audio_item_id = self.controller.audio.insert_audio_item(
                 track_index, audio_file_path, DEFAULT_AUDIO_FILE_POSITION
             )
             # Check audio item ID
@@ -592,12 +595,12 @@ class TestReaperController(unittest.TestCase):
                     audio_item_id, 0, "Audio item ID should be >= 0"
                 )
             # Delete audio item
-            self.assertTrue(self.controller.delete_item(track_index, audio_item_id))
+            self.assertTrue(self.controller.audio.delete_item(track_index, audio_item_id))
 
     def _cleanup_media_item_test(self, track_index: int, mp3_item_id):
         """Clean up media item test resources."""
         # Clean up - delete the MP3 item
-        self.assertTrue(self.controller.delete_item(track_index, mp3_item_id))
+        self.assertTrue(self.controller.audio.delete_item(track_index, mp3_item_id))
 
         self.logger.info(
             "Skipping strict duplicated item deletion assertion in debug mode."
@@ -606,12 +609,12 @@ class TestReaperController(unittest.TestCase):
     def test_midi_item_create_fail(self):
         """Test MIDI item creation failure handling."""
         # Create a track
-        track_index = self.controller.create_track("MIDI Test Track")
+        track_index = self.controller.track.create_track("MIDI Test Track")
 
         # Try to create MIDI item with invalid parameters
         # Using negative track index to force failure
         invalid_track_index = -1
-        midi_item_id = self.controller.create_midi_item(invalid_track_index, 0, 4)
+        midi_item_id = self.controller.midi.create_midi_item(invalid_track_index, 0, 4)
 
         # In non-debug mode, it should return -1 for failure
         if not self.controller.debug:
@@ -626,7 +629,7 @@ class TestReaperController(unittest.TestCase):
 
         # Try another failure case with invalid time parameters
         # Using negative start time to force failure
-        midi_item_id = self.controller.create_midi_item(track_index, -1, 4)
+        midi_item_id = self.controller.midi.create_midi_item(track_index, -1, 4)
 
         # In non-debug mode, it should return -1 for failure
         if not self.controller.debug:
@@ -642,10 +645,10 @@ class TestReaperController(unittest.TestCase):
     def test_audio_file_insertion(self):
         """Test audio file insertion."""
         # Create a track for the audio
-        track_index = self.controller.create_track("Audio Test Track")
+        track_index = self.controller.track.create_track("Audio Test Track")
 
         # Insert the sample audio file at position 0.0
-        audio_item_id = self.controller.insert_audio_item(
+        audio_item_id = self.controller.audio.insert_audio_item(
             track_index, self.sample_audio_path, DEFAULT_MP3_POSITION
         )
 
@@ -656,14 +659,14 @@ class TestReaperController(unittest.TestCase):
             self.assertGreaterEqual(audio_item_id, 0, "Audio item ID should be >= 0")
 
         # Get the properties of the inserted audio item
-        audio_properties = self.controller.get_item_properties(
+        audio_properties = self.controller.audio.get_item_properties(
             track_index, audio_item_id
         )
         self.assertIsInstance(audio_properties, dict)
         self.logger.info(f"Audio item properties: {audio_properties}")
 
         # Clean up
-        self.assertTrue(self.controller.delete_item(track_index, audio_item_id))
+        self.assertTrue(self.controller.audio.delete_item(track_index, audio_item_id))
 
 
 if __name__ == "__main__":

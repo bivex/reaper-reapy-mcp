@@ -20,7 +20,9 @@ from src.controllers.analysis.spectrum_controller import (
 @pytest.fixture
 def mock_reapy():
     """Mock reapy for testing."""
-    with patch('src.core.reapy_bridge.get_reapy') as mock:
+    with patch('src.controllers.analysis.loudness_controller.get_reapy') as mock, \
+         patch('src.controllers.analysis.spectrum_controller.get_reapy', mock), \
+         patch('src.controllers.analysis.analysis_controller.get_reapy', mock):
         reapy_mock = Mock()
         project_mock = Mock()
         

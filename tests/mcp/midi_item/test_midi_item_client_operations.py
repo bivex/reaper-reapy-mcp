@@ -1,3 +1,4 @@
+import pytest
 import logging
 import os
 import sys
@@ -10,6 +11,8 @@ from src.reaper_controller import ReaperController
 from src.controllers.midi.midi_controller import MIDIController
 
 
+
+@pytest.mark.reaper
 class TestMidiItemClientOperations(unittest.TestCase):
 
     @classmethod

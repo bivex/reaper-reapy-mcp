@@ -1,3 +1,4 @@
+import pytest
 import logging
 import os
 import sys
@@ -74,6 +75,8 @@ class MockReapyProject:
         return self.tracks[index]
 
 
+
+@pytest.mark.reaper
 class TestMcpTemporary(unittest.TestCase):
 
     @classmethod

@@ -273,7 +273,6 @@ class LoudnessController:
         """Get peak and RMS levels for a track using REAPER API."""
         try:
             import math
-            from src.core.reapy_bridge import get_reapy
             from src.constants import (
                 DB_CONVERSION_FACTOR,
                 SILENCE_THRESHOLD_DB,
@@ -332,7 +331,6 @@ class LoudnessController:
         """Get peak and RMS levels for master track using REAPER API."""
         try:
             import math
-            from src.core.reapy_bridge import get_reapy
             from src.constants import (
                 DB_CONVERSION_FACTOR,
                 SILENCE_THRESHOLD_DB,

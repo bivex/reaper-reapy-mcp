@@ -1,3 +1,4 @@
+import pytest
 import logging
 import os
 import sys
@@ -9,6 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.reaper_controller import ReaperController
 
 
+
+@pytest.mark.reaper
 class TestBasicTrackClientOperations(unittest.TestCase):
 
     @classmethod

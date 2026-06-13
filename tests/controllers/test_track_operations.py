@@ -1,18 +1,17 @@
 #!/usr/bin/env python
-# Test script to verify the controller structure works correctly
-
 import sys
 import os
 import logging
 import unittest
+import pytest
 
-# Add the repository root to the Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the ReaperController
 from src.reaper_controller import ReaperController
 
 
+
+@pytest.mark.reaper
 class TestTrackOperations(unittest.TestCase):
 
     @classmethod
@@ -26,9 +25,9 @@ class TestTrackOperations(unittest.TestCase):
 
     def test_track_creation(self):
         self.logger.info("Testing track creation...")
-        track_index = self.controller.create_track("Test Track")
+        track_index = self.controller.track.create_track("Test Track")
         self.assertGreaterEqual(track_index, 0, "Track creation failed")
-        self.logger.info(f"✓ Track created with index {track_index}")
+        self.logger.info(f"Track created with index {track_index}")
 
 
 if __name__ == "__main__":

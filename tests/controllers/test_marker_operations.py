@@ -2,14 +2,15 @@ import sys
 import os
 import logging
 import unittest
+import pytest
 
-# Add the repository root to the Python path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Import the ReaperController
 from src.reaper_controller import ReaperController
 
 
+
+@pytest.mark.reaper
 class TestMarkerOperations(unittest.TestCase):
 
     @classmethod
@@ -23,9 +24,9 @@ class TestMarkerOperations(unittest.TestCase):
 
     def test_marker_creation(self):
         self.logger.info("Testing marker creation...")
-        marker_id = self.controller.create_marker(0, "Test Marker")
+        marker_id = self.controller.marker.create_marker(0, "Test Marker")
         self.assertGreaterEqual(marker_id, 0, "Marker creation failed")
-        self.logger.info(f"✓ Marker created with ID {marker_id}")
+        self.logger.info(f"Marker created with ID {marker_id}")
 
 
 if __name__ == "__main__":
