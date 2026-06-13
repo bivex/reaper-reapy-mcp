@@ -180,7 +180,7 @@ class MIDIController:
         try:
             if self._RPR is None:
                 self.logger.error("RPR not initialized")
-                return None
+                return -1
 
             reapy = get_reapy()
             project = reapy.Project()
@@ -216,7 +216,7 @@ class MIDIController:
                             self.logger.error(
                                 "Item count didn't increase after creation"
                             )
-                            return None
+                            return -1
                     else:
                         self.logger.error("Failed to add take to item")
                         # Clean up the item if take creation failed
@@ -224,18 +224,18 @@ class MIDIController:
                             item.delete()
                         except:
                             self.logger.warning("Failed to delete failed MIDI item")
-                        return None
+                        return -1
                 else:
                     self.logger.error("Failed to create item using reapy")
-                    return None
+                    return -1
             except Exception as creation_error:
                 self.logger.error(f"MIDI item creation failed: {creation_error}")
-                return None
+                return -1
 
         except Exception as e:
             error_message = f"Failed to create MIDI item on track {track_index}: {e}"
             self.logger.error(error_message)
-            return None
+            return -1
 
     def _validate_midi_item_params(
         self, track_index: int, start_time: float, length: float
@@ -280,7 +280,7 @@ class MIDIController:
             if track is None:
                 return False
 
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 error_message = f"MIDI item {item_id} not found on track {track_index}"
                 self.logger.error(error_message)
@@ -364,7 +364,10 @@ class MIDIController:
             )
             return False
 
-        from constants import MIDI_MAX_VALUE
+        try:
+            from src.constants import MIDI_MAX_VALUE
+        except ImportError:
+            from constants import MIDI_MAX_VALUE
 
         if not (0 <= velocity <= MIDI_MAX_VALUE):  # MIDI velocity range is 0-127
             self.logger.error(
@@ -397,7 +400,7 @@ class MIDIController:
             if track is None:
                 return False
 
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 error_message = f"MIDI item {item_id} not found on track {track_index}"
                 self.logger.error(error_message)
@@ -438,7 +441,7 @@ class MIDIController:
             if track is None:
                 return []
 
-            item = get_item_by_id_or_index(track, item_id)
+            item = get_item_by_id_or_index(track_index, item_id)
             if item is None:
                 error_message = f"MIDI item {item_id} not found on track {track_index}"
                 self.logger.error(error_message)
@@ -451,32 +454,33 @@ class MIDIController:
                 return []
 
             notes = []
-            # Use the correct reapy API for MIDI notes
             try:
-                # Try to get MIDI notes using the correct method
-                midi_notes = take.notes if hasattr(take, "notes") else []
-                for note in midi_notes:
-                    from constants import MIDI_MIDDLE_C, MIDI_DEFAULT_VELOCITY
-
+                from src.constants import MIDI_MIDDLE_C, MIDI_DEFAULT_VELOCITY
+            except ImportError:
+                from constants import MIDI_MIDDLE_C, MIDI_DEFAULT_VELOCITY
+            # Read notes via RPR MIDI_GetNote (matches how they were written)
+            try:
+                reapy_mod = get_reapy()
+                RPR = reapy_mod.reascript_api
+                note_count = RPR.MIDI_CountEvts(take.id, 0, 0, 0)[2]
+                for i in range(note_count):
+                    result = RPR.MIDI_GetNote(
+                        take.id, i, False, False, 0.0, 0.0, 0, 0, 0
+                    )
+                    # result: [retval, take_id, idx, selected, muted, startppq, endppq, chan, pitch, vel]
+                    start_ppq, end_ppq, chan, pitch, vel = result[5], result[6], result[7], result[8], result[9]
                     note_info = {
-                        "pitch": (
-                            note.pitch if hasattr(note, "pitch") else MIDI_MIDDLE_C
-                        ),
-                        "start": note.start if hasattr(note, "start") else 0.0,
-                        "end": note.end if hasattr(note, "end") else 1.0,
-                        "velocity": (
-                            note.velocity
-                            if hasattr(note, "velocity")
-                            else MIDI_DEFAULT_VELOCITY
-                        ),
-                        "channel": note.channel if hasattr(note, "channel") else 0,
+                        "pitch": pitch,
+                        "start": start_ppq,
+                        "end": end_ppq,
+                        "velocity": vel,
+                        "channel": chan,
                     }
                     notes.append(note_info)
             except Exception as e:
                 self.logger.warning(
-                    f"Could not retrieve MIDI notes using standard method: {e}"
+                    f"Could not retrieve MIDI notes using RPR method: {e}"
                 )
-                # Return empty list if we can't get notes
                 notes = []
 
             self.logger.info(f"Retrieved {len(notes)} MIDI notes from item {item_id}")
