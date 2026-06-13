@@ -58,7 +58,10 @@ class ReaperControllerFactory:
                     "analysis": "controllers.analysis.analysis_controller.AnalysisController",
                 }
                 module_path, class_name = mapping[controller_type].rsplit(".", 1)
-                module = importlib.import_module(module_path, package=__package__)
+                try:
+                    module = importlib.import_module(f"src.{module_path}")
+                except ImportError:
+                    module = importlib.import_module(module_path, package=__package__)
                 controller_class = getattr(module, class_name)
                 self._controllers[controller_type] = controller_class(debug=self.debug)
             except Exception as e:
