@@ -48,7 +48,7 @@ class FXParamsController:
             fx_name = (fx_name_buf or "").rstrip("\x00")
             mapped_index = self._map_param_name_to_index(fx_name, param_name)
             if mapped_index is not None:
-                return self._RPR.TrackFX_GetParam(track.id, fx_index, mapped_index)
+                return self._RPR.TrackFX_GetParam(track.id, fx_index, mapped_index, 0.0, 1.0)[0]
             param_count = self._RPR.TrackFX_GetNumParams(track.id, fx_index)
             for i in range(param_count):
                 buf_size = 256
@@ -58,7 +58,7 @@ class FXParamsController:
                 if not retrieved:
                     retrieved = self._generate_contextual_param_name(fx_name or "Unknown", i)
                 if (param_name.lower() in retrieved.lower()) or (retrieved.lower() in param_name.lower()):
-                    return self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    return self._RPR.TrackFX_GetParam(track.id, fx_index, i, 0.0, 1.0)[0]
             return 0.0
         except Exception as e:
             self.logger.error("Failed to get FX parameter '%s': %s", param_name, e)
@@ -91,7 +91,7 @@ class FXParamsController:
                                     raise Exception("Empty buffer result")
                         except Exception:
                             param_name = self._generate_contextual_param_name(fx_name, i)
-                    param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i)
+                    param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i, 0.0, 1.0)[0]
                     formatted_value = ""
                     try:
                         format_buf = "\x00" * 256
