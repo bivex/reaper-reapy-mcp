@@ -56,6 +56,8 @@ class ReaperControllerFactory:
                     "automation": "controllers.automation.automation_controller.AutomationController",
                     "advanced_items": "controllers.audio.advanced_item_controller.AdvancedItemController",
                     "analysis": "controllers.analysis.analysis_controller.AnalysisController",
+                    "pitch": "controllers.audio.pitch_controller.PitchController",
+                    "render": "controllers.render.render_controller.RenderController",
                 }
                 module_path, class_name = mapping[controller_type].rsplit(".", 1)
                 try:
@@ -156,6 +158,16 @@ class ReaperControllerFactory:
     def analysis(self) -> AnalysisController:
         """Get the analysis controller for loudness and spectrum analysis."""
         return self._get_controller("analysis")
+
+    @property
+    def pitch(self) -> PitchController:
+        """Get the pitch controller for pitch shifting and time-stretching."""
+        return self._get_controller("pitch")
+
+    @property
+    def render(self) -> RenderController:
+        """Get the render controller for bounce, freeze, stems, and export."""
+        return self._get_controller("render")
 
     def verify_connection(self) -> bool:
         """Verify connection to REAPER.
