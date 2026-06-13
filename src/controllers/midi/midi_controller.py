@@ -192,38 +192,20 @@ class MIDIController:
                 f"Track {track_index} has {item_count_before} items before creation"
             )
 
-            # Simple approach: Use reapy's built-in MIDI item creation
+            # Use reapy's native MIDI item creation
             try:
-                # Create MIDI item directly
-                item = track.add_item(position, length)
+                item = track.add_midi_item(start=position, end=position + length)
                 if item:
-                    # Add a take and make it MIDI
-                    take = item.add_take()
-                    if take:
-                        # MIDI takes in reapy are automatically MIDI-ready
-                        # No need for complex source creation
-                        self._RPR.UpdateArrange()
-
-                        # Verify creation by checking item count
-                        item_count_after = len(track.items)
-                        if item_count_after > item_count_before:
-                            new_index = item_count_before  # New item is at this index
-                            self.logger.info(
-                                f"Successfully created MIDI item at index {new_index}"
-                            )
-                            return new_index
-                        else:
-                            self.logger.error(
-                                "Item count didn't increase after creation"
-                            )
-                            return -1
+                    self._RPR.UpdateArrange()
+                    item_count_after = len(track.items)
+                    if item_count_after > item_count_before:
+                        new_index = item_count_before
+                        self.logger.info(
+                            f"Successfully created MIDI item at index {new_index}"
+                        )
+                        return new_index
                     else:
-                        self.logger.error("Failed to add take to item")
-                        # Clean up the item if take creation failed
-                        try:
-                            item.delete()
-                        except:
-                            self.logger.warning("Failed to delete failed MIDI item")
+                        self.logger.error("Item count didn't increase after creation")
                         return -1
                 else:
                     self.logger.error("Failed to create item using reapy")
@@ -412,8 +394,14 @@ class MIDIController:
                 self.logger.error("No active take found for MIDI item")
                 return False
 
-            # Clear all MIDI notes
-            take.clear_midi_notes()
+            # Clear all MIDI notes via RPR
+            reapy_mod = get_reapy()
+            RPR = reapy_mod.reascript_api
+            note_count = RPR.MIDI_CountEvts(take.id, 0, 0, 0)[2]
+            # Delete notes in reverse order to preserve indices
+            for i in range(note_count - 1, -1, -1):
+                RPR.MIDI_DeleteNote(take.id, i)
+            RPR.MIDI_Sort(take.id)
 
             self.logger.info(f"Cleared all MIDI notes from item {item_id}")
             return True

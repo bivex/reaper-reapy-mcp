@@ -655,7 +655,7 @@ class AudioController:
                 return False
 
             # Use shared utility to delete the item
-            return delete_item(item)
+            return delete_item(track_index, item_id)
 
         except Exception as e:
             error_message = f"Failed to delete item {item_id}: {e}"
