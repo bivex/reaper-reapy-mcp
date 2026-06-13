@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Run this script from terminal AFTER opening and closing REAPER at least once:
 
@@ -13,7 +14,12 @@ Restart REAPER after running.
 """
 import os
 import sys
-import glob
+
+# Force UTF-8 for all I/O regardless of locale
+if sys.stdout.encoding and sys.stdout.encoding.lower() == "ascii":
+    sys.stdout.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
+if sys.stderr.encoding and sys.stderr.encoding.lower() == "ascii":
+    sys.stderr.reconfigure(encoding="utf-8")  # type: ignore[attr-defined]
 
 REAPER_INI = os.path.expanduser(
     "~/Library/Application Support/REAPER/reaper.ini"
@@ -31,7 +37,7 @@ _reapy_file: str = _reapy_pkg.__file__ or ""
 _reapy_dir = os.path.dirname(_reapy_file)
 _reascript = os.path.join(_reapy_dir, "reascripts", "activate_reapy_server.py")
 if not os.path.exists(_reascript):
-    print(f"ERROR: activate_reapy_server.py not found at {_reascript}")
+    print("ERROR: activate_reapy_server.py not found at " + _reascript)
     sys.exit(1)
 
 
@@ -55,7 +61,7 @@ def write_ini(path, sections):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         for section, lines in sections.items():
-            f.write(f"[{section}]\n")
+            f.write("[" + section + "]\n")
             for line in lines:
                 f.write(line + "\n")
 
@@ -66,9 +72,9 @@ def set_key(sections, section, key, value):
     key_lower = key.lower()
     for i, line in enumerate(sections[section]):
         if "=" in line and line.split("=", 1)[0].strip().lower() == key_lower:
-            sections[section][i] = f"{key}={value}"
+            sections[section][i] = key + "=" + value
             return
-    sections[section].append(f"{key}={value}")
+    sections[section].append(key + "=" + value)
 
 
 def get_key(sections, section, key):
@@ -80,10 +86,10 @@ def get_key(sections, section, key):
     return None
 
 
-# ── patch reaper.ini ─────────────────────────────────────────────────────────
+# patch reaper.ini
 if os.path.getsize(REAPER_INI) == 0:
     print(
-        "reaper.ini is empty — open REAPER once, close it, then re-run this script."
+        "reaper.ini is empty - open REAPER once, close it, then re-run this script."
     )
     sys.exit(1)
 
@@ -95,37 +101,28 @@ set_key(sections, "reaper", "reascript_pythonpath", PYTHON_DYLIB_DIR)
 set_key(sections, "reaper", "reascript_pythondll", PYTHON_DYLIB)
 
 # 2. Web interface for reapy (port 2307)
-# Find existing csurf slots or create new one
-existing = []
-for k in list(sections.get("reaper", [])):
-    if "=" in k and k.split("=")[0].strip().lower().startswith("csurf_descr"):
-        existing.append(k)
-
-# Check if reapy web interface already configured
 already = any(
-    str(REAPY_PORT) in (get_key(sections, "reaper", f"csurf_descr{i}") or "")
+    str(REAPY_PORT) in (get_key(sections, "reaper", "csurf_descr" + str(i)) or "")
     for i in range(10)
 )
 
 if not already:
-    # Find next free csurf slot
     idx = 0
-    while get_key(sections, "reaper", f"csurf_descr{idx}") is not None:
+    while get_key(sections, "reaper", "csurf_descr" + str(idx)) is not None:
         idx += 1
-    set_key(sections, "reaper", f"csurf_descr{idx}",
-            f"Web interface  '{REAPY_PORT}' '' 0 ''")
-    set_key(sections, "reaper", "csurf_cnt",
-            str(idx + 1))
+    set_key(sections, "reaper", "csurf_descr" + str(idx),
+            "Web interface  '" + str(REAPY_PORT) + "' '' 0 ''")
+    set_key(sections, "reaper", "csurf_cnt", str(idx + 1))
 
 # 3. External state so reapy knows it's configured
 set_key(sections, "ext_reapy", "activate_reapy_server", _reascript)
 
 write_ini(REAPER_INI, sections)
-print(f"reaper.ini patched: Python={PYTHON_DYLIB}, web interface port={REAPY_PORT}")
+print("reaper.ini patched: Python=" + PYTHON_DYLIB + ", web interface port=" + str(REAPY_PORT))
 
-# ── patch reaper-kb.ini — add ReaScript to actions ───────────────────────────
+# patch reaper-kb.ini
 kb_sections = read_ini(REAPER_KB_INI)
-action_line = f'SCR 4 0 RS_reapy_server "Script: activate_reapy_server.py" {_reascript}'
+action_line = 'SCR 4 0 RS_reapy_server "Script: activate_reapy_server.py" ' + _reascript
 
 already_kb = any(
     "activate_reapy_server" in line
