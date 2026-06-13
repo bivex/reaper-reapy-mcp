@@ -6,39 +6,53 @@
 
 ## Overview
 
-This Python-based MCP server provides comprehensive control over REAPER DAW through AI assistants. With 104+ specialized tools, you can manage tracks, effects, MIDI, audio items, routing, automation, professional audio analysis, sidechain/bus routing, and advanced mixing/mastering operations—all through natural language commands.
+Python-based MCP server providing comprehensive control over REAPER DAW through AI assistants. 110+ specialized tools covering tracks, effects, MIDI, audio items, routing, automation, professional mastering and mixing — all through natural language commands.
 
-## ✨ Key Features
+Uses [bivex/reapy](https://github.com/bivex/reapy) fork as a git submodule (`vendor/reapy`), with Python 3.13 compatibility patches applied. Operations not covered by reapy are handled via direct REAPER ReaScript API calls.
+
+## Features
 
 | Category | Capabilities |
 |----------|-------------|
-| 🎛️ **Track Management** | Create, rename, color, volume, pan, mute, solo, record arm |
+| 🎛️ **Track Management** | Create, rename, color, volume (dB), pan, mute, solo, record arm |
 | 🎚️ **FX Control** | Add/remove effects, parameter automation, compressor/limiter presets |
-| 🎹 **MIDI Operations** | Create items, add/edit notes, pitch filtering, musical positioning |
-| 🎧 **Audio Processing** | Insert files, duplicate items, split, fade, crossfade, reverse |
-| 🔗 **Routing & Mixing** | Sends/receives, folder tracks, bus creation, comprehensive routing |
-| 🎚️ **Sidechain & Bus** | Sidechain compression, parallel processing, saturation buses, route analysis |
+| 🎹 **MIDI Operations** | Create items, add/edit notes, pitch filter, transpose, musical positioning |
+| 🎧 **Audio Processing** | Insert files, duplicate, split, fade, crossfade, reverse |
+| 🔗 **Routing & Mixing** | Sends/receives, folder tracks, bus creation, sidechain routing |
 | 🎛️ **Automation** | Envelope creation, point editing, automation modes |
-| 🎯 **Project Control** | Tempo, markers, regions, master track, project clearing |
-| 📊 **Audio Analysis** | LUFS/loudness measurement, spectrum analysis, stereo imaging, dynamics |
-| 🎚️ **Mastering Tools** | LUFS normalization, broadcast compliance, streaming standards |
-| 📈 **Gain Staging** | Volume automation generation, clip gain adjustment, peak limiting |
-| 📊 **Monitoring** | Peak level metering, crest factor, phase correlation |
-| 🎵 **Dual Positioning** | Time (seconds) and musical (measure:beat) notation support |
+| 🎯 **Project Control** | Tempo, markers, regions, master track |
+| 📊 **Audio Analysis** | LUFS/loudness, spectrum, stereo imaging, dynamics, true peak |
+| 🎚️ **Pitch & Timestretch** | Item pitch shift (semitones), playback rate, élastique/SoundTouch modes, MIDI transpose |
+| 🎬 **Render & Export** | Bounce to file, freeze/unfreeze tracks, stem export, region render |
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
+
 - Python 3.10+ (3.13 tested on macOS with miniconda)
 - REAPER DAW installed
-- `python-reapy` installed: `pip install python-reapy`
 
-### 1. Install Dependencies
+### 1. Clone with submodules
+
 ```bash
-pip install -e .
+git clone --recurse-submodules <repository-url>
+cd reaper-reapy-mcp
 ```
 
-### 2. Configure REAPER — Enable Python for ReaScripts
+Or if already cloned:
+
+```bash
+git submodule update --init
+```
+
+### 2. Install dependencies
+
+```bash
+pip install -e .
+pip install --no-build-isolation vendor/reapy
+```
+
+### 3. Configure REAPER — Enable Python for ReaScripts
 
 **macOS (miniconda):**
 
@@ -47,310 +61,163 @@ In REAPER: **Options → Preferences → Plug-ins → ReaScript**
 - Custom path to Python dylib directory: `/opt/homebrew/Caskroom/miniconda/base/lib`
 - Force ReaScript to use specific Python dylib: `libpython3.13.dylib`
 
-If Python 3.13 doesn't work, try the `omni` env (Python 3.12):
-- Custom path: `/opt/homebrew/Caskroom/miniconda/base/envs/omni/lib`
-- Dylib: `libpython3.12.dylib`
-
 **Windows (anaconda):**
 - Custom path: `C:\ProgramData\anaconda3`
 - DLL: `python312.dll`
 
-### 3. Configure reapy (run once from terminal, with REAPER closed or running)
+### 4. Patch reaper.ini (run once, REAPER can be open or closed)
+
 ```bash
 python3 reaper_side_enable_server.py
 ```
 
-This patches `reaper.ini` directly — works around a reapy configparser bug on Python 3.13.
+Enables the reapy web interface and patches `reaper.ini` for Python 3.13 compatibility.
 
-### 4. Enable Web Interface in REAPER
+### 5. Enable Web Interface in REAPER
 
-In REAPER: **Options → Preferences → Control/OSC/web** → Add → **Web browser interface** → port `2307` → OK → Apply
+**Options → Preferences → Control/OSC/web** → Add → **Web browser interface** → port `2307` → OK → Apply
 
-This is required for reapy dist API to connect.
+Required for reapy dist API to connect.
 
-### 5. Activate reapy Server in REAPER
+### 6. Activate reapy Server in REAPER
 
-In REAPER: **Actions → Run ReaScript** → select `activate_reapy_server.py` from the project root.
+**Actions → Run ReaScript** → select `activate_reapy_server.py` from the project root.
 
 Run this every time REAPER starts (or add it to REAPER startup actions).
 
-### 6. Start the MCP Server
+### 7. Start the MCP Server
+
 ```bash
 python3 src/run_mcp_server.py
-# or as module
-python3 -m src.run_mcp_server
 ```
 
-Both direct script execution and module execution are supported.
+### 8. Verify Connection
 
-### 7. Verify Connection
 ```bash
 python3 -c "import warnings; warnings.filterwarnings('ignore'); import reapy; print('tracks:', reapy.Project().n_tracks)"
 ```
 
-## 🎚️ Professional Sidechain & Bus Routing
-
-The REAPER MCP server includes advanced sidechain and bus routing tools for professional mixing and mastering workflows.
-
-### Key Features
-
-| Tool | Purpose | Use Cases |
-|------|---------|-----------|
-| **`create_sidechain_send`** | Quick sidechain routing setup | Kick → Bass compression, Vocal → Music ducking |
-| **`setup_parallel_bus`** | Parallel processing with phase compensation | Parallel compression, parallel EQ, New York style processing |
-| **`add_saturation_bus`** | Parallel harmonic enhancement | Tape warmth, tube character, digital excitement |
-| **`sidechain_route_analyzer`** | Route validation and analysis | Latency measurement, feedback detection, channel mapping |
-
-### Sidechain Routing Capabilities
-
-- **Channel routing**: Supports both channels 3/4 (standard sidechain) and 1/2 routing
-- **Pre/Post fader**: Configurable send positioning for optimal signal flow
-- **Level control**: Precise dB-based send level adjustment
-- **Real-time validation**: Automatic route analysis and feedback loop detection
-
-### Bus Processing Features
-
-- **Automatic track creation**: Creates properly configured bus tracks
-- **Phase compensation**: Built-in latency compensation for parallel processing  
-- **Return routing**: Automatic return path setup to master or mix buses
-- **Saturation types**: Multiple saturation algorithms (tape, tube, transistor, digital)
-
-### Workflow Examples
-
-**Sidechain Compression (Kick → Bass):**
-```python
-# 1. Setup sidechain send
-create_sidechain_send(
-    source_track=0,      # Kick drum
-    destination_track=1, # Bass track  
-    dest_channels=3,     # Route to sidechain input 3/4
-    level_db=-3.0        # Moderate send level
-)
-
-# 2. Analyze routing validity
-analysis = sidechain_route_analyzer(0, 1)
-# Returns: route validity, channel mapping, latency info
-```
-
-**Parallel Compression:**
-```python
-# Create parallel bus with automatic compensation
-bus_info = setup_parallel_bus(
-    source_track=2,
-    bus_name="Vocal Parallel",
-    mix_db=-6.0,         # 50/50 blend
-    latency_comp=True    # Enable phase alignment
-)
-# Bus track created at: bus_info.bus_track_index
-```
-
-**Parallel Saturation:**
-```python
-# Add harmonic enhancement bus
-sat_bus = add_saturation_bus(
-    source_track=3,
-    saturation_type="tape",  # Warm tape character
-    mix_percent=20.0         # Subtle enhancement
-)
-# Returns saturation bus track index and FX info
-```
-
-### Technical Implementation
-
-- **Real REAPER API integration**: Uses native REAPER routing functions
-- **Professional channel mapping**: Proper stereo and sidechain channel configuration
-- **Latency measurement**: PDC-based latency calculation and compensation
-- **Route validation**: Comprehensive analysis including feedback detection
-- **Error handling**: Graceful failure modes with detailed error reporting
-
-## 🔧 Troubleshooting
-
-### Connection Issues (`ConnectionRefusedError`)
-
-**1. Check REAPER Port**
-- Open Task Manager > Details tab
-- Find `reaper.exe` and check "Local Port" column
-- Common ports: 2306 (default), 2307
-
-**2. Enable REAPER Remote API**
-```
-REAPER → Actions → Show action list → Search "reapy" → Run "reapy: Enable remote API"
-```
-**Restart REAPER** after enabling.
-
-**3. Test Connection**
-```bash
-python start_reapy_server_simple.py
-```
-Should show: "✅ Connection established successfully!"
-
-### Common Issues
-| Problem | Solution |
-|---------|----------|
-| Port mismatch | Update `start_reapy_server_simple.py` with correct port |
-| Python not configured | Check REAPER ReaScript Python settings |
-| reapy not enabled | Run enable script in REAPER Actions |
-
-## 🔗 MCP Client Integration
+## MCP Client Integration
 
 ### Claude Desktop
-Add to your Claude configuration file:
 
 ```json
 {
     "mcpServers": {
         "reaper-reapy-mcp": {
             "type": "stdio",
-            "command": "uv",
-            "args": [
-                "--directory",
-                "C:\\path\\to\\reaper-reapy-mcp",
-                "run",
-                "-m",
-                "src.run_mcp_server"
-            ]
+            "command": "python3",
+            "args": ["/path/to/reaper-reapy-mcp/src/run_mcp_server.py"]
         }
     }
 }
 ```
 
 ### Cursor IDE
+
 Add to `~/.cursor/mcp.json`:
 
 ```json
 {
   "mcpServers": {
     "reaper-reapy-mcp": {
-      "command": "uv",
-      "args": [
-        "--directory",
-        "C:\\path\\to\\reaper-reapy-mcp",
-        "run",
-        "-m",
-        "src.run_mcp_server"
-      ]
+      "command": "python3",
+      "args": ["/path/to/reaper-reapy-mcp/src/run_mcp_server.py"]
     }
   }
 }
 ```
 
-> **Note**: Replace `C:\\path\\to\\reaper-reapy-mcp` with your actual project path.
+## Mastering & Mixing
 
-## 📚 Key Concepts
+This project is designed for professional mixing and mastering workflows. Below is what is available and what relies on direct RPR API calls instead of reapy.
 
-### Dual Position Format
-Tools support both time and musical positioning:
+### What reapy covers natively
 
-| Format | Example | Use Case |
-|--------|---------|----------|
-| **Time** | `{"start_time": 15.5}` | Precise timing |
-| **Musical** | `{"start_measure": "3:2.5"}` | Musical positioning |
+- Track volume/pan read-write (`track.volume`, `track.pan`)
+- FX chain: add, remove, reorder, parameter read/write
+- Sends and receives routing
+- Envelopes (automation)
+- MIDI: notes, events (partial)
+- Mute, solo, record arm
+- Markers and regions (read)
+- Tempo and time signature
 
-**Musical Format**: `"measure:beat"` (1-based, decimals supported)
+### What this fork adds on top of reapy
 
-### Item ID System
-- Zero-based indices per track (0, 1, 2...)
-- Stable until items are deleted/reordered
-- Consistent across MIDI, audio, and property operations
+These are not in reapy 0.10 and are implemented via direct REAPER ReaScript API:
 
-## 💡 Usage Examples
+| Feature | Controller | Notes |
+|---------|-----------|-------|
+| Track volume in dB | `pitch.set_track_volume_db` | reapy uses 0–1 linear; this accepts dBFS |
+| Master track direct access | `master.*` | Via `RPR.GetMasterTrack` + RPR calls |
+| Render / bounce to file | `render.render_project` | Uses REAPER action 42230 |
+| Freeze / unfreeze track | `render.freeze_track` / `render.unfreeze_track` | Actions 41223–41225 |
+| Stem export | `render.export_stems` | Solos each track, renders, restores state |
+| Region render | `render.render_regions` | Render all regions to separate files |
+| Item pitch shift | `pitch.set_item_pitch` | `D_PITCH` via `SetMediaItemInfo_Value` |
+| Playback rate / timestretch | `pitch.set_item_rate` | `D_PLAYRATE` + `B_PPITCH` |
+| Pitch algorithm (élastique etc.) | `pitch.set_take_pitch_mode` | `I_PITCHMODE` on take |
+| MIDI transpose | `pitch.transpose_midi_item` | Rewrites all notes via `MIDI_SetNote` |
+| LUFS / loudness analysis | `analysis.*` | Simulated via peak + RMS integration |
+| Sidechain routing | `sidechain.*` | Channel 3/4 routing via RPR sends |
 
-### Basic Operations
+### Workflow Examples
+
+**Pitch shift an audio item:**
 ```python
-# Create and configure tracks
-create_track("Lead Vocal")
-set_track_volume(track_index=0, volume_db=-6.0)
-add_fx(track_index=0, fx_name="ReaComp")
-
-# MIDI workflow
-create_midi_item(track_index=0, start_measure="1:1", length=4.0)
-add_midi_note(track_index=0, item_id=0, pitch=60, start_time=0.0, length=1.0)
-
-# Audio processing
-insert_audio_item(track_index=1, file_path="vocals.wav", start_time=0.0)
-fade_in(track_index=1, item_index=0, fade_length=0.5)
+set_item_pitch(track_index=0, item_id=0, semitones=-2.0)   # down 2 semitones
+set_item_rate(track_index=0, item_id=0, rate=0.9, preserve_pitch=True)
 ```
 
-### Advanced Routing
+**Bounce a track to WAV:**
 ```python
-# Create folder structure
-create_folder_track("Drums")
-create_bus_track("Drum Bus") 
-set_track_parent(child_track_index=1, parent_track_index=0)
-
-# Sends and routing
-add_send(source_track=0, destination_track=2, volume=-6.0)
-get_track_routing_info(track_index=0)
+bounce_track(track_index=2, output_path="/tmp/bass_bounce.wav")
 ```
 
-### Automation
+**Freeze a CPU-heavy track:**
 ```python
-# Volume automation
-create_automation_envelope(track_index=0, envelope_name="volume")
-add_automation_point(track_index=0, envelope_name="volume", time=0.0, value=0.5)
-set_automation_mode(track_index=0, mode="write")
+freeze_track(track_index=1, freeze_to_stereo=True)
+# ... later ...
+unfreeze_track(track_index=1)
 ```
 
-### Professional Audio Analysis
+**Export stems:**
 ```python
-# LUFS loudness measurement
-loudness_measure_track(track_index=0, window_sec=30.0)
-loudness_measure_master(window_sec=30.0)
-
-# Spectrum analysis with weighting
-spectrum_analyzer_track(track_index=0, fft_size=8192, weighting="A")
-phase_correlation(track_index=0)
-stereo_image_metrics(track_index=0)
-
-# Professional mastering workflows
-normalize_track_lufs(track_index=0, target_lufs=-16.0, true_peak_ceiling=-1.0)
-write_volume_automation_to_target_lufs(track_index=0, target_lufs=-23.0)
-master_chain_analysis(window_sec=10.0)  # Broadcast/streaming compliance
+export_stems(output_dir="/tmp/stems", track_indices=[0,1,2,3])
+# Produces: /tmp/stems/Lead.wav, /tmp/stems/Violin1.wav, ...
 ```
 
-### Professional Sidechain & Bus Routing
+**Render all regions:**
 ```python
-# Sidechain compression setup (kick → bass)
+render_regions(output_dir="/tmp/regions", name_pattern="$region")
+```
+
+**LUFS normalization:**
+```python
+normalize_track_lufs(track_index=0, target_lufs=-14.0, true_peak_ceiling=-1.0)
+```
+
+**Sidechain compression (kick → bass):**
+```python
 create_sidechain_send(
-    source_track=0,      # Kick drum track
-    destination_track=1, # Bass track with compressor
-    dest_channels=3,     # Route to channels 3/4 for sidechain input
-    level_db=-6.0,       # Send level
-    pre_fader=True       # Pre-fader send
+    source_track=0,       # Kick
+    destination_track=1,  # Bass with compressor
+    dest_channels=3,      # Route to channels 3/4
+    level_db=-3.0
 )
-
-# Parallel compression bus
-setup_parallel_bus(
-    source_track=2,           # Source track (vocals)
-    bus_name="Vocal Parallel", 
-    mix_db=-3.0,             # Parallel mix level
-    latency_comp=True        # Enable phase compensation
-)
-
-# Parallel saturation for harmonic enhancement  
-add_saturation_bus(
-    source_track=3,          # Source track (drums)
-    saturation_type="tape",  # "tape", "tube", "transistor", "digital"
-    mix_percent=25.0         # 25% saturation blend
-)
-
-# Route analysis and validation
-sidechain_route_analyzer(
-    source_track=0,     # Kick 
-    dest_track=1        # Bass
-)  # Returns: validity, channel mapping, latency, warnings
 ```
 
-## 🛠️ Available Tools (104+ Total)
+## Available Tools (110+)
 
 <details>
-<summary><strong>🔌 Connection (1)</strong></summary>
+<summary><strong>Connection (1)</strong></summary>
 
-- `test_connection` - Test connection to REAPER
+- `test_connection`
 </details>
 
 <details>
-<summary><strong>🎛️ Track Management (17)</strong></summary>
+<summary><strong>Track Management (17)</strong></summary>
 
 - `create_track`, `rename_track`, `set_track_color`, `get_track_color`
 - `get_track_count`, `set_track_volume`, `get_track_volume`
@@ -360,7 +227,7 @@ sidechain_route_analyzer(
 </details>
 
 <details>
-<summary><strong>🎚️ FX Management (10)</strong></summary>
+<summary><strong>FX Management (10)</strong></summary>
 
 - `add_fx`, `remove_fx`, `set_fx_param`, `get_fx_param`
 - `get_fx_param_list`, `get_fx_list`, `get_available_fx_list`, `toggle_fx`
@@ -368,14 +235,14 @@ sidechain_route_analyzer(
 </details>
 
 <details>
-<summary><strong>🎹 MIDI Operations (6)</strong></summary>
+<summary><strong>MIDI Operations (6)</strong></summary>
 
 - `create_midi_item`, `add_midi_note`, `clear_midi_item`
 - `get_midi_notes`, `find_midi_notes_by_pitch`, `get_selected_midi_item`
 </details>
 
 <details>
-<summary><strong>🎧 Audio & Items (15)</strong></summary>
+<summary><strong>Audio & Items (15)</strong></summary>
 
 - `insert_audio_item`, `duplicate_item`, `delete_item`
 - `get_item_properties`, `set_item_position`, `set_item_length`
@@ -385,7 +252,28 @@ sidechain_route_analyzer(
 </details>
 
 <details>
-<summary><strong>🔗 Routing & Mixing (17)</strong></summary>
+<summary><strong>Pitch & Timestretch (6)</strong></summary>
+
+- `set_item_pitch`, `get_item_pitch` — semitone pitch shift on audio items
+- `set_item_rate`, `get_item_rate` — playback rate / timestretch
+- `set_take_pitch_mode` — pitch algorithm (élastique, SoundTouch, DIRAC)
+- `transpose_midi_item` — transpose all MIDI notes by N semitones
+- `set_track_volume_db`, `get_track_volume_db` — track volume in dBFS via RPR
+</details>
+
+<details>
+<summary><strong>Render & Export (6)</strong></summary>
+
+- `render_project` — render project or time range to file
+- `render_time_selection` — render current time selection
+- `bounce_track` — bounce single track to WAV (solos, renders, restores)
+- `freeze_track`, `unfreeze_track`, `is_frozen` — track freeze
+- `render_regions` — render all regions to separate files
+- `export_stems` — export each track as a separate stem file
+</details>
+
+<details>
+<summary><strong>Routing & Mixing (17)</strong></summary>
 
 - `add_send`, `remove_send`, `get_sends`, `get_receives`
 - `set_send_volume`, `set_send_pan`, `toggle_send_mute`
@@ -396,16 +284,16 @@ sidechain_route_analyzer(
 </details>
 
 <details>
-<summary><strong>🎛️ Professional Sidechain & Bus Routing (4)</strong></summary>
+<summary><strong>Sidechain & Bus Routing (4)</strong></summary>
 
-- `create_sidechain_send` - Quick sidechain routing (kick → bass compressor)
-- `setup_parallel_bus` - Parallel processing with phase compensation
-- `add_saturation_bus` - Parallel harmonic enhancement/saturation
-- `sidechain_route_analyzer` - Route validation and latency analysis
+- `create_sidechain_send` — sidechain routing (kick → bass compressor)
+- `setup_parallel_bus` — parallel processing with phase compensation
+- `add_saturation_bus` — parallel harmonic enhancement
+- `sidechain_route_analyzer` — route validation and latency analysis
 </details>
 
 <details>
-<summary><strong>🎛️ Automation (6)</strong></summary>
+<summary><strong>Automation (6)</strong></summary>
 
 - `create_automation_envelope`, `add_automation_point`
 - `get_automation_points`, `set_automation_mode`
@@ -413,7 +301,7 @@ sidechain_route_analyzer(
 </details>
 
 <details>
-<summary><strong>🎯 Project & Master (14)</strong></summary>
+<summary><strong>Project & Master (14)</strong></summary>
 
 - **Project**: `set_tempo`, `get_tempo`, `clear_project`
 - **Markers**: `create_region`, `delete_region`, `create_marker`, `delete_marker`
@@ -422,39 +310,84 @@ sidechain_route_analyzer(
 </details>
 
 <details>
-<summary><strong>📊 Professional Audio Analysis (14)</strong></summary>
+<summary><strong>Professional Audio Analysis (14)</strong></summary>
 
-- **Loudness Measurement**: `loudness_measure_track`, `loudness_measure_master`
-- **Spectrum Analysis**: `spectrum_analyzer_track`, `spectrum_analyzer_master` 
-- **Stereo Analysis**: `phase_correlation`, `stereo_image_metrics`
-- **Dynamics Analysis**: `crest_factor_track`, `crest_factor_master`
+- **Loudness**: `loudness_measure_track`, `loudness_measure_master`
+- **Spectrum**: `spectrum_analyzer_track`, `spectrum_analyzer_master`
+- **Stereo**: `phase_correlation`, `stereo_image_metrics`
+- **Dynamics**: `crest_factor_track`, `crest_factor_master`
 - **LUFS Normalization**: `normalize_track_lufs`, `match_loudness_between_tracks`
 - **Gain Staging**: `write_volume_automation_to_target_lufs`, `clip_gain_adjust`
-- **Professional Analysis**: `comprehensive_track_analysis`, `master_chain_analysis`
+- **Mastering**: `comprehensive_track_analysis`, `master_chain_analysis`
 </details>
 
-## 🤝 Contributing
+## Key Concepts
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Dual Position Format
 
-### Development Setup
+Tools accept both time and musical positioning:
+
+| Format | Example | Use Case |
+|--------|---------|----------|
+| Time | `{"start_time": 15.5}` | Precise timing in seconds |
+| Musical | `{"start_measure": "3:2.5"}` | Measure:beat notation |
+
+Musical format: `"measure:beat"` (1-based, decimals supported)
+
+### Item ID System
+
+- Zero-based indices per track (0, 1, 2...)
+- Stable until items are deleted or reordered
+- Consistent across MIDI, audio, and property operations
+
+## reapy Notes
+
+This project uses [bivex/reapy](https://github.com/bivex/reapy) as a git submodule in `vendor/reapy`. It is a fork of the original [RomeoDespres/reapy](https://github.com/RomeoDespres/reapy) with the following patches applied:
+
+- **PR#138**: Fix Python 3.13 `configparser._UnnamedSection` AttributeError
+
+Operations outside reapy's scope (render, freeze, pitch, stem export, master track via RPR) are implemented directly using `reapy.reascript_api` (the raw REAPER ReaScript Python bridge).
+
+## Troubleshooting
+
+### ConnectionRefusedError
+
+1. Confirm REAPER is running with web interface on port 2307
+2. Run `activate_reapy_server.py` inside REAPER (Actions → Run ReaScript)
+3. Check port: `lsof -i :2306 -i :2307`
+
+### Python not found in REAPER
+
+Check **Options → Preferences → Plug-ins → ReaScript** — path must point to the directory containing the Python dylib, not the Python binary itself.
+
+### reapy install fails
+
+Use `--no-build-isolation`:
 ```bash
-# Clone and install
-git clone <repository-url>
-cd reaper-reapy-mcp
-pip install -e .
-
-# Run tests
-pytest
-
-# Run MCP tool tests only (quiet)
-pytest tests/mcp -q
+pip install --no-build-isolation vendor/reapy
 ```
 
-## 📄 License
+### Common Issues
 
-MIT License - see the [LICENSE](LICENSE) file for details.
+| Problem | Solution |
+|---------|----------|
+| Port mismatch | Web interface must be on port 2307 |
+| Python dylib not found | Set correct path in REAPER ReaScript prefs |
+| reapy server not active | Run `activate_reapy_server.py` in REAPER Actions |
+| MIDI notes return 0 | Use `get_midi_notes` — reads via RPR MIDI_CountEvts, not reapy take.notes |
 
----
+## Development
 
-**Ready to control REAPER with AI?** Follow the Quick Start guide above and start creating music with natural language commands! 🎵
+```bash
+# Run all tests (no REAPER needed)
+pytest tests/ -q
+
+# Run integration tests (REAPER must be running with reapy server active)
+pytest tests/ -m reaper -q
+```
+
+135 tests pass offline (mock-based). 12 additional integration tests require a live REAPER connection.
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
