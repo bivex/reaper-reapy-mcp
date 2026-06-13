@@ -78,19 +78,18 @@ class FXParamsController:
                     param_name = ""
                     try:
                         buf_size = 256
-                        param_name = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "", buf_size)
+                        result = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, "\x00" * buf_size, buf_size)
+                        # TrackFX_GetParamName returns [retval, track_id, fx_idx, param_idx, name_buf, buf_size]
+                        if isinstance(result, (list, tuple)) and len(result) >= 5:
+                            param_name = result[4].rstrip("\x00") if result[4] else ""
+                        elif isinstance(result, str):
+                            param_name = result.rstrip("\x00")
+                        else:
+                            param_name = ""
                         if not param_name or len(param_name.strip()) == 0:
                             raise Exception("Empty parameter name")
                     except Exception:
-                        try:
-                            param_name_buf = "\x00" * 256
-                            success = self._RPR.TrackFX_GetParamName(track.id, fx_index, i, param_name_buf, 256)
-                            if success and param_name_buf:
-                                param_name = param_name_buf.rstrip("\x00")
-                                if not param_name:
-                                    raise Exception("Empty buffer result")
-                        except Exception:
-                            param_name = self._generate_contextual_param_name(fx_name, i)
+                        param_name = self._generate_contextual_param_name(fx_name, i)
                     param_value = self._RPR.TrackFX_GetParam(track.id, fx_index, i, 0.0, 1.0)[0]
                     formatted_value = ""
                     try:
