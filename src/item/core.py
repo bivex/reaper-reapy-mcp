@@ -78,13 +78,10 @@ def get_item_properties(
             "id": item.id,
             "position": item.position,
             "length": item.length,
-            "start": item.start,
-            "end": item.end,
-            "selected": item.selected,
-            "muted": item.muted,
-            "locked": item.locked,
-            "snap_offset": item.snap_offset,
-            "take_count": len(item.takes),
+            "start": item.position,
+            "end": item.position + item.length,
+            "selected": item.is_selected,
+            "take_count": item.n_takes,
         }
 
     except Exception as e:
