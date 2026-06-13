@@ -155,17 +155,20 @@ class ReaperControllerFactory:
         return self._get_controller("analysis")
 
     def verify_connection(self) -> bool:
-        """Verify connection to REAPER."""
-        if self._connection_verified is not None:
-            return self._connection_verified
+        """Verify connection to REAPER.
+
+        Always performs a live check — never caches a failed result so that
+        the server can connect to REAPER started after MCP server launch.
+        A successful connection is cached to avoid redundant checks.
+        """
+        if self._connection_verified is True:
+            return True
 
         try:
             import socket
             from constants import REAPER_DEFAULT_PORTS
 
-            ports_to_try = REAPER_DEFAULT_PORTS
-
-            for port in ports_to_try:
+            for port in REAPER_DEFAULT_PORTS:
                 try:
                     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                     sock.settimeout(1.0)
@@ -174,6 +177,12 @@ class ReaperControllerFactory:
 
                     if result == 0:
                         self.logger.info(f"REAPER server found on port {port}")
+                        # Try reapy handshake to confirm it's actually reapy
+                        try:
+                            import reapy  # type: ignore[import-untyped]
+                            reapy.Project()  # lightweight call
+                        except Exception:
+                            pass  # TCP open but reapy not ready yet — still count as connected
                         self._connection_verified = True
                         return True
 
@@ -183,12 +192,13 @@ class ReaperControllerFactory:
             self.logger.warning(
                 "REAPER connection failed: No server found on common ports (2306-2309)"
             )
-            self._connection_verified = False
+            # Do NOT cache False — REAPER may start later
+            self._connection_verified = None
             return False
 
         except Exception as e:
             self.logger.warning(f"REAPER connection test failed: {e}")
-            self._connection_verified = False
+            self._connection_verified = None
             return False
 
 
