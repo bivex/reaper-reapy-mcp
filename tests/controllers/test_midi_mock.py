@@ -139,7 +139,7 @@ class MockReaperController:
 
     def duplicate_item(self, track_index, item_id, new_position=None):
         item_key = f"{track_index}:{item_id}"
-        new_item_id = 1  # For simplicity, use 1 as the duplicated item ID
+        new_item_id = item_id + 100  # Unique id that won't collide with original
         if item_key in self._test_midi_items:
             source_item = self._test_midi_items[item_key]
             new_key = f"{track_index}:{new_item_id}"
@@ -200,7 +200,6 @@ class MockReaperController:
 
 # Test class
 
-@pytest.mark.reaper
 class TestMIDIOperations(unittest.TestCase):
 
     def setUp(self):

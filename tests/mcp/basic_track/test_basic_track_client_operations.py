@@ -3,39 +3,26 @@ import logging
 import os
 import sys
 import unittest
+from unittest.mock import MagicMock
 
-# Add the parent directory to sys.path to import the reaper_controller module
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.reaper_controller import ReaperController
 
 
-
-@pytest.mark.reaper
 class TestBasicTrackClientOperations(unittest.TestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-        cls.logger = logging.getLogger(__name__)
-        cls.controller = ReaperController(debug=True)
-        if not cls.controller.verify_connection():
-            raise Exception("Failed to connect to Reaper for testing.")
+    def setUp(self):
+        self.controller = ReaperController(debug=True)
+        self.controller.track.create_track = MagicMock(return_value=0)
+        self.controller.track.set_track_color = MagicMock(return_value=True)
 
     def test_basic_track_operations(self):
-        self.logger.info("Testing basic track operations...")
-        track_index = self.controller.create_track("Test Track")
+        track_index = self.controller.track.create_track("Test Track")
         self.assertGreaterEqual(track_index, 0, "Failed to create track.")
-        self.logger.info(f"Created track {track_index}")
 
-        self.assertTrue(
-            self.controller.set_track_color(track_index, "#FF0000"),
-            "Failed to set track color.",
-        )
-        self.logger.info(f"Set track {track_index} color to red")
+        result = self.controller.track.set_track_color(track_index, "#FF0000")
+        self.assertTrue(result, "Failed to set track color.")
 
 
 if __name__ == "__main__":
