@@ -1,5 +1,5 @@
 import logging
-from typing import Optional, List, Dict, Any, Union, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
     import reapy

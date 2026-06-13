@@ -1,7 +1,7 @@
 import logging
 import os
 import re
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Set
 import sys
 
 from src.core.reapy_bridge import get_reapy

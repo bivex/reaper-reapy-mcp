@@ -1,7 +1,7 @@
 """MCP tools for routing, sends, buses, sidechain."""
 
 from mcp.server.fastmcp import FastMCP, Context
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional, Set, Type
 from ._helpers import _create_success_response, _create_error_response, _handle_controller_operation, logger
 
 def _setup_routing_tools(mcp: FastMCP, controller) -> None:

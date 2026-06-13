@@ -1,7 +1,7 @@
 """MCP tools for audio items and properties."""
 
 from mcp.server.fastmcp import FastMCP, Context
-from typing import Optional, Dict, Any
+from typing import Any, Dict, List, Optional, Set
 from src.time.conversion import parse_position
 from ._helpers import (
     _create_success_response,

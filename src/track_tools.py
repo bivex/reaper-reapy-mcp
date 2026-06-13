@@ -1,7 +1,7 @@
 """Track-related MCP tools."""
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional, Set
 from mcp.server.fastmcp import FastMCP, Context
 from .tool_helpers import (
     _create_success_response,
