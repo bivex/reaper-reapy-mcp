@@ -157,47 +157,29 @@ class ReaperControllerFactory:
     def verify_connection(self) -> bool:
         """Verify connection to REAPER.
 
-        Always performs a live check — never caches a failed result so that
-        the server can connect to REAPER started after MCP server launch.
-        A successful connection is cached to avoid redundant checks.
+        Uses reapy directly — avoids raw TCP probes that corrupt the reapy
+        server's recv buffer and cause MemoryError on the REAPER side.
+        Never caches False so the server retries after REAPER starts.
         """
         if self._connection_verified is True:
             return True
 
         try:
-            import socket
-            from constants import REAPER_DEFAULT_PORTS
+            import warnings
+            import reapy  # type: ignore[import-untyped]
 
-            for port in REAPER_DEFAULT_PORTS:
-                try:
-                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                    sock.settimeout(1.0)
-                    result = sock.connect_ex(("localhost", port))
-                    sock.close()
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                proj = reapy.Project()
+                # Access a simple attribute to confirm the connection is live
+                _ = proj.n_tracks
 
-                    if result == 0:
-                        self.logger.info(f"REAPER server found on port {port}")
-                        # Try reapy handshake to confirm it's actually reapy
-                        try:
-                            import reapy  # type: ignore[import-untyped]
-                            reapy.Project()  # lightweight call
-                        except Exception:
-                            pass  # TCP open but reapy not ready yet — still count as connected
-                        self._connection_verified = True
-                        return True
-
-                except Exception:
-                    continue
-
-            self.logger.warning(
-                "REAPER connection failed: No server found on common ports (2306-2309)"
-            )
-            # Do NOT cache False — REAPER may start later
-            self._connection_verified = None
-            return False
+            self.logger.info("REAPER connection verified via reapy")
+            self._connection_verified = True
+            return True
 
         except Exception as e:
-            self.logger.warning(f"REAPER connection test failed: {e}")
+            self.logger.warning(f"REAPER connection failed: {e}")
             self._connection_verified = None
             return False
 
