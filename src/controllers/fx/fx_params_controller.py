@@ -1,7 +1,10 @@
 import logging
 from typing import Any, Dict, List, Optional, Type
 
-from src.core.reapy_bridge import get_reapy
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
 
 
 class FXParamsController:

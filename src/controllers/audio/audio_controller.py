@@ -8,12 +8,21 @@ import sys
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, script_dir)
 
-from src.core.reapy_bridge import get_reapy
-from src.item.utils import (
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
+try:
+    from src.item.utils import (
+except ImportError:
+    from item.utils import (
     get_item_by_id_or_index,
     get_item_properties as get_item_props,
 )
-from src.item.operations import delete_item, verify_item_deletion, select_item
+try:
+    from src.item.operations import delete_item, verify_item_deletion, select_item
+except ImportError:
+    from item.operations import delete_item, verify_item_deletion, select_item
 
 # Constants
 INSERTION_WAIT_TIME = (

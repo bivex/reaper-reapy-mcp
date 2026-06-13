@@ -8,7 +8,10 @@ from .tool_helpers import (
     _create_error_response,
     _handle_controller_operation,
 )
-from src.time.conversion import parse_position
+try:
+    from src.time.conversion import parse_position
+except ImportError:
+    from time.conversion import parse_position
 
 logger = logging.getLogger(__name__)
 

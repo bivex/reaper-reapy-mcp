@@ -12,7 +12,10 @@ from typing import Optional, Dict, Any, List, Tuple
 from dataclasses import dataclass
 from enum import Enum
 
-from src.core.reapy_bridge import get_reapy
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
 
 
 class WeightingType(Enum):

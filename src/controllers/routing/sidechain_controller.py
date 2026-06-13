@@ -14,8 +14,14 @@ from typing import Any, Dict, List, Optional, Set, Type, Union
 from dataclasses import dataclass
 from enum import Enum
 
-from src.core.reapy_bridge import get_reapy
-from src.constants import DEFAULT_STEREO_CHANNELS
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
+try:
+    from src.constants import DEFAULT_STEREO_CHANNELS
+except ImportError:
+    from constants import DEFAULT_STEREO_CHANNELS
 
 
 class SidechainMode(Enum):

@@ -1,7 +1,10 @@
 import logging
 from typing import List, Dict, Any
 
-from src.core.reapy_bridge import get_reapy
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
 
 
 class FXManageController:

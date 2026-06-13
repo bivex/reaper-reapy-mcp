@@ -2,7 +2,10 @@
 
 from mcp.server.fastmcp import FastMCP, Context
 from typing import Optional, Dict, Any
-from src.time.conversion import parse_position
+try:
+    from src.time.conversion import parse_position
+except ImportError:
+    from time.conversion import parse_position
 from ._helpers import (
     _create_success_response,
     _create_error_response,

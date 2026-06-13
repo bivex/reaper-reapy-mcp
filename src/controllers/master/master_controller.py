@@ -11,7 +11,10 @@ import os
 script_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, script_dir)
 
-from src.core.reapy_bridge import get_reapy
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
 
 
 class MasterController:

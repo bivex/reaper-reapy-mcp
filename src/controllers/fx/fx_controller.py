@@ -4,7 +4,10 @@ import re
 from typing import Any, Dict, List, Optional, Set
 import sys
 
-from src.core.reapy_bridge import get_reapy
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
 from .fx_manage_controller import FXManageController
 from .fx_params_controller import FXParamsController
 from .fx_routing_controller import FXRoutingController

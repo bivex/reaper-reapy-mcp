@@ -1,6 +1,9 @@
 import logging
 
-from src.core.reapy_bridge import get_reapy
+try:
+    from src.core.reapy_bridge import get_reapy
+except ImportError:
+    from core.reapy_bridge import get_reapy
 
 
 class FXRoutingController:
