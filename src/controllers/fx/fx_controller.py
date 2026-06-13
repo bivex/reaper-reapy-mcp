@@ -121,6 +121,9 @@ class FXController:
             "reaper-plugs64.ini",
             "reaper-vstplugins.ini",
             "reaper-vstplugins64.ini",
+            "reaper-vstplugins_arm64.ini",
+            "reaper-auplugins_arm64.ini",
+            "reaper-auplugins_arm64-bc.ini",
         ]
         for ini_file in plugin_ini_files:
             ini_path = os.path.join(resource_path, ini_file)
